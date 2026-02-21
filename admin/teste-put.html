@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste PUT Config</title>
+</head>
+<body>
+    <h1>Teste de Atualização de Configurações</h1>
+    <button onclick="testarPut()">Testar PUT</button>
+    <div id="resultado"></div>
+
+    <script>
+        async function testarPut() {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = 'Testando...';
+            
+            const dados = {
+                nome_loja: 'DL Crepes e Lanches',
+                slogan: 'Teste de atualização',
+                horario_funcionamento: 'Seg a Dom: 18h às 23h',
+                endereco_completo: 'Bairro Santa Marta, Santa Maria - RS',
+                whatsapp: '5551999999999',
+                cor_principal: '#C83232',
+                taxa_por_km: 2.00,
+                taxa_minima: 5.00,
+                frete_gratis_acima: 50.00
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/config/dlcrepes', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+                
+                const data = await response.json();
+                resultado.innerHTML = '<pre style="color: green;">✅ Sucesso: ' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultado.innerHTML = '<pre style="color: red;">❌ Erro: ' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

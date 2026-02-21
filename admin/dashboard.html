@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-header">
+        <h1>Meu Pedido - Painel Administrativo</h1>
+        <div class="user-info">
+            <span>DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">Sair</button>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html" class="active">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="config.html">⚙️ Configurações</a></li>
+            </ul>
+        </div>
+        
+        <div class="admin-content">
+            <h1>Dashboard</h1>
+            
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3>Pedidos Hoje</h3>
+                    <div class="valor">0</div>
+                </div>
+                <div class="card">
+                    <h3>Faturamento Hoje</h3>
+                    <div class="valor">R$ 0,00</div>
+                </div>
+                <div class="card">
+                    <h3>Produtos</h3>
+                    <div class="valor" id="totalProdutos">0</div>
+                </div>
+                <div class="card">
+                    <h3>Categorias</h3>
+                    <div class="valor" id="totalCategorias">0</div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <h2>Produtos em Destaque</h2>
+                <table id="destaquesTable">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Preço</th>
+                            <th>Categoria</th>
+                        </tr>
+                    </thead>
+                    <tbody id="destaquesBody">
+                        <tr>
+                            <td colspan="3">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        async function carregarDashboard() {
+            try {
+                const response = await fetch('http://localhost:3000/api/cardapio/dlcrepes');
+                const produtos = await response.json();
+                
+                document.getElementById('totalProdutos').textContent = produtos.length;
+                
+                const categorias = [...new Set(produtos.map(p => p.categoria_nome))];
+                document.getElementById('totalCategorias').textContent = categorias.length;
+                
+                const destaques = produtos.slice(0, 5);
+                const tbody = document.getElementById('destaquesBody');
+                tbody.innerHTML = destaques.map(p => `
+                    <tr>
+                        <td>${p.nome}</td>
+                        <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
+                        <td>${p.categoria_nome || '-'}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+            }
+        }
+        
+        carregarDashboard();
+    </script>
+</body>
+</html>

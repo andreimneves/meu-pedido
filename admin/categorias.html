@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorias - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-header">
+        <h1>Meu Pedido - Painel Administrativo</h1>
+        <div class="user-info">
+            <span>DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">Sair</button>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html" class="active">📁 Categorias</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="config.html">⚙️ Configurações</a></li>
+            </ul>
+        </div>
+        
+        <div class="admin-content">
+            <h1>Gerenciar Categorias</h1>
+            
+            <button class="btn-add" onclick="abrirModalCategoria()">+ Nova Categoria</button>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ordem</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoriasTable">
+                        <tr>
+                            <td colspan="3">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Categoria -->
+    <div id="categoriaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModalCategoria()">&times;</span>
+            <h2 id="modalTituloCategoria">Nova Categoria</h2>
+            
+            <form onsubmit="event.preventDefault(); salvarCategoria();">
+                <div class="form-group">
+                    <label>Nome da Categoria</label>
+                    <input type="text" id="categoriaNome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ordem (1, 2, 3...)</label>
+                    <input type="number" id="categoriaOrdem" value="0">
+                </div>
+                
+                <button type="submit" class="btn-save">Salvar</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        // Funções específicas para categorias
+        let categorias = [];
+        let categoriaEditando = null;
+        
+        async function carregarCategorias() {
+            try {
+                const response = await fetch('http://localhost:3000/api/categorias');
+                categorias = await response.json();
+                exibirCategorias();
+            } catch (error) {
+                console.error('Erro ao carregar categorias:', error);
+            }
+        }
+        
+        function exibirCategorias() {
+            const tbody = document.getElementById('categoriasTable');
+            tbody.innerHTML = categorias.map(c => `
+                <tr>
+                    <td>${c.nome}</td>
+                    <td>${c.ordem || 0}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editarCategoria(${c.id})">Editar</button>
+                        <button class="btn-delete" onclick="excluirCategoria(${c.id})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function abrirModalCategoria() {
+            categoriaEditando = null;
+            document.getElementById('modalTituloCategoria').textContent = 'Nova Categoria';
+            document.getElementById('categoriaNome').value = '';
+            document.getElementById('categoriaOrdem').value = '0';
+            document.getElementById('categoriaModal').style.display = 'block';
+        }
+        
+        function editarCategoria(id) {
+            categoriaEditando = categorias.find(c => c.id === id);
+            document.getElementById('modalTituloCategoria').textContent = 'Editar Categoria';
+            document.getElementById('categoriaNome').value = categoriaEditando.nome;
+            document.getElementById('categoriaOrdem').value = categoriaEditando.ordem || 0;
+            document.getElementById('categoriaModal').style.display = 'block';
+        }
+        
+        async function salvarCategoria() {
+            const nome = document.getElementById('categoriaNome').value;
+            const ordem = document.getElementById('categoriaOrdem').value;
+            
+            const categoria = { nome, ordem: parseInt(ordem) };
+            
+            try {
+                let response;
+                
+                if (categoriaEditando) {
+                    response = await fetch(`http://localhost:3000/api/categorias/${categoriaEditando.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(categoria)
+                    });
+                } else {
+                    response = await fetch('http://localhost:3000/api/categorias', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(categoria)
+                    });
+                }
+                
+                if (response.ok) {
+                    document.getElementById('categoriaModal').style.display = 'none';
+                    await carregarCategorias();
+                } else {
+                    alert('Erro ao salvar categoria');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar categoria:', error);
+                alert('Erro ao salvar categoria');
+            }
+        }
+        
+        async function excluirCategoria(id) {
+            if (!confirm('Tem certeza que deseja excluir esta categoria?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/categorias/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    await carregarCategorias();
+                } else {
+                    alert('Erro ao excluir categoria');
+                }
+            } catch (error) {
+                console.error('Erro ao excluir categoria:', error);
+                alert('Erro ao excluir categoria');
+            }
+        }
+        
+        function fecharModalCategoria() {
+            document.getElementById('categoriaModal').style.display = 'none';
+        }
+        
+        carregarCategorias();
+    </script>
+</body>
+</html>

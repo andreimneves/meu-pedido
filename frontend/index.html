@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>DL Crepes e Lanches - Cardápio Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #C83232, #A02828);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header .slogan {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .header .info {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .header .info span {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .cart-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #C83232;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .cart-count {
+            background: #C83232;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            position: absolute;
+            top: -5px;
+            right: -5px;
+        }
+
+        /* BUSCA */
+        .search-box {
+            padding: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* CATEGORIAS */
+        .categorias {
+            display: flex;
+            overflow-x: auto;
+            padding: 0 15px 15px;
+            gap: 10px;
+        }
+
+        .categoria-btn {
+            padding: 8px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            white-space: nowrap;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .categoria-btn.ativa {
+            background: #C83232;
+            color: white;
+        }
+
+        /* PRODUTOS */
+        .produtos {
+            padding: 0 15px 20px;
+        }
+
+        .produto-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .produto-info h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .produto-preco {
+            color: #C83232;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .btn-adicionar {
+            background: #C83232;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* MODAL DO CARRINHO */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 500px;
+            margin: 30px auto;
+            padding: 25px;
+            border-radius: 15px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        /* ITENS DO CARRINHO */
+        .cart-items {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .cart-item-price {
+            color: #C83232;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .cart-item-remove {
+            color: #C83232;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+
+        .cart-total {
+            text-align: right;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        .cart-total strong {
+            color: #C83232;
+            font-size: 22px;
+        }
+
+        /* FORMULÁRIO BONITO */
+        .form-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .form-row {
+            margin-bottom: 15px;
+        }
+
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .form-row input:focus,
+        .form-row select:focus,
+        .form-row textarea:focus {
+            outline: none;
+            border-color: #C83232;
+        }
+
+        .delivery-options {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .delivery-options label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .delivery-options input[type="radio"] {
+            display: none;
+        }
+
+        .delivery-options input[type="radio"]:checked + label {
+            background: #C83232;
+            color: white;
+            border-color: #C83232;
+        }
+
+        .address-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+        }
+
+        .cep-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .frete-info {
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .whatsapp-btn:hover {
+            background: #128C7E;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header" id="header">
+            <h1 id="nomeLoja">DL Crepes e Lanches</h1>
+            <div class="slogan" id="slogan">Seu refúgio de sabores no coração do Santa Marta</div>
+            <div class="info">
+                <span id="horario">🕒 18h às 23h</span>
+                <span id="endereco">📍 Santa Marta</span>
+            </div>
+            <div class="cart-icon" onclick="abrirCarrinho()">
+                🛒
+                <span class="cart-count" id="cartCount">0</span>
+            </div>
+        </div>
+
+        <!-- BUSCA -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar no cardápio..." onkeyup="filtrarProdutos()">
+        </div>
+
+        <!-- CATEGORIAS -->
+        <div class="categorias" id="categorias">
+            <button class="categoria-btn ativa" onclick="filtrarCategoria('Todos')">Todos</button>
+        </div>
+
+        <!-- PRODUTOS -->
+        <div class="produtos" id="produtos">
+            <div class="loading">Carregando cardápio...</div>
+        </div>
+    </div>
+
+    <!-- MODAL DO CARRINHO -->
+    <div id="cartModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharCarrinho()">&times;</span>
+            <h2>🛒 Seu Carrinho</h2>
+            
+            <div class="cart-items" id="cartItems"></div>
+            
+            <div class="cart-total">
+                <span>Total:</span> <strong>R$ <span id="cartTotal">0,00</span></strong>
+            </div>
+
+            <!-- FORMULÁRIO DE ENTREGA -->
+            <div class="form-section">
+                <h3>📋 Dados para entrega</h3>
+                
+                <div class="delivery-options">
+                    <label>
+                        <input type="radio" name="deliveryType" value="delivery" checked onchange="toggleDelivery(true)">
+                        🚚 Delivery
+                    </label>
+                    <label>
+                        <input type="radio" name="deliveryType" value="pickup" onchange="toggleDelivery(false)">
+                        🏠 Retirada
+                    </label>
+                </div>
+
+                <div id="deliveryFields">
+                    <div class="form-row">
+                        <label>👤 Nome completo *</label>
+                        <input type="text" id="clienteNome" placeholder="Digite seu nome" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>📱 WhatsApp *</label>
+                        <input type="tel" id="clienteTelefone" placeholder="(51) 99999-9999" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>📍 CEP</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;" onblur="buscarCEP()">
+                            <button onclick="buscarCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer;">Buscar</button>
+                        </div>
+                        <div class="cep-info" id="cepInfo"></div>
+                    </div>
+
+                    <div class="address-grid">
+                        <div class="form-row" style="grid-column: 1/-1;">
+                            <label>🏠 Endereço *</label>
+                            <input type="text" id="clienteEndereco" placeholder="Rua, Avenida..." required>
+                        </div>
+                        <div class="form-row">
+                            <label>Número *</label>
+                            <input type="text" id="clienteNumero" placeholder="123" required>
+                        </div>
+                        <div class="form-row">
+                            <label>Bairro *</label>
+                            <input type="text" id="clienteBairro" placeholder="Seu bairro" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>📍 Complemento</label>
+                        <input type="text" id="clienteComplemento" placeholder="Apto, Bloco, Referência...">
+                    </div>
+
+                    <div class="frete-info" id="freteInfo">
+                        🚚 Calculando frete...
+                    </div>
+                </div>
+
+                <div id="pickupFields" style="display: none;">
+                    <div class="form-row">
+                        <label>👤 Nome completo *</label>
+                        <input type="text" id="pickupNome" placeholder="Digite seu nome" required>
+                    </div>
+                    <div class="form-row">
+                        <label>📱 WhatsApp *</label>
+                        <input type="tel" id="pickupTelefone" placeholder="(51) 99999-9999" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label>📝 Observações</label>
+                    <textarea id="observacoes" placeholder="Ex: ponto da carne, tirar cebola, sem salada..." rows="2"></textarea>
+                </div>
+            </div>
+
+            <button class="whatsapp-btn" onclick="finalizarPedido()">
+                📲 Finalizar Pedido no WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURAÇÕES =====
+        const API_URL = 'http://localhost:3000/api';
+        const SUBDOMINIO = 'dlcrepes';
+        
+        // ===== VARIÁVEIS GLOBAIS =====
+        let produtos = [];
+        let carrinho = [];
+        let categoriaAtiva = 'Todos';
+        let produtosFiltrados = [];
+        let configuracoesLoja = {};
+        let taxaFrete = 0;
+
+        // ===== CARREGAR CONFIGURAÇÕES DA LOJA =====
+        async function carregarConfiguracoes() {
+            try {
+                const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
+                configuracoesLoja = await response.json();
+                
+                // Atualizar header com dados da loja
+                document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'DL Crepes e Lanches';
+                document.getElementById('slogan').textContent = configuracoesLoja.slogan || 'Seu refúgio de sabores no coração do Santa Marta';
+                document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || '18h às 23h'}`;
+                document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || 'Santa Marta'}`;
+                
+                // Mudar cor do header
+                if (configuracoesLoja.cor_principal) {
+                    document.querySelector('.header').style.background = `linear-gradient(135deg, ${configuracoesLoja.cor_principal}, ${ajustarCor(configuracoesLoja.cor_principal, -20)})`;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+            }
+        }
+
+        function ajustarCor(hex, percent) {
+            // Função simples para escurecer/clarear cor
+            return hex; // Por enquanto retorna a mesma
+        }
+
+        // ===== CARREGAR PRODUTOS DA API =====
+        async function carregarProdutos() {
+            try {
+                const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`);
+                produtos = await response.json();
+                produtosFiltrados = produtos;
+                exibirProdutos();
+                carregarCategorias();
+            } catch (error) {
+                document.getElementById('produtos').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: red;">
+                        ❌ Erro ao carregar cardápio<br>
+                        Verifique se o servidor está rodando
+                    </div>
+                `;
+            }
+        }
+
+        // ===== CARREGAR CATEGORIAS =====
+        function carregarCategorias() {
+            const categorias = ['Todos', ...new Set(produtos.map(p => p.categoria_nome))];
+            const html = categorias.map(cat => `
+                <button class="categoria-btn ${cat === categoriaAtiva ? 'ativa' : ''}" 
+                        onclick="filtrarCategoria('${cat}')">
+                    ${cat}
+                </button>
+            `).join('');
+            document.getElementById('categorias').innerHTML = html;
+        }
+
+        // ===== FILTRAR POR CATEGORIA =====
+        function filtrarCategoria(categoria) {
+            categoriaAtiva = categoria;
+            carregarCategorias();
+            filtrarProdutos();
+        }
+
+        // ===== FILTRAR POR BUSCA E CATEGORIA =====
+        function filtrarProdutos() {
+            const busca = document.getElementById('searchInput').value.toLowerCase();
+            
+            produtosFiltrados = produtos.filter(p => {
+                const matchCategoria = categoriaAtiva === 'Todos' || p.categoria_nome === categoriaAtiva;
+                const matchBusca = p.nome.toLowerCase().includes(busca);
+                return matchCategoria && matchBusca;
+            });
+            
+            exibirProdutos();
+        }
+
+        // ===== EXIBIR PRODUTOS =====
+        function exibirProdutos() {
+            if (produtosFiltrados.length === 0) {
+                document.getElementById('produtos').innerHTML = '<div style="text-align: center; padding: 20px;">Nenhum produto encontrado</div>';
+                return;
+            }
+            
+            const html = produtosFiltrados.map(p => `
+                <div class="produto-card">
+                    <div class="produto-info">
+                        <h3>${p.nome}</h3>
+                        <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
+                    </div>
+                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome}', ${p.preco})">
+                        Adicionar
+                    </button>
+                </div>
+            `).join('');
+            
+            document.getElementById('produtos').innerHTML = html;
+        }
+
+        // ===== CARRINHO =====
+        function adicionarAoCarrinho(id, nome, preco) {
+            carrinho.push({
+                id: id,
+                nome: nome,
+                preco: preco
+            });
+            atualizarCarrinho();
+            
+            // Feedback visual
+            const btn = event.target;
+            btn.textContent = '✓ Adicionado';
+            btn.style.background = '#4CAF50';
+            setTimeout(() => {
+                btn.textContent = 'Adicionar';
+                btn.style.background = '#C83232';
+            }, 1000);
+        }
+
+        function removerDoCarrinho(index) {
+            carrinho.splice(index, 1);
+            atualizarCarrinho();
+            abrirCarrinho(); // Atualiza a visualização
+        }
+
+        function atualizarCarrinho() {
+            document.getElementById('cartCount').textContent = carrinho.length;
+        }
+
+        // ===== MODAL DO CARRINHO =====
+        function abrirCarrinho() {
+            if (carrinho.length === 0) {
+                document.getElementById('cartItems').innerHTML = '<div style="text-align: center; padding: 20px;">🛒 Carrinho vazio</div>';
+                document.getElementById('cartTotal').textContent = '0,00';
+            } else {
+                const itemsHtml = carrinho.map((item, index) => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.nome}</div>
+                            <div class="cart-item-price">R$ ${item.preco.toFixed(2)}</div>
+                        </div>
+                        <button class="cart-item-remove" onclick="removerDoCarrinho(${index})">&times;</button>
+                    </div>
+                `).join('');
+                
+                document.getElementById('cartItems').innerHTML = itemsHtml;
+                calcularTotal();
+            }
+            document.getElementById('cartModal').style.display = 'block';
+        }
+
+        function fecharCarrinho() {
+            document.getElementById('cartModal').style.display = 'none';
+        }
+
+        function toggleDelivery(isDelivery) {
+            document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
+            document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
+            if (!isDelivery) {
+                taxaFrete = 0;
+                calcularTotal();
+            }
+        }
+
+        // ===== BUSCAR CEP =====
+        async function buscarCEP() {
+            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
+            
+            if (cep.length !== 8) {
+                document.getElementById('cepInfo').innerHTML = '❌ CEP inválido';
+                return;
+            }
+
+            document.getElementById('cepInfo').innerHTML = '🔄 Buscando...';
+
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const dados = await response.json();
+                
+                if (dados.erro) {
+                    document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado';
+                    return;
+                }
+
+                document.getElementById('clienteEndereco').value = dados.logradouro || '';
+                document.getElementById('clienteBairro').value = dados.bairro || '';
+                document.getElementById('cepInfo').innerHTML = '✅ CEP encontrado!';
+                
+                calcularFretePorBairro(dados.bairro);
+                
+            } catch (error) {
+                document.getElementById('cepInfo').innerHTML = '❌ Erro ao buscar CEP';
+            }
+        }
+
+        // ===== CALCULAR FRETE POR BAIRRO =====
+        function calcularFretePorBairro(bairro) {
+            // Simulação de cálculo por bairro
+            const bairros = {
+                'santa marta': 5.00,
+                'centro': 8.00,
+                'camobi': 12.00,
+                'itacorubi': 10.00
+            };
+
+            const bairroLower = bairro ? bairro.toLowerCase() : '';
+            let valorFrete = configuracoesLoja.taxa_minima || 5.00;
+
+            // Verificar se o bairro está na lista
+            for (let [b, valor] of Object.entries(bairros)) {
+                if (bairroLower.includes(b)) {
+                    valorFrete = valor;
+                    break;
+                }
+            }
+
+            taxaFrete = valorFrete;
+            
+            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
+            
+            // Verificar frete grátis
+            if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50)) {
+                taxaFrete = 0;
+                document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
+            } else {
+                document.getElementById('freteInfo').innerHTML = `🚚 Taxa de entrega: R$ ${taxaFrete.toFixed(2)}`;
+            }
+            
+            calcularTotal();
+        }
+
+        function calcularTotal() {
+            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
+            const total = subtotal + taxaFrete;
+            
+            document.getElementById('cartTotal').textContent = total.toFixed(2);
+            
+            // Verificar frete grátis novamente
+            if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50) && taxaFrete > 0) {
+                taxaFrete = 0;
+                document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
+                document.getElementById('cartTotal').textContent = subtotal.toFixed(2);
+            }
+        }
+
+        // ===== FINALIZAR PEDIDO NO WHATSAPP =====
+        function finalizarPedido() {
+            if (carrinho.length === 0) {
+                alert('❌ Carrinho vazio!');
+                return;
+            }
+
+            const tipoEntrega = document.querySelector('input[name="deliveryType"]:checked').value;
+            
+            let nome, telefone;
+            
+            if (tipoEntrega === 'delivery') {
+                nome = document.getElementById('clienteNome').value;
+                telefone = document.getElementById('clienteTelefone').value;
+                
+                if (!nome || !telefone) {
+                    alert('❌ Preencha nome e telefone');
+                    return;
+                }
+            } else {
+                nome = document.getElementById('pickupNome').value;
+                telefone = document.getElementById('pickupTelefone').value;
+                
+                if (!nome || !telefone) {
+                    alert('❌ Preencha nome e telefone');
+                    return;
+                }
+            }
+
+            // Calcular totais
+            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
+            const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
+
+            // Montar mensagem ORGANIZADA com emojis
+            let mensagem = `🍽️ *NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
+            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            mensagem += `👤 *Cliente:* ${nome}\n`;
+            mensagem += `📱 *Contato:* ${telefone}\n\n`;
+            
+            mensagem += `📋 *ITENS DO PEDIDO:*\n`;
+            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            
+            carrinho.forEach(item => {
+                mensagem += `• ${item.nome}\n`;
+                mensagem += `  └─ R$ ${item.preco.toFixed(2)}\n`;
+            });
+            
+            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            mensagem += `💰 *Subtotal:* R$ ${subtotal.toFixed(2)}\n`;
+            
+            if (tipoEntrega === 'delivery') {
+                if (taxaFrete === 0) {
+                    mensagem += `🎉 *Frete:* GRÁTIS\n`;
+                } else {
+                    mensagem += `🚚 *Frete:* R$ ${taxaFrete.toFixed(2)}\n`;
+                }
+                
+                const endereco = document.getElementById('clienteEndereco').value;
+                const numero = document.getElementById('clienteNumero').value;
+                const bairro = document.getElementById('clienteBairro').value;
+                const complemento = document.getElementById('clienteComplemento').value;
+                
+                mensagem += `📍 *Endereço:* ${endereco}, ${numero}`;
+                if (complemento) mensagem += ` - ${complemento}`;
+                mensagem += `\n📍 *Bairro:* ${bairro}`;
+            } else {
+                mensagem += `🏠 *Retirada no local*\n`;
+                mensagem += `📍 *Endereço da loja:* ${configuracoesLoja.endereco_completo || 'Bairro Santa Marta'}`;
+            }
+            
+            mensagem += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
+            mensagem += `💵 *TOTAL:* R$ ${total.toFixed(2)}\n`;
+            
+            const observacoes = tipoEntrega === 'delivery' ? 
+                document.getElementById('observacoes').value : 
+                document.getElementById('observacoes').value;
+            
+            if (observacoes) {
+                mensagem += `\n📝 *Observações:*\n${observacoes}\n`;
+            }
+            
+            mensagem += `\n⏱️ *Horário do pedido:* ${new Date().toLocaleTimeString()}`;
+
+            // Codificar para URL
+            const mensagemCodificada = encodeURIComponent(mensagem);
+            
+            // Número do WhatsApp (das configurações)
+            const whatsappNumber = configuracoesLoja.whatsapp || '5551999999999';
+            
+            // Abrir WhatsApp
+            window.open(`https://wa.me/${whatsappNumber}?text=${mensagemCodificada}`, '_blank');
+            
+            // Limpar carrinho após envio
+            carrinho = [];
+            atualizarCarrinho();
+            fecharCarrinho();
+        }
+
+        // Inicializar
+        carregarConfiguracoes();
+        carregarProdutos();
+    </script>
+
+    // ===== VERIFICAR DISPONIBILIDADE DO DELIVERY =====
+async function verificarDisponibilidadeDelivery() {
+    try {
+        const response = await fetch(`${API_URL}/horarios/disponibilidade/${SUBDOMINIO}`);
+        const data = await response.json();
+        
+        const deliveryOption = document.querySelector('input[value="delivery"]');
+        const pickupOption = document.querySelector('input[value="pickup"]');
+        const freteInfo = document.getElementById('freteInfo');
+        
+        if (!data.disponivel) {
+            // Desabilitar delivery
+            if (deliveryOption) {
+                deliveryOption.disabled = true;
+                deliveryOption.checked = false;
+                pickupOption.checked = true;
+                toggleDelivery(false);
+            }
+            
+            // Mostrar aviso
+            if (freteInfo) {
+                freteInfo.innerHTML = `⚠️ ${data.mensagem}`;
+                freteInfo.classList.add('aviso');
+            }
+        } else {
+            // Habilitar delivery
+            if (deliveryOption) {
+                deliveryOption.disabled = false;
+            }
+            if (freteInfo) {
+                freteInfo.classList.remove('aviso');
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao verificar disponibilidade:', error);
+    }
+}
+
+// ===== EXIBIR MENSAGEM PERSONALIZADA =====
+function exibirMensagemPersonalizada() {
+    if (configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
+        const header = document.querySelector('.header');
+        const mensagemDiv = document.createElement('div');
+        mensagemDiv.className = 'mensagem-personalizada';
+        mensagemDiv.style.background = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
+        mensagemDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
+        mensagemDiv.style.padding = '10px 20px';
+        mensagemDiv.style.textAlign = 'center';
+        mensagemDiv.style.fontSize = '14px';
+        mensagemDiv.style.display = 'flex';
+        mensagemDiv.style.alignItems = 'center';
+        mensagemDiv.style.justifyContent = 'center';
+        mensagemDiv.style.gap = '10px';
+        
+        mensagemDiv.innerHTML = `
+            <span style="font-size: 20px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
+            <span>${configuracoesLoja.mensagem_banner}</span>
+        `;
+        
+        header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
+    }
+}
+
+// Chamar estas funções depois de carregar as configurações
+// No final da função carregarConfiguracoes(), adicione:
+// await verificarDisponibilidadeDelivery();
+// exibirMensagemPersonalizada();
+
+</body>
+</html>
