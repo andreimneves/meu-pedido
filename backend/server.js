@@ -26,30 +26,35 @@ const configRoutes = require('./src/routes/config');
 const horarioRoutes = require('./src/routes/horarios');
 const pedidoRoutes = require('./src/routes/pedidos');
 
-// ===== REGISTRO DAS ROTAS =====
+// ===== MIDDLEWARE DE DEBUG PARA VER TODAS AS REQUISIÇÕES =====
+app.use((req, res, next) => {
+    console.log(`📨 [${req.method}] ${req.originalUrl}`);
+    next();
+});
+
+// ===== REGISTRO DAS ROTAS COM O PADRÃO CORRETO =====
+// IMPORTANTE: O padrão /api/pedidos/:subdominio passa o :subdominio como parâmetro
+// para o router, que precisa de mergeParams:true para enxergá-lo
+app.use('/api/pedidos/:subdominio', pedidoRoutes);  // A ordem aqui não importa tanto
+
+// Outras rotas (que não precisam de mergeParams)
 app.use('/api', produtoRoutes);
 app.use('/api', categoriaRoutes);
 app.use('/api', configRoutes);
 app.use('/api', horarioRoutes);
-app.use('/api', pedidoRoutes);
 
-// ===== ROTA DE TESTE =====
-app.get('/', (req, res) => {
-    res.json({ 
-        mensagem: '🚀 Sistema Meu Pedido funcionando!',
-        versao: '1.0.0',
-        status: 'online',
+// ===== ROTA DE DEBUG GERAL =====
+app.get('/api/debug', (req, res) => {
+    res.json({
+        mensagem: 'API funcionando',
         rotas_disponiveis: [
-            '/api/produtos',
-            '/api/categorias',
-            '/api/config/:subdominio',
-            '/api/horarios/:subdominio',
-            '/api/horarios/disponibilidade/:subdominio',
-            '/api/pedidos (POST)',
-            '/api/pedidos/:subdominio (GET)',
-            '/api/pedidos/:subdominio/:id (GET)',
-            '/api/pedidos/:subdominio/:id/status (PUT)',
-            '/api/dashboard/:subdominio (GET)'
+            'GET /api/debug',
+            'GET /api/pedidos/:subdominio',
+            'GET /api/pedidos/:subdominio/:id',
+            'PUT /api/pedidos/:subdominio/:id/status',
+            'DELETE /api/pedidos/:subdominio/:id',
+            'POST /api/pedidos/:subdominio',
+            'GET /api/dashboard/:subdominio'
         ]
     });
 });
@@ -108,4 +113,28 @@ app.listen(PORT, () => {
     console.log('   - DELETE /api/pedidos/:subdominio/:id');
     console.log('   - GET  /api/dashboard/:subdominio');
     console.log('='.repeat(50));
+});
+
+// ENDPOINT DE DIAGNÓSTICO - REMOVA DEPOIS
+app.get('/api/diagnostico', (req, res) => {
+    const rotas = [];
+    
+    // Função para extrair rotas registradas (simplificado)
+    function listarRotas(stack, basePath = '') {
+        stack.forEach(layer => {
+            if (layer.route) {
+                const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+                rotas.push(`${methods} ${basePath}${layer.route.path}`);
+            } else if (layer.name === 'router' && layer.handle.stack) {
+                listarRotas(layer.handle.stack, basePath + (layer.regexp.source.replace('\\/?(?=\\/|$)', '').replace(/\\\//g, '/').replace(/\^/g, '').replace(/\?/g, '')));
+            }
+        });
+    }
+    
+    listarRotas(app._router.stack);
+    
+    res.json({
+        mensagem: 'Rotas registradas',
+        rotas: rotas.sort()
+    });
 });
