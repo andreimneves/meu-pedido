@@ -122,11 +122,14 @@
             <h1>📋 Pedidos</h1>
             
             <div class="filtros">
-                <button class="filtro-btn active" onclick="filtrarPedidos('todos')">Todos</button>
-                <button class="filtro-btn" onclick="filtrarPedidos('novo')">Novos</button>
-                <button class="filtro-btn" onclick="filtrarPedidos('preparando')">Preparando</button>
-                <button class="filtro-btn" onclick="filtrarPedidos('pronto')">Pronto</button>
-                <button class="filtro-btn" onclick="filtrarPedidos('entregue')">Entregue</button>
+                <div class="filtros">
+                    <button class="filtro-btn active" onclick="filtrarPedidos('todos')">Todos</button>
+                    <button class="filtro-btn" onclick="filtrarPedidos('novo')">Novos</button>
+                    <button class="filtro-btn" onclick="filtrarPedidos('preparando')">Preparando</button>
+                    <button class="filtro-btn" onclick="filtrarPedidos('pronto')">Pronto</button>
+                    <button class="filtro-btn" onclick="filtrarPedidos('entregue')">Entregue</button>
+                    <button class="filtro-btn" onclick="filtrarPedidos('cancelado')">Cancelado</button>
+                </div>
             </div>
             
             <div id="pedidosList">
@@ -136,139 +139,185 @@
     </div>
 
     <script>
-        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
-        const SUBDOMINIO = 'dlcrepes';
-        let todosPedidos = [];
-        let filtroAtual = 'todos';
+    const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+    const SUBDOMINIO = 'dlcrepes';
+    let todosPedidos = [];
+    let filtroAtual = 'todos';
 
-        // Logout
-        function logout() {
-            localStorage.removeItem('adminLogado');
-            window.location.href = 'index.html';
-        }
+    // Logout
+    function logout() {
+        localStorage.removeItem('adminLogado');
+        window.location.href = 'index.html';
+    }
 
-        // Verificar login
-        if (!localStorage.getItem('adminLogado')) {
-            window.location.href = 'index.html';
-        }
+    // Verificar login
+    if (!localStorage.getItem('adminLogado')) {
+        window.location.href = 'index.html';
+    }
 
-        // Carregar pedidos
-        async function carregarPedidos() {
-            try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
-                todosPedidos = await response.json();
-                filtrarPedidos(filtroAtual);
-            } catch (error) {
-                document.getElementById('pedidosList').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: red;">
-                        ❌ Erro ao carregar pedidos: ${error.message}
-                    </div>
-                `;
+    // Carregar pedidos
+    async function carregarPedidos() {
+        try {
+            const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        }
-
-        // Filtrar pedidos
-        function filtrarPedidos(filtro) {
-            filtroAtual = filtro;
+            todosPedidos = await response.json();
+            console.log('Pedidos carregados:', todosPedidos);
+            exibirPedidos(todosPedidos);
             
-            // Atualizar botões
+            // Atualizar botão ativo
             document.querySelectorAll('.filtro-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            let pedidosFiltrados = todosPedidos;
-            if (filtro !== 'todos') {
-                pedidosFiltrados = todosPedidos.filter(p => p.status === filtro);
-            }
-            
-            exibirPedidos(pedidosFiltrados);
-        }
-
-        // Exibir pedidos
-        function exibirPedidos(pedidos) {
-            const lista = document.getElementById('pedidosList');
-            
-            if (pedidos.length === 0) {
-                lista.innerHTML = '<div style="text-align: center; padding: 40px;">Nenhum pedido encontrado</div>';
-                return;
-            }
-            
-            const html = pedidos.map(p => {
-                const data = new Date(p.data_pedido).toLocaleString('pt-BR');
-                const statusClass = `status-${p.status}`;
-                
-                return `
-                    <div class="pedido-card" data-id="${p.id}">
-                        <div class="pedido-header">
-                            <span class="pedido-id">Pedido #${p.id}</span>
-                            <span class="pedido-data">${data}</span>
-                        </div>
-                        <div class="pedido-cliente">👤 ${p.cliente_nome}</div>
-                        <div class="pedido-telefone">📱 ${p.cliente_telefone}</div>
-                        ${p.cliente_endereco ? `<div>📍 ${p.cliente_endereco}</div>` : ''}
-                        ${p.cliente_bairro ? `<div>🏘️ ${p.cliente_bairro}</div>` : ''}
-                        <div class="pedido-itens">
-                            ${p.itens ? p.itens.map(item => `
-                                <div class="pedido-item">
-                                    <span>${item.produto_nome} x${item.quantidade}</span>
-                                    <span>R$ ${item.preco_unitario.toFixed(2)}</span>
-                                </div>
-                            `).join('') : 'Carregando itens...'}
-                        </div>
-                        <div class="pedido-total">
-                            Total: R$ ${p.total.toFixed(2)}
-                        </div>
-                        <div class="pedido-actions">
-                            <select class="btn-status" onchange="atualizarStatus(${p.id}, this.value)" style="background: ${getStatusColor(p.status)}; color: white;">
-                                <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>📥 Novo</option>
-                                <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>👨‍🍳 Preparando</option>
-                                <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>✅ Pronto</option>
-                                <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>🚚 Entregue</option>
-                                <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>❌ Cancelado</option>
-                            </select>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            lista.innerHTML = html;
-        }
-
-        function getStatusColor(status) {
-            const cores = {
-                'novo': '#ff9800',
-                'preparando': '#2196F3',
-                'pronto': '#4CAF50',
-                'entregue': '#9C27B0',
-                'cancelado': '#f44336'
-            };
-            return cores[status] || '#999';
-        }
-
-        async function atualizarStatus(pedidoId, novoStatus) {
-            try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
-                });
-                
-                if (response.ok) {
-                    await carregarPedidos();
+                if (btn.getAttribute('onclick')?.includes(filtroAtual)) {
+                    btn.classList.add('active');
                 } else {
-                    alert('Erro ao atualizar status');
+                    btn.classList.remove('active');
                 }
-            } catch (error) {
-                alert('Erro de conexão');
+            });
+            
+        } catch (error) {
+            console.error('Erro ao carregar pedidos:', error);
+            document.getElementById('pedidosList').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: red;">
+                    ❌ Erro ao carregar pedidos: ${error.message}<br>
+                    Verifique se o backend está rodando em ${API_URL}
+                </div>
+            `;
+        }
+    }
+
+    // Filtrar pedidos (CORRIGIDO - sem usar event)
+    function filtrarPedidos(filtro) {
+        filtroAtual = filtro;
+        
+        // Atualizar botões manualmente
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Adicionar classe active ao botão clicado
+        const botoes = document.querySelectorAll('.filtro-btn');
+        for (let btn of botoes) {
+            if (btn.textContent.toLowerCase() === filtro || 
+                (filtro === 'todos' && btn.textContent === 'Todos')) {
+                btn.classList.add('active');
+                break;
             }
         }
-
-        // Carregar pedidos ao iniciar
-        carregarPedidos();
         
-        // Atualizar a cada 30 segundos
-        setInterval(carregarPedidos, 30000);
-    </script>
-</body>
-</html>
+        let pedidosFiltrados = todosPedidos;
+        if (filtro !== 'todos') {
+            pedidosFiltrados = todosPedidos.filter(p => p.status === filtro);
+        }
+        
+        exibirPedidos(pedidosFiltrados);
+    }
+
+    // Função para buscar itens do pedido (se necessário)
+    async function buscarItensPedido(pedidoId) {
+        try {
+            const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`);
+            const pedido = await response.json();
+            return pedido.itens || [];
+        } catch (error) {
+            console.error('Erro ao buscar itens:', error);
+            return [];
+        }
+    }
+
+    // Exibir pedidos
+    async function exibirPedidos(pedidos) {
+        const lista = document.getElementById('pedidosList');
+        
+        if (pedidos.length === 0) {
+            lista.innerHTML = '<div style="text-align: center; padding: 40px;">Nenhum pedido encontrado</div>';
+            return;
+        }
+        
+        // Para cada pedido, buscar os itens
+        const pedidosComItens = await Promise.all(pedidos.map(async (p) => {
+            try {
+                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${p.id}`);
+                const pedidoCompleto = await response.json();
+                return pedidoCompleto;
+            } catch (error) {
+                return { ...p, itens: [] };
+            }
+        }));
+        
+        const html = pedidosComItens.map(p => {
+            const data = new Date(p.data_pedido).toLocaleString('pt-BR');
+            
+            return `
+                <div class="pedido-card" data-id="${p.id}">
+                    <div class="pedido-header">
+                        <span class="pedido-id">Pedido #${p.id}</span>
+                        <span class="pedido-data">${data}</span>
+                    </div>
+                    <div class="pedido-cliente">👤 ${p.cliente_nome}</div>
+                    <div class="pedido-telefone">📱 ${p.cliente_telefone}</div>
+                    ${p.cliente_endereco ? `<div>📍 ${p.cliente_endereco}</div>` : ''}
+                    ${p.cliente_bairro ? `<div>🏘️ ${p.cliente_bairro}</div>` : ''}
+                    <div class="pedido-itens">
+                        ${p.itens && p.itens.length > 0 ? p.itens.map(item => `
+                            <div class="pedido-item">
+                                <span>${item.produto_nome} x${item.quantidade}</span>
+                                <span>R$ ${parseFloat(item.preco_unitario).toFixed(2)}</span>
+                            </div>
+                        `).join('') : '<div>Nenhum item encontrado</div>'}
+                    </div>
+                    <div class="pedido-total">
+                        Total: R$ ${parseFloat(p.total).toFixed(2)}
+                    </div>
+                    <div class="pedido-actions">
+                        <select class="btn-status" onchange="atualizarStatus(${p.id}, this.value)" style="background: ${getStatusColor(p.status)}; color: white; padding: 8px; border: none; border-radius: 5px; cursor: pointer;">
+                            <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>📥 Novo</option>
+                            <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>👨‍🍳 Preparando</option>
+                            <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>✅ Pronto</option>
+                            <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>🚚 Entregue</option>
+                            <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>❌ Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        lista.innerHTML = html;
+    }
+
+    function getStatusColor(status) {
+        const cores = {
+            'novo': '#ff9800',
+            'preparando': '#2196F3',
+            'pronto': '#4CAF50',
+            'entregue': '#9C27B0',
+            'cancelado': '#f44336'
+        };
+        return cores[status] || '#999';
+    }
+
+    async function atualizarStatus(pedidoId, novoStatus) {
+        try {
+            const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: novoStatus })
+            });
+            
+            if (response.ok) {
+                await carregarPedidos();
+            } else {
+                const erro = await response.json();
+                alert('Erro ao atualizar status: ' + (erro.erro || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            alert('Erro de conexão: ' + error.message);
+        }
+    }
+
+    // Carregar pedidos ao iniciar
+    carregarPedidos();
+    
+    // Atualizar a cada 30 segundos
+    setInterval(carregarPedidos, 30000);
+</script>
