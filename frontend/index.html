@@ -523,10 +523,10 @@
                     </div>
 
                     <div class="form-row">
-                        <label>📍 CEP</label>
+                        <label>📍 CEP *</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;">
-                            <button onclick="buscarCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Buscar</button>
+                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;" onblur="calcularFretePorCEP()">
+                            <button type="button" onclick="calcularFretePorCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Calcular Frete</button>
                         </div>
                         <div class="cep-info" id="cepInfo"></div>
                     </div>
@@ -552,7 +552,7 @@
                     </div>
 
                     <div class="frete-info" id="freteInfo">
-                        🚚 Informe seu CEP para calcular o frete
+                        👆 Informe seu CEP para calcular o frete
                     </div>
                 </div>
 
@@ -591,6 +591,7 @@
         let produtosFiltrados = [];
         let configuracoesLoja = {};
         let taxaFrete = 0;
+        let distanciaKm = 0;
 
         // ===== CARREGAR CONFIGURAÇÕES DA LOJA =====
         async function carregarConfiguracoes() {
@@ -758,65 +759,112 @@
             document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
             if (!isDelivery) {
                 taxaFrete = 0;
+                distanciaKm = 0;
                 calcularTotal();
             }
         }
 
-        // ===== BUSCAR CEP =====
-        async function buscarCEP() {
-            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
+        // ===== CALCULAR FRETE POR CEP =====
+        async function calcularFretePorCEP() {
+            const cepCliente = document.getElementById('cepInput').value.replace(/\D/g, '');
             
-            if (cep.length !== 8) {
-                document.getElementById('cepInfo').innerHTML = '❌ CEP inválido';
+            if (cepCliente.length !== 8) {
+                document.getElementById('cepInfo').innerHTML = '❌ Digite um CEP válido com 8 números';
                 return;
             }
 
-            document.getElementById('cepInfo').innerHTML = '🔄 Buscando...';
+            const cepLoja = configuracoesLoja.cep_loja?.replace(/\D/g, '') || '97000000';
+            
+            document.getElementById('cepInfo').innerHTML = '🔄 Calculando distância e frete...';
 
             try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const dados = await response.json();
+                // Buscar coordenadas do CEP do cliente
+                const responseCliente = await fetch(`https://viacep.com.br/ws/${cepCliente}/json/`);
+                const dadosCliente = await response.json();
                 
-                if (dados.erro) {
+                if (dadosCliente.erro) {
                     document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado';
                     return;
                 }
 
-                document.getElementById('clienteEndereco').value = dados.logradouro || '';
-                document.getElementById('clienteBairro').value = dados.bairro || '';
-                document.getElementById('cepInfo').innerHTML = '✅ CEP encontrado!';
+                // Buscar coordenadas do CEP da loja
+                const responseLoja = await fetch(`https://viacep.com.br/ws/${cepLoja}/json/`);
+                const dadosLoja = await responseLoja.json();
+
+                // Preencher endereço automaticamente
+                document.getElementById('clienteEndereco').value = dadosCliente.logradouro || '';
+                document.getElementById('clienteBairro').value = dadosCliente.bairro || '';
+
+                // Calcular distância aproximada baseada nos primeiros dígitos do CEP
+                // Quanto mais próximos os primeiros dígitos, menor a distância
+                const prefixoCliente = parseInt(cepCliente.substring(0, 5));
+                const prefixoLoja = parseInt(cepLoja.substring(0, 5));
                 
-                calcularFrete();
+                // Calcular diferença absoluta
+                const diferenca = Math.abs(prefixoCliente - prefixoLoja);
+                
+                // Converter diferença em km aproximado
+                // Região metropolitana: diferença pequena = poucos km
+                // Outras regiões: diferença maior = mais km
+                if (diferenca < 100) {
+                    distanciaKm = 3 + (diferenca / 50);
+                } else if (diferenca < 500) {
+                    distanciaKm = 8 + (diferenca / 100);
+                } else {
+                    distanciaKm = 20 + (diferenca / 200);
+                }
+
+                // Limitar a distância máxima para entrega
+                const kmMaximo = configuracoesLoja.km_maximo_entrega || 30;
+                
+                if (distanciaKm > kmMaximo) {
+                    document.getElementById('freteInfo').innerHTML = `❌ Distância muito grande (${distanciaKm.toFixed(1)} km). Não entregamos nesta região.`;
+                    document.getElementById('freteInfo').className = 'frete-info erro';
+                    
+                    // Desabilitar delivery
+                    const deliveryOption = document.getElementById('deliveryOption');
+                    if (deliveryOption) {
+                        deliveryOption.disabled = true;
+                        deliveryOption.checked = false;
+                        document.getElementById('pickupOption').checked = true;
+                        toggleDelivery(false);
+                    }
+                    return;
+                }
+
+                // Calcular frete baseado nas configurações
+                const taxaPorKm = configuracoesLoja.taxa_por_km || 2.00;
+                const taxaMinima = configuracoesLoja.taxa_minima || 5.00;
+                
+                let freteCalculado = distanciaKm * taxaPorKm;
+                
+                // Aplicar taxa mínima
+                if (freteCalculado < taxaMinima) {
+                    freteCalculado = taxaMinima;
+                }
+                
+                taxaFrete = freteCalculado;
+                
+                // Verificar frete grátis por valor do pedido
+                const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
+                const freteGratisAcima = configuracoesLoja.frete_gratis_acima || 50;
+                
+                if (subtotal >= freteGratisAcima) {
+                    taxaFrete = 0;
+                    document.getElementById('freteInfo').innerHTML = `🎉 Frete grátis! (Distância: ${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').className = 'frete-info';
+                } else {
+                    document.getElementById('freteInfo').innerHTML = `🚚 Frete: R$ ${taxaFrete.toFixed(2)} (${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').className = 'frete-info';
+                }
+                
+                document.getElementById('cepInfo').innerHTML = '✅ CEP válido!';
+                calcularTotal();
                 
             } catch (error) {
-                document.getElementById('cepInfo').innerHTML = '❌ Erro ao buscar CEP';
+                console.error('Erro ao calcular frete:', error);
+                document.getElementById('cepInfo').innerHTML = '❌ Erro ao calcular frete. Tente novamente.';
             }
-        }
-
-        // ===== CALCULAR FRETE =====
-        function calcularFrete() {
-            // Simulação simples de frete
-            const bairro = document.getElementById('clienteBairro').value.toLowerCase();
-            
-            if (bairro.includes('santa marta')) {
-                taxaFrete = 5.00;
-            } else if (bairro.includes('centro')) {
-                taxaFrete = 8.00;
-            } else {
-                taxaFrete = configuracoesLoja.taxa_minima || 10.00;
-            }
-            
-            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
-            
-            // Verificar frete grátis
-            if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50)) {
-                taxaFrete = 0;
-                document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
-            } else {
-                document.getElementById('freteInfo').innerHTML = `🚚 Taxa de entrega: R$ ${taxaFrete.toFixed(2)}`;
-            }
-            
-            calcularTotal();
         }
 
         function calcularTotal() {
@@ -877,9 +925,12 @@
             if (tipoEntrega === 'delivery') {
                 nome = document.getElementById('clienteNome').value;
                 telefone = document.getElementById('clienteTelefone').value;
+                const endereco = document.getElementById('clienteEndereco').value;
+                const numero = document.getElementById('clienteNumero').value;
+                const bairro = document.getElementById('clienteBairro').value;
                 
-                if (!nome || !telefone) {
-                    alert('❌ Preencha nome e telefone para entrega');
+                if (!nome || !telefone || !endereco || !numero || !bairro) {
+                    alert('❌ Preencha todos os campos obrigatórios para entrega');
                     return;
                 }
             } else {
@@ -916,9 +967,17 @@
             
             if (tipoEntrega === 'delivery') {
                 if (taxaFrete === 0) {
-                    mensagem += `🎉 *Frete:* GRÁTIS\n`;
+                    mensagem += `🎉 *Frete:* GRÁTIS`;
+                    if (distanciaKm > 0) {
+                        mensagem += ` (${distanciaKm.toFixed(1)} km)`;
+                    }
+                    mensagem += `\n`;
                 } else {
-                    mensagem += `🚚 *Frete:* R$ ${taxaFrete.toFixed(2)}\n`;
+                    mensagem += `🚚 *Frete:* R$ ${taxaFrete.toFixed(2)}`;
+                    if (distanciaKm > 0) {
+                        mensagem += ` (${distanciaKm.toFixed(1)} km)`;
+                    }
+                    mensagem += `\n`;
                 }
                 
                 const endereco = document.getElementById('clienteEndereco').value;
@@ -928,7 +987,8 @@
                 
                 mensagem += `📍 *Endereço:* ${endereco}, ${numero}`;
                 if (complemento) mensagem += ` - ${complemento}`;
-                mensagem += `\n📍 *Bairro:* ${bairro}`;
+                mensagem += `\n📍 *Bairro:* ${bairro}\n`;
+                mensagem += `📍 *CEP:* ${document.getElementById('cepInput').value}\n`;
             } else {
                 mensagem += `🏠 *Retirada no local*\n`;
             }
@@ -958,9 +1018,18 @@
 
         // ===== INICIALIZAR =====
         window.onload = async function() {
+            console.log('Inicializando sistema...');
             await carregarConfiguracoes();
             await carregarProdutos();
             await verificarDisponibilidadeDelivery();
+            
+            // Garantir que a mensagem seja exibida após carregar as configurações
+            setTimeout(() => {
+                if (configuracoesLoja.mensagem_banner_ativo) {
+                    console.log('Exibindo mensagem:', configuracoesLoja.mensagem_banner);
+                    exibirMensagemPersonalizada();
+                }
+            }, 500);
         };
     </script>
 </body>
