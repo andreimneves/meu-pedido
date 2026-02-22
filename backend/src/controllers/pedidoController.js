@@ -2,13 +2,24 @@
 const pool = require('../config/database');
 
 const pedidoController = {
-    // Criar um novo pedido (POST /api/pedidos)
+    // ===== CRIAR NOVO PEDIDO =====
     async criarPedido(req, res) {
+        console.log('🔍 [POST] /api/pedidos - Recebendo requisição');
+        console.log('📦 Body:', req.body);
+        
         const client = await pool.connect();
         try {
             const { subdominio, pedido } = req.body;
             
-            console.log('📦 Recebendo novo pedido:', { subdominio, pedido });
+            // Validações básicas
+            if (!subdominio) {
+                return res.status(400).json({ erro: 'subdominio é obrigatório' });
+            }
+            if (!pedido || !pedido.cliente_nome || !pedido.cliente_telefone || !pedido.itens) {
+                return res.status(400).json({ erro: 'Dados do pedido incompletos' });
+            }
+            
+            console.log(`📦 Processando pedido para: ${subdominio}`);
             
             await client.query('BEGIN');
             
@@ -24,6 +35,7 @@ const pedidoController = {
             }
             
             const tenantId = tenantQuery.rows[0].id;
+            console.log(`✅ Tenant encontrado: ID ${tenantId}`);
             
             // Inserir o pedido
             const pedidoQuery = await client.query(
@@ -39,7 +51,7 @@ const pedidoController = {
                     pedido.cliente_telefone,
                     pedido.cliente_endereco || '',
                     pedido.cliente_bairro || '',
-                    pedido.tipo_entrega,
+                    pedido.tipo_entrega || 'delivery',
                     pedido.taxa_entrega || 0,
                     pedido.subtotal,
                     pedido.total,
@@ -49,6 +61,7 @@ const pedidoController = {
             );
             
             const pedidoId = pedidoQuery.rows[0].id;
+            console.log(`📝 Pedido #${pedidoId} criado`);
             
             // Inserir os itens do pedido
             for (const item of pedido.itens) {
@@ -59,11 +72,11 @@ const pedidoController = {
                     ) VALUES ($1, $2, $3, $4, $5, $6)`,
                     [
                         pedidoId,
-                        item.produto_id,
+                        item.produto_id || null,
                         item.produto_nome,
-                        item.quantidade,
+                        item.quantidade || 1,
                         item.preco_unitario,
-                        item.subtotal
+                        item.subtotal || (item.preco_unitario * (item.quantidade || 1))
                     ]
                 );
             }
@@ -86,10 +99,17 @@ const pedidoController = {
         }
     },
     
-    // Listar pedidos (GET /api/pedidos/:subdominio)
+    // ===== LISTAR PEDIDOS =====
     async listarPedidos(req, res) {
+        console.log('🔍 [GET] /api/pedidos/:subdominio - Recebendo requisição');
+        console.log('📦 Parâmetros:', req.params);
+        
         try {
             const { subdominio } = req.params;
+            
+            if (!subdominio) {
+                return res.status(400).json({ erro: 'subdominio é obrigatório' });
+            }
             
             console.log(`📋 Listando pedidos para: ${subdominio}`);
             
@@ -123,10 +143,17 @@ const pedidoController = {
         }
     },
     
-    // Buscar um pedido específico com seus itens (GET /api/pedidos/:subdominio/:id)
+    // ===== BUSCAR PEDIDO ESPECÍFICO =====
     async buscarPedido(req, res) {
+        console.log('🔍 [GET] /api/pedidos/:subdominio/:id - Recebendo requisição');
+        console.log('📦 Parâmetros:', req.params);
+        
         try {
             const { subdominio, id } = req.params;
+            
+            if (!subdominio || !id) {
+                return res.status(400).json({ erro: 'subdominio e id são obrigatórios' });
+            }
             
             console.log(`🔍 Buscando pedido #${id} para: ${subdominio}`);
             
@@ -168,19 +195,38 @@ const pedidoController = {
         }
     },
     
-    // Atualizar status do pedido (PUT /api/pedidos/:subdominio/:id/status)
+    // ===== ATUALIZAR STATUS DO PEDIDO =====
     async atualizarStatus(req, res) {
+        console.log('🔍 [PUT] /api/pedidos/:subdominio/:id/status - REQUISIÇÃO RECEBIDA');
+        console.log('📦 Parâmetros:', req.params);
+        console.log('📦 Body:', req.body);
+        
         try {
             const { subdominio, id } = req.params;
             const { status } = req.body;
             
-            console.log(`🔄 Atualizando pedido #${id} para status: ${status}`);
+            // Validações
+            if (!subdominio || !id) {
+                console.log('❌ subdominio ou id ausentes');
+                return res.status(400).json({ erro: 'subdominio e id são obrigatórios' });
+            }
+            
+            if (!status) {
+                console.log('❌ status ausente no body');
+                return res.status(400).json({ erro: 'status é obrigatório' });
+            }
             
             // Validar status
             const statusValidos = ['novo', 'preparando', 'pronto', 'entregue', 'cancelado'];
             if (!statusValidos.includes(status)) {
-                return res.status(400).json({ erro: 'Status inválido' });
+                console.log(`❌ Status inválido: ${status}`);
+                return res.status(400).json({ 
+                    erro: 'Status inválido',
+                    statusValidos: statusValidos 
+                });
             }
+            
+            console.log(`🔄 Atualizando pedido #${id} para status: ${status}`);
             
             // Buscar tenant_id pelo subdomínio
             const tenantQuery = await pool.query(
@@ -189,10 +235,12 @@ const pedidoController = {
             );
             
             if (tenantQuery.rows.length === 0) {
+                console.log(`❌ Tenant não encontrado: ${subdominio}`);
                 return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
             }
             
             const tenantId = tenantQuery.rows[0].id;
+            console.log(`✅ Tenant encontrado: ID ${tenantId}`);
             
             // Atualizar o status do pedido
             const result = await pool.query(
@@ -204,6 +252,7 @@ const pedidoController = {
             );
             
             if (result.rows.length === 0) {
+                console.log(`❌ Pedido #${id} não encontrado para tenant ${tenantId}`);
                 return res.status(404).json({ erro: 'Pedido não encontrado' });
             }
             
@@ -216,14 +265,24 @@ const pedidoController = {
             
         } catch (error) {
             console.error('❌ Erro ao atualizar status:', error);
-            res.status(500).json({ erro: error.message });
+            res.status(500).json({ 
+                erro: 'Erro interno no servidor',
+                detalhe: error.message 
+            });
         }
     },
     
-    // Excluir pedido (DELETE /api/pedidos/:subdominio/:id)
+    // ===== EXCLUIR PEDIDO =====
     async excluirPedido(req, res) {
+        console.log('🔍 [DELETE] /api/pedidos/:subdominio/:id - Recebendo requisição');
+        console.log('📦 Parâmetros:', req.params);
+        
         try {
             const { subdominio, id } = req.params;
+            
+            if (!subdominio || !id) {
+                return res.status(400).json({ erro: 'subdominio e id são obrigatórios' });
+            }
             
             console.log(`🗑️ Excluindo pedido #${id}`);
             
@@ -248,7 +307,7 @@ const pedidoController = {
                 return res.status(404).json({ erro: 'Pedido não encontrado' });
             }
             
-            // Excluir itens do pedido (ON DELETE CASCADE deve cuidar disso, mas vamos garantir)
+            // Excluir itens do pedido
             await pool.query('DELETE FROM itens_pedido WHERE pedido_id = $1', [id]);
             
             // Excluir pedido
@@ -264,10 +323,17 @@ const pedidoController = {
         }
     },
     
-    // Dashboard com resumo dos pedidos (GET /api/dashboard/:subdominio)
+    // ===== RESUMO DASHBOARD =====
     async resumoDashboard(req, res) {
+        console.log('🔍 [GET] /api/dashboard/:subdominio - Recebendo requisição');
+        console.log('📦 Parâmetros:', req.params);
+        
         try {
             const { subdominio } = req.params;
+            
+            if (!subdominio) {
+                return res.status(400).json({ erro: 'subdominio é obrigatório' });
+            }
             
             console.log(`📊 Gerando dashboard para: ${subdominio}`);
             
