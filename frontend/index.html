@@ -70,6 +70,31 @@
             border-radius: 20px;
         }
 
+        /* Suporte WhatsApp */
+        .suporte-whatsapp {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .suporte-whatsapp:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .suporte-whatsapp img {
+            width: 20px;
+            height: 20px;
+            filter: brightness(0) invert(1);
+        }
+
         .cart-icon {
             position: absolute;
             top: 20px;
@@ -531,6 +556,13 @@
                 <span id="horario">🕒 18h às 23h</span>
                 <span id="endereco">📍 Santa Marta</span>
             </div>
+            
+            <!-- Link de suporte WhatsApp -->
+            <div class="suporte-whatsapp" id="suporteWhatsapp" onclick="abrirWhatsappSuporte()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
+                <span>Tem alguma dúvida ou algo não funcionou? Conte com a gente! 💬</span>
+            </div>
+            
             <div class="cart-icon" onclick="abrirCarrinho()">
                 🛒
                 <span class="cart-count" id="cartCount">0</span>
@@ -1005,7 +1037,7 @@
             const avisoDiv = document.getElementById('avisoDelivery');
             
             // Gerar opções de horários para agendamento
-            const horariosOptions = gerarOpcoesHorarios();
+            gerarOpcoesHorarios();
             
             avisoDiv.innerHTML = `
                 <div class="aviso-box">
@@ -1119,6 +1151,13 @@
             } catch (error) {
                 console.error('Erro ao verificar disponibilidade:', error);
             }
+        }
+
+        // ===== ABRIR WHATSAPP DE SUPORTE =====
+        function abrirWhatsappSuporte() {
+            const numero = configuracoesLoja.whatsapp || '5551999999999';
+            const mensagem = encodeURIComponent('Olá! Preciso de ajuda com o pedido. 😊');
+            window.open(`https://wa.me/${numero}?text=${mensagem}`, '_blank');
         }
 
         // ===== FINALIZAR PEDIDO NO WHATSAPP =====
