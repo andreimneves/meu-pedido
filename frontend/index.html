@@ -1252,7 +1252,7 @@
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
 
-            // ===== Salvar pedido no banco de dados =====
+            // ===== SALVAR PEDIDO NO BANCO DE DADOS =====
             try {
                 console.log('💾 Salvando pedido no banco...', dadosPedido);
                 
@@ -1267,14 +1267,17 @@
                     })
                 });
                 
+                const responseData = await response.json();
+                
                 if (response.ok) {
-                    console.log('✅ Pedido salvo com sucesso!');
+                    console.log('✅ Pedido salvo com sucesso! ID:', responseData.pedido_id);
                 } else {
-                    console.error('❌ Erro ao salvar pedido:', await response.text());
+                    console.error('❌ Erro ao salvar pedido:', responseData);
+                    alert('⚠️ Pedido enviado ao WhatsApp, mas houve um erro ao salvar no sistema. Entre em contato para confirmar.');
                 }
             } catch (error) {
                 console.error('❌ Erro ao salvar pedido:', error);
-                // Continua mesmo com erro - o WhatsApp ainda será enviado
+                alert('⚠️ Pedido enviado ao WhatsApp, mas houve um erro de conexão. Entre em contato para confirmar.');
             }
 
             // Montar mensagem para WhatsApp
