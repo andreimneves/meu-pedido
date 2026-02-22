@@ -25,6 +25,18 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
+        /* MENSAGEM PERSONALIZADA */
+        .mensagem-personalizada {
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
         /* HEADER */
         .header {
             background: linear-gradient(135deg, #C83232, #A02828);
@@ -73,6 +85,11 @@
             font-size: 20px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .cart-icon:hover {
+            transform: scale(1.1);
         }
 
         .cart-count {
@@ -97,6 +114,12 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #C83232;
         }
 
         /* CATEGORIAS */
@@ -105,6 +128,16 @@
             overflow-x: auto;
             padding: 0 15px 15px;
             gap: 10px;
+            scrollbar-width: thin;
+        }
+
+        .categorias::-webkit-scrollbar {
+            height: 5px;
+        }
+
+        .categorias::-webkit-scrollbar-thumb {
+            background: #C83232;
+            border-radius: 10px;
         }
 
         .categoria-btn {
@@ -116,6 +149,10 @@
             cursor: pointer;
             font-size: 14px;
             transition: all 0.3s;
+        }
+
+        .categoria-btn:hover {
+            background: #e0e0e0;
         }
 
         .categoria-btn.ativa {
@@ -138,6 +175,12 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .produto-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         .produto-info h3 {
@@ -159,6 +202,11 @@
             border-radius: 5px;
             cursor: pointer;
             font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn-adicionar:hover {
+            background: #A02828;
         }
 
         /* MODAL DO CARRINHO */
@@ -171,6 +219,7 @@
             height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 1000;
+            overflow-y: auto;
         }
 
         .modal-content {
@@ -191,6 +240,7 @@
             font-size: 28px;
             cursor: pointer;
             color: #999;
+            transition: color 0.3s;
         }
 
         .close:hover {
@@ -240,6 +290,11 @@
             font-size: 22px;
             cursor: pointer;
             padding: 0 10px;
+            transition: color 0.3s;
+        }
+
+        .cart-item-remove:hover {
+            color: #A02828;
         }
 
         .cart-total {
@@ -256,7 +311,7 @@
             font-size: 22px;
         }
 
-        /* FORMULÁRIO BONITO */
+        /* FORMULÁRIO */
         .form-section {
             margin: 20px 0;
             padding: 15px;
@@ -318,6 +373,7 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             cursor: pointer;
+            transition: all 0.3s;
         }
 
         .delivery-options input[type="radio"] {
@@ -350,6 +406,16 @@
             margin-top: 10px;
         }
 
+        .frete-info.aviso {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .frete-info.erro {
+            background: #ffebee;
+            color: #c62828;
+        }
+
         .whatsapp-btn {
             background: #25D366;
             color: white;
@@ -361,6 +427,7 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 15px;
+            transition: background 0.3s;
         }
 
         .whatsapp-btn:hover {
@@ -371,6 +438,15 @@
             text-align: center;
             padding: 40px;
             color: #666;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f8f8;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
         }
     </style>
 </head>
@@ -404,6 +480,11 @@
         <div class="produtos" id="produtos">
             <div class="loading">Carregando cardápio...</div>
         </div>
+
+        <!-- RODAPÉ -->
+        <footer>
+            <p>© DL Crepes e Lanches - Todos os direitos reservados</p>
+        </footer>
     </div>
 
     <!-- MODAL DO CARRINHO -->
@@ -423,32 +504,29 @@
                 <h3>📋 Dados para entrega</h3>
                 
                 <div class="delivery-options">
-                    <label>
-                        <input type="radio" name="deliveryType" value="delivery" checked onchange="toggleDelivery(true)">
-                        🚚 Delivery
-                    </label>
-                    <label>
-                        <input type="radio" name="deliveryType" value="pickup" onchange="toggleDelivery(false)">
-                        🏠 Retirada
-                    </label>
+                    <input type="radio" name="deliveryType" value="delivery" id="deliveryOption" checked onchange="toggleDelivery(true)">
+                    <label for="deliveryOption">🚚 Delivery</label>
+                    
+                    <input type="radio" name="deliveryType" value="pickup" id="pickupOption" onchange="toggleDelivery(false)">
+                    <label for="pickupOption">🏠 Retirada</label>
                 </div>
 
                 <div id="deliveryFields">
                     <div class="form-row">
                         <label>👤 Nome completo *</label>
-                        <input type="text" id="clienteNome" placeholder="Digite seu nome" required>
+                        <input type="text" id="clienteNome" placeholder="Digite seu nome">
                     </div>
 
                     <div class="form-row">
                         <label>📱 WhatsApp *</label>
-                        <input type="tel" id="clienteTelefone" placeholder="(51) 99999-9999" required>
+                        <input type="tel" id="clienteTelefone" placeholder="(51) 99999-9999">
                     </div>
 
                     <div class="form-row">
                         <label>📍 CEP</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;" onblur="buscarCEP()">
-                            <button onclick="buscarCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer;">Buscar</button>
+                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;">
+                            <button onclick="buscarCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Buscar</button>
                         </div>
                         <div class="cep-info" id="cepInfo"></div>
                     </div>
@@ -456,15 +534,15 @@
                     <div class="address-grid">
                         <div class="form-row" style="grid-column: 1/-1;">
                             <label>🏠 Endereço *</label>
-                            <input type="text" id="clienteEndereco" placeholder="Rua, Avenida..." required>
+                            <input type="text" id="clienteEndereco" placeholder="Rua, Avenida...">
                         </div>
                         <div class="form-row">
                             <label>Número *</label>
-                            <input type="text" id="clienteNumero" placeholder="123" required>
+                            <input type="text" id="clienteNumero" placeholder="123">
                         </div>
                         <div class="form-row">
                             <label>Bairro *</label>
-                            <input type="text" id="clienteBairro" placeholder="Seu bairro" required>
+                            <input type="text" id="clienteBairro" placeholder="Seu bairro">
                         </div>
                     </div>
 
@@ -474,18 +552,18 @@
                     </div>
 
                     <div class="frete-info" id="freteInfo">
-                        🚚 Calculando frete...
+                        🚚 Informe seu CEP para calcular o frete
                     </div>
                 </div>
 
                 <div id="pickupFields" style="display: none;">
                     <div class="form-row">
                         <label>👤 Nome completo *</label>
-                        <input type="text" id="pickupNome" placeholder="Digite seu nome" required>
+                        <input type="text" id="pickupNome" placeholder="Digite seu nome">
                     </div>
                     <div class="form-row">
                         <label>📱 WhatsApp *</label>
-                        <input type="tel" id="pickupTelefone" placeholder="(51) 99999-9999" required>
+                        <input type="tel" id="pickupTelefone" placeholder="(51) 99999-9999">
                     </div>
                 </div>
 
@@ -526,19 +604,32 @@
                 document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || '18h às 23h'}`;
                 document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || 'Santa Marta'}`;
                 
-                // Mudar cor do header
-                if (configuracoesLoja.cor_principal) {
-                    document.querySelector('.header').style.background = `linear-gradient(135deg, ${configuracoesLoja.cor_principal}, ${ajustarCor(configuracoesLoja.cor_principal, -20)})`;
-                }
+                // Exibir mensagem personalizada
+                exibirMensagemPersonalizada();
                 
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
             }
         }
 
-        function ajustarCor(hex, percent) {
-            // Função simples para escurecer/clarear cor
-            return hex; // Por enquanto retorna a mesma
+        // ===== EXIBIR MENSAGEM PERSONALIZADA =====
+        function exibirMensagemPersonalizada() {
+            if (configuracoesLoja && configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
+                const header = document.querySelector('.header');
+                const mensagemDiv = document.createElement('div');
+                mensagemDiv.className = 'mensagem-personalizada';
+                mensagemDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
+                mensagemDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                
+                mensagemDiv.innerHTML = `
+                    <span style="font-size: 20px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
+                    <span>${configuracoesLoja.mensagem_banner}</span>
+                `;
+                
+                if (header) {
+                    header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
+                }
+            }
         }
 
         // ===== CARREGAR PRODUTOS DA API =====
@@ -623,19 +714,13 @@
             atualizarCarrinho();
             
             // Feedback visual
-            const btn = event.target;
-            btn.textContent = '✓ Adicionado';
-            btn.style.background = '#4CAF50';
-            setTimeout(() => {
-                btn.textContent = 'Adicionar';
-                btn.style.background = '#C83232';
-            }, 1000);
+            alert('✅ Produto adicionado ao carrinho!');
         }
 
         function removerDoCarrinho(index) {
             carrinho.splice(index, 1);
             atualizarCarrinho();
-            abrirCarrinho(); // Atualiza a visualização
+            abrirCarrinho();
         }
 
         function atualizarCarrinho() {
@@ -701,35 +786,25 @@
                 document.getElementById('clienteBairro').value = dados.bairro || '';
                 document.getElementById('cepInfo').innerHTML = '✅ CEP encontrado!';
                 
-                calcularFretePorBairro(dados.bairro);
+                calcularFrete();
                 
             } catch (error) {
                 document.getElementById('cepInfo').innerHTML = '❌ Erro ao buscar CEP';
             }
         }
 
-        // ===== CALCULAR FRETE POR BAIRRO =====
-        function calcularFretePorBairro(bairro) {
-            // Simulação de cálculo por bairro
-            const bairros = {
-                'santa marta': 5.00,
-                'centro': 8.00,
-                'camobi': 12.00,
-                'itacorubi': 10.00
-            };
-
-            const bairroLower = bairro ? bairro.toLowerCase() : '';
-            let valorFrete = configuracoesLoja.taxa_minima || 5.00;
-
-            // Verificar se o bairro está na lista
-            for (let [b, valor] of Object.entries(bairros)) {
-                if (bairroLower.includes(b)) {
-                    valorFrete = valor;
-                    break;
-                }
+        // ===== CALCULAR FRETE =====
+        function calcularFrete() {
+            // Simulação simples de frete
+            const bairro = document.getElementById('clienteBairro').value.toLowerCase();
+            
+            if (bairro.includes('santa marta')) {
+                taxaFrete = 5.00;
+            } else if (bairro.includes('centro')) {
+                taxaFrete = 8.00;
+            } else {
+                taxaFrete = configuracoesLoja.taxa_minima || 10.00;
             }
-
-            taxaFrete = valorFrete;
             
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             
@@ -747,14 +822,44 @@
         function calcularTotal() {
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + taxaFrete;
-            
             document.getElementById('cartTotal').textContent = total.toFixed(2);
-            
-            // Verificar frete grátis novamente
-            if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50) && taxaFrete > 0) {
-                taxaFrete = 0;
-                document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
-                document.getElementById('cartTotal').textContent = subtotal.toFixed(2);
+        }
+
+        // ===== VERIFICAR DISPONIBILIDADE DO DELIVERY =====
+        async function verificarDisponibilidadeDelivery() {
+            try {
+                const response = await fetch(`${API_URL}/horarios/disponibilidade/${SUBDOMINIO}`);
+                const data = await response.json();
+                
+                const deliveryOption = document.getElementById('deliveryOption');
+                const pickupOption = document.getElementById('pickupOption');
+                const freteInfo = document.getElementById('freteInfo');
+                
+                if (!data.disponivel) {
+                    // Desabilitar delivery
+                    if (deliveryOption) {
+                        deliveryOption.disabled = true;
+                        deliveryOption.checked = false;
+                        if (pickupOption) pickupOption.checked = true;
+                        toggleDelivery(false);
+                    }
+                    
+                    // Mostrar aviso
+                    if (freteInfo) {
+                        freteInfo.innerHTML = `⚠️ ${data.mensagem}`;
+                        freteInfo.classList.add('aviso');
+                    }
+                } else {
+                    // Habilitar delivery
+                    if (deliveryOption) {
+                        deliveryOption.disabled = false;
+                    }
+                    if (freteInfo) {
+                        freteInfo.classList.remove('aviso');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao verificar disponibilidade:', error);
             }
         }
 
@@ -765,7 +870,7 @@
                 return;
             }
 
-            const tipoEntrega = document.querySelector('input[name="deliveryType"]:checked').value;
+            const tipoEntrega = document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
             
             let nome, telefone;
             
@@ -774,7 +879,7 @@
                 telefone = document.getElementById('clienteTelefone').value;
                 
                 if (!nome || !telefone) {
-                    alert('❌ Preencha nome e telefone');
+                    alert('❌ Preencha nome e telefone para entrega');
                     return;
                 }
             } else {
@@ -782,7 +887,7 @@
                 telefone = document.getElementById('pickupTelefone').value;
                 
                 if (!nome || !telefone) {
-                    alert('❌ Preencha nome e telefone');
+                    alert('❌ Preencha nome e telefone para retirada');
                     return;
                 }
             }
@@ -791,7 +896,7 @@
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
 
-            // Montar mensagem ORGANIZADA com emojis
+            // Montar mensagem
             let mensagem = `🍽️ *NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
             mensagem += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
             
@@ -826,109 +931,37 @@
                 mensagem += `\n📍 *Bairro:* ${bairro}`;
             } else {
                 mensagem += `🏠 *Retirada no local*\n`;
-                mensagem += `📍 *Endereço da loja:* ${configuracoesLoja.endereco_completo || 'Bairro Santa Marta'}`;
             }
             
             mensagem += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
             mensagem += `💵 *TOTAL:* R$ ${total.toFixed(2)}\n`;
             
-            const observacoes = tipoEntrega === 'delivery' ? 
-                document.getElementById('observacoes').value : 
-                document.getElementById('observacoes').value;
-            
+            const observacoes = document.getElementById('observacoes').value;
             if (observacoes) {
                 mensagem += `\n📝 *Observações:*\n${observacoes}\n`;
             }
-            
-            mensagem += `\n⏱️ *Horário do pedido:* ${new Date().toLocaleTimeString()}`;
 
             // Codificar para URL
             const mensagemCodificada = encodeURIComponent(mensagem);
             
-            // Número do WhatsApp (das configurações)
+            // Número do WhatsApp
             const whatsappNumber = configuracoesLoja.whatsapp || '5551999999999';
             
             // Abrir WhatsApp
             window.open(`https://wa.me/${whatsappNumber}?text=${mensagemCodificada}`, '_blank');
             
-            // Limpar carrinho após envio
+            // Limpar carrinho
             carrinho = [];
             atualizarCarrinho();
             fecharCarrinho();
         }
 
-        // Inicializar
-        carregarConfiguracoes();
-        carregarProdutos();
+        // ===== INICIALIZAR =====
+        window.onload = async function() {
+            await carregarConfiguracoes();
+            await carregarProdutos();
+            await verificarDisponibilidadeDelivery();
+        };
     </script>
-
-    // ===== VERIFICAR DISPONIBILIDADE DO DELIVERY =====
-async function verificarDisponibilidadeDelivery() {
-    try {
-        const response = await fetch(`${API_URL}/horarios/disponibilidade/${SUBDOMINIO}`);
-        const data = await response.json();
-        
-        const deliveryOption = document.querySelector('input[value="delivery"]');
-        const pickupOption = document.querySelector('input[value="pickup"]');
-        const freteInfo = document.getElementById('freteInfo');
-        
-        if (!data.disponivel) {
-            // Desabilitar delivery
-            if (deliveryOption) {
-                deliveryOption.disabled = true;
-                deliveryOption.checked = false;
-                pickupOption.checked = true;
-                toggleDelivery(false);
-            }
-            
-            // Mostrar aviso
-            if (freteInfo) {
-                freteInfo.innerHTML = `⚠️ ${data.mensagem}`;
-                freteInfo.classList.add('aviso');
-            }
-        } else {
-            // Habilitar delivery
-            if (deliveryOption) {
-                deliveryOption.disabled = false;
-            }
-            if (freteInfo) {
-                freteInfo.classList.remove('aviso');
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao verificar disponibilidade:', error);
-    }
-}
-
-// ===== EXIBIR MENSAGEM PERSONALIZADA =====
-function exibirMensagemPersonalizada() {
-    if (configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
-        const header = document.querySelector('.header');
-        const mensagemDiv = document.createElement('div');
-        mensagemDiv.className = 'mensagem-personalizada';
-        mensagemDiv.style.background = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
-        mensagemDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
-        mensagemDiv.style.padding = '10px 20px';
-        mensagemDiv.style.textAlign = 'center';
-        mensagemDiv.style.fontSize = '14px';
-        mensagemDiv.style.display = 'flex';
-        mensagemDiv.style.alignItems = 'center';
-        mensagemDiv.style.justifyContent = 'center';
-        mensagemDiv.style.gap = '10px';
-        
-        mensagemDiv.innerHTML = `
-            <span style="font-size: 20px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
-            <span>${configuracoesLoja.mensagem_banner}</span>
-        `;
-        
-        header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
-    }
-}
-
-// Chamar estas funções depois de carregar as configurações
-// No final da função carregarConfiguracoes(), adicione:
-// await verificarDisponibilidadeDelivery();
-// exibirMensagemPersonalizada();
-
 </body>
 </html>
