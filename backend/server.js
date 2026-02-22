@@ -18,10 +18,12 @@ app.use(express.json());
 const produtoRoutes = require('./src/routes/produtos');
 const categoriaRoutes = require('./src/routes/categorias');
 const configRoutes = require('./src/routes/config');
+const pedidoRoutes = require('./src/routes/pedidos');
 
 app.use('/api', produtoRoutes);
 app.use('/api', categoriaRoutes);
 app.use('/api', configRoutes);
+app.use('/api', pedidoRoutes);
 
 // Rota de teste
 app.get('/', (req, res) => {
