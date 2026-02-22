@@ -3,32 +3,41 @@ const { Pool } = require('pg');
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Carregar .env
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// CAMINHO ABSOLUTO QUE FUNCIONOU NO TESTE
+const envPath = 'C:\\Users\\andre\\Desktop\\meu-pedido\\.env';
+console.log('📁 Carregando .env de:', envPath);
 
-console.log('📁 Conectando ao banco...');
-console.log('   Host:', process.env.DB_HOST);
-console.log('   Database:', process.env.DB_NAME);
-console.log('   User:', process.env.DB_USER);
+// Carregar .env
+dotenv.config({ path: envPath });
+
+console.log('📊 Configurações do banco:');
+console.log('   DB_USER:', process.env.DB_USER);
+console.log('   DB_HOST:', process.env.DB_HOST);
+console.log('   DB_NAME:', process.env.DB_NAME);
+console.log('   DB_PORT:', process.env.DB_PORT);
+console.log('   DB_PASSWORD:', process.env.DB_PASSWORD ? '✅ definida' : '❌ NÃO DEFINIDA');
+
+// Forçar senha como string
+const dbPassword = process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD) : '';
 
 const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD) : '',
-    port: process.env.DB_PORT || 5432,
-    ssl: {
-        rejectUnauthorized: false // Importante para o Neon!
-    }
+    password: dbPassword,
+    port: process.env.DB_PORT,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Testar conexão
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('❌ Erro ao conectar no banco:', err.message);
-        console.error('   Verifique as variáveis de ambiente');
+        console.error('❌ Erro detalhado:');
+        console.error('   Mensagem:', err.message);
+        console.error('   Código:', err.code);
+        console.error('   Senha está definida?', dbPassword ? 'Sim' : 'Não');
     } else {
-        console.log('✅ Conectado ao PostgreSQL com SSL!');
+        console.log('✅ Conectado ao PostgreSQL com sucesso!');
         release();
     }
 });
