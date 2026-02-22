@@ -1161,7 +1161,7 @@
         }
 
         // ===== FINALIZAR PEDIDO NO WHATSAPP =====
-        function finalizarPedido() {
+        async function finalizarPedido() {
             if (carrinho.length === 0) {
                 alert('❌ Carrinho vazio!');
                 return;
@@ -1171,6 +1171,7 @@
             
             let nome, telefone;
             let infoAgendamento = '';
+            let dadosPedido = {};
             
             if (tipoEntrega === 'delivery') {
                 nome = document.getElementById('clienteNome').value;
@@ -1185,6 +1186,28 @@
                     return;
                 }
                 
+                // Montar endereço completo
+                const enderecoCompleto = `${endereco}, ${numero}${document.getElementById('clienteComplemento').value ? ' - ' + document.getElementById('clienteComplemento').value : ''}`;
+                
+                dadosPedido = {
+                    cliente_nome: nome,
+                    cliente_telefone: telefone,
+                    cliente_endereco: enderecoCompleto,
+                    cliente_bairro: bairro,
+                    tipo_entrega: 'delivery',
+                    taxa_entrega: taxaFrete,
+                    subtotal: carrinho.reduce((sum, item) => sum + item.preco, 0),
+                    total: carrinho.reduce((sum, item) => sum + item.preco, 0) + taxaFrete,
+                    observacoes: document.getElementById('observacoes').value,
+                    itens: carrinho.map(item => ({
+                        produto_id: item.id,
+                        produto_nome: item.nome,
+                        quantidade: 1,
+                        preco_unitario: item.preco,
+                        subtotal: item.preco
+                    }))
+                };
+                
                 if (modoAgendamento) {
                     const dataAgendamento = document.getElementById('dataAgendamento').value;
                     const horarioAgendamento = document.getElementById('horarioAgendamento').value;
@@ -1196,6 +1219,7 @@
                     
                     const dataFormatada = new Date(dataAgendamento).toLocaleDateString('pt-BR');
                     infoAgendamento = `\n📅 *Entrega agendada:* ${dataFormatada} - ${horarioAgendamento}`;
+                    dadosPedido.observacoes += `\nEntrega agendada: ${dataFormatada} ${horarioAgendamento}`;
                 }
             } else {
                 nome = document.getElementById('pickupNome').value;
@@ -1205,13 +1229,55 @@
                     alert('❌ Preencha nome e telefone para retirada');
                     return;
                 }
+                
+                dadosPedido = {
+                    cliente_nome: nome,
+                    cliente_telefone: telefone,
+                    tipo_entrega: 'pickup',
+                    taxa_entrega: 0,
+                    subtotal: carrinho.reduce((sum, item) => sum + item.preco, 0),
+                    total: carrinho.reduce((sum, item) => sum + item.preco, 0),
+                    observacoes: document.getElementById('observacoes').value,
+                    itens: carrinho.map(item => ({
+                        produto_id: item.id,
+                        produto_nome: item.nome,
+                        quantidade: 1,
+                        preco_unitario: item.preco,
+                        subtotal: item.preco
+                    }))
+                };
             }
 
             // Calcular totais
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
 
-            // Montar mensagem
+            // ===== Salvar pedido no banco de dados =====
+            try {
+                console.log('💾 Salvando pedido no banco...', dadosPedido);
+                
+                const response = await fetch(`${API_URL}/pedidos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subdominio: SUBDOMINIO,
+                        pedido: dadosPedido
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Pedido salvo com sucesso!');
+                } else {
+                    console.error('❌ Erro ao salvar pedido:', await response.text());
+                }
+            } catch (error) {
+                console.error('❌ Erro ao salvar pedido:', error);
+                // Continua mesmo com erro - o WhatsApp ainda será enviado
+            }
+
+            // Montar mensagem para WhatsApp
             let mensagem = `🍽️ *NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
             mensagem += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
             
