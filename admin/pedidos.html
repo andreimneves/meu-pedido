@@ -6,6 +6,7 @@
     <title>Pedidos - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Mantenha TODO o CSS que eu enviei anteriormente - é o mesmo */
         * {
             margin: 0;
             padding: 0;
@@ -408,6 +409,7 @@
             background: white;
             border-radius: 16px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            grid-column: 1 / -1;
         }
 
         .loading-spinner {
@@ -433,6 +435,7 @@
             background: white;
             border-radius: 16px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            grid-column: 1 / -1;
         }
 
         .sem-pedidos-icon {
@@ -461,6 +464,10 @@
 
         .notificacao.erro {
             background: #f44336;
+        }
+
+        .notificacao.aviso {
+            background: #ff9800;
         }
 
         @keyframes slideIn {
@@ -497,6 +504,49 @@
                 justify-content: center;
             }
         }
+
+        .erro-container {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            border: 2px solid #f44336;
+        }
+
+        .erro-titulo {
+            color: #f44336;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+
+        .erro-detalhes {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            overflow-x: auto;
+        }
+
+        .btn-tentar-novamente {
+            background: #C83232;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-tentar-novamente:hover {
+            background: #A02828;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -526,7 +576,7 @@
                 <span style="font-size: 14px; color: #999; margin-left: 15px; font-weight: normal;" id="totalPedidos"></span>
             </h1>
             
-            <div class="filtros-container">
+            <div class="filtros-container" id="filtrosContainer" style="display: none;">
                 <div class="filtros-titulo">
                     <span>🔍</span> Filtrar por status:
                 </div>
@@ -569,16 +619,20 @@
         let todosPedidos = [];
         let filtroAtual = 'todos';
 
-        // Notificação
+        // Função segura para mostrar notificações
         function mostrarNotificacao(mensagem, tipo = 'sucesso') {
             const notif = document.getElementById('notificacao');
-            notif.textContent = mensagem;
-            notif.className = `notificacao ${tipo}`;
-            notif.style.display = 'block';
-            
-            setTimeout(() => {
-                notif.style.display = 'none';
-            }, 3000);
+            if (notif) {
+                notif.textContent = mensagem;
+                notif.className = `notificacao ${tipo}`;
+                notif.style.display = 'block';
+                
+                setTimeout(() => {
+                    notif.style.display = 'none';
+                }, 3000);
+            } else {
+                alert(mensagem);
+            }
         }
 
         // Logout
@@ -592,27 +646,75 @@
             window.location.href = 'index.html';
         }
 
-        // Carregar pedidos
+        // Função segura para fazer fetch com tratamento de erros
+        async function fetchSeguro(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                
+                // Verificar se a resposta é OK
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Verificar se a resposta é JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const texto = await response.text();
+                    throw new Error(`Resposta não é JSON: ${texto.substring(0, 100)}`);
+                }
+                
+                // Tentar fazer parse do JSON
+                const dados = await response.json();
+                return { sucesso: true, dados };
+                
+            } catch (error) {
+                console.error('Erro no fetch:', error);
+                return { 
+                    sucesso: false, 
+                    erro: error.message,
+                    url: url
+                };
+            }
+        }
+
+        // Carregar pedidos com tratamento de erro robusto
         async function carregarPedidos() {
             try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                todosPedidos = await response.json();
+                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}`);
                 
+                if (!resultado.sucesso) {
+                    throw new Error(resultado.erro);
+                }
+                
+                todosPedidos = resultado.dados;
+                
+                // Mostrar filtros apenas se tiver pedidos
+                document.getElementById('filtrosContainer').style.display = todosPedidos.length > 0 ? 'block' : 'none';
                 document.getElementById('totalPedidos').textContent = `(${todosPedidos.length} total)`;
                 
-                exibirPedidos(todosPedidos);
+                // Aplicar filtro atual
+                const pedidosFiltrados = filtroAtual === 'todos' 
+                    ? todosPedidos 
+                    : todosPedidos.filter(p => p.status === filtroAtual);
+                
+                await exibirPedidos(pedidosFiltrados);
                 
             } catch (error) {
                 console.error('Erro ao carregar pedidos:', error);
+                
+                document.getElementById('filtrosContainer').style.display = 'none';
                 document.getElementById('pedidosList').innerHTML = `
-                    <div class="sem-pedidos">
-                        <div class="sem-pedidos-icon">❌</div>
-                        <h3>Erro ao carregar pedidos</h3>
-                        <p style="color: #666; margin-top: 10px;">${error.message}</p>
-                        <button onclick="carregarPedidos()" style="margin-top: 20px; padding: 10px 20px; background: #C83232; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <div class="erro-container">
+                        <div class="erro-titulo">❌ Erro ao carregar pedidos</div>
+                        <p style="margin-bottom: 20px;">${error.message}</p>
+                        <div class="erro-detalhes">
+                            URL tentada: ${API_URL}/pedidos/${SUBDOMINIO}<br>
+                            Verifique se:
+                            <br>1. O backend está rodando em: ${API_URL}
+                            <br>2. A rota /pedidos existe no backend
+                            <br>3. O subdomínio '${SUBDOMINIO}' está correto
+                        </div>
+                        <button class="btn-tentar-novamente" onclick="carregarPedidos()">
                             🔄 Tentar novamente
                         </button>
                     </div>
@@ -638,31 +740,56 @@
             exibirPedidos(pedidosFiltrados);
         }
 
+        // Buscar itens de um pedido específico
+        async function buscarItensPedido(pedidoId) {
+            const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`);
+            if (resultado.sucesso) {
+                return resultado.dados.itens || [];
+            }
+            return [];
+        }
+
         // Exibir pedidos
         async function exibirPedidos(pedidos) {
             const lista = document.getElementById('pedidosList');
             
-            if (pedidos.length === 0) {
+            if (!pedidos || pedidos.length === 0) {
                 lista.innerHTML = `
                     <div class="sem-pedidos">
                         <div class="sem-pedidos-icon">📭</div>
                         <h3>Nenhum pedido encontrado</h3>
-                        <p style="color: #666; margin-top: 10px;">Os pedidos aparecerão aqui quando chegarem</p>
+                        <p style="color: #666; margin-top: 10px;">
+                            ${filtroAtual === 'todos' 
+                                ? 'Os pedidos aparecerão aqui quando chegarem' 
+                                : `Nenhum pedido com status "${filtroAtual}"`}
+                        </p>
                     </div>
                 `;
                 return;
             }
             
-            // Buscar itens para cada pedido
-            const pedidosComItens = await Promise.all(pedidos.map(async (p) => {
+            // Mostrar loading
+            lista.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Carregando detalhes dos pedidos...
+                </div>
+            `;
+            
+            // Buscar itens para cada pedido (com limite de 5 por vez para não sobrecarregar)
+            const pedidosComItens = [];
+            for (const p of pedidos.slice(0, 20)) { // Limite de 20 pedidos
                 try {
-                    const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${p.id}`);
-                    const pedidoCompleto = await response.json();
-                    return pedidoCompleto;
+                    const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${p.id}`);
+                    if (resultado.sucesso) {
+                        pedidosComItens.push(resultado.dados);
+                    } else {
+                        pedidosComItens.push({ ...p, itens: [] });
+                    }
                 } catch (error) {
-                    return { ...p, itens: [] };
+                    pedidosComItens.push({ ...p, itens: [] });
                 }
-            }));
+            }
             
             const html = pedidosComItens.map(p => {
                 const data = new Date(p.data_pedido).toLocaleString('pt-BR');
@@ -690,10 +817,10 @@
                         
                         <div class="cliente-info">
                             <div class="cliente-nome">
-                                <span>👤</span> ${p.cliente_nome}
+                                <span>👤</span> ${p.cliente_nome || 'Nome não informado'}
                             </div>
                             <div class="cliente-telefone">
-                                <span>📱</span> ${p.cliente_telefone}
+                                <span>📱</span> ${p.cliente_telefone || 'Telefone não informado'}
                             </div>
                             ${p.cliente_endereco ? `
                                 <div class="cliente-endereco">
@@ -714,11 +841,11 @@
                             ${p.itens && p.itens.length > 0 ? p.itens.map(item => `
                                 <div class="item-pedido">
                                     <div class="item-nome">
-                                        <span>•</span> ${item.produto_nome}
-                                        <span class="item-quantidade">x${item.quantidade}</span>
+                                        <span>•</span> ${item.produto_nome || 'Item não identificado'}
+                                        <span class="item-quantidade">x${item.quantidade || 1}</span>
                                     </div>
                                     <div class="item-preco">
-                                        R$ ${parseFloat(item.preco_unitario).toFixed(2)}
+                                        R$ ${item.preco_unitario ? parseFloat(item.preco_unitario).toFixed(2) : '0,00'}
                                     </div>
                                 </div>
                             `).join('') : `
@@ -729,7 +856,7 @@
                         </div>
                         
                         <div class="pedido-total">
-                            Total: <span>R$ ${parseFloat(p.total).toFixed(2)}</span>
+                            Total: <span>R$ ${p.total ? parseFloat(p.total).toFixed(2) : '0,00'}</span>
                         </div>
                         
                         <div class="pedido-acoes">
@@ -770,24 +897,20 @@
                 selectOriginal.disabled = true;
                 selectOriginal.style.opacity = '0.5';
                 
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
+                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: novoStatus })
                 });
                 
-                if (response.ok) {
+                if (resultado.sucesso) {
                     mostrarNotificacao(`✅ Status do pedido #${pedidoId} atualizado para ${novoStatus}!`, 'sucesso');
-                    await carregarPedidos();
+                    await carregarPedidos(); // Recarrega a lista completa
                 } else {
-                    const erro = await response.json();
-                    mostrarNotificacao(`❌ Erro: ${erro.erro || 'Erro desconhecido'}`, 'erro');
-                    selectOriginal.disabled = false;
-                    selectOriginal.style.opacity = '1';
-                    selectOriginal.value = valorOriginal;
+                    throw new Error(resultado.erro);
                 }
             } catch (error) {
-                mostrarNotificacao(`❌ Erro de conexão: ${error.message}`, 'erro');
+                mostrarNotificacao(`❌ Erro: ${error.message}`, 'erro');
                 selectOriginal.disabled = false;
                 selectOriginal.style.opacity = '1';
                 selectOriginal.value = valorOriginal;
@@ -800,24 +923,25 @@
             }
             
             try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`, {
+                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`, {
                     method: 'DELETE'
                 });
                 
-                if (response.ok) {
+                if (resultado.sucesso) {
                     mostrarNotificacao(`✅ Pedido #${pedidoId} excluído com sucesso!`, 'sucesso');
-                    await carregarPedidos();
+                    await carregarPedidos(); // Recarrega a lista
                 } else {
-                    const erro = await response.json();
-                    mostrarNotificacao(`❌ Erro: ${erro.erro || 'Erro desconhecido'}`, 'erro');
+                    throw new Error(resultado.erro);
                 }
             } catch (error) {
-                mostrarNotificacao(`❌ Erro de conexão: ${error.message}`, 'erro');
+                mostrarNotificacao(`❌ Erro: ${error.message}`, 'erro');
             }
         }
 
         // Carregar pedidos ao iniciar
-        carregarPedidos();
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarPedidos();
+        });
         
         // Atualizar a cada 30 segundos
         setInterval(carregarPedidos, 30000);
