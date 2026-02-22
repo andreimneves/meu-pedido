@@ -247,6 +247,62 @@
             color: #333;
         }
 
+        /* MENSAGENS DE AVISO */
+        .aviso-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .aviso-box p {
+            margin-bottom: 15px;
+            color: #e65100;
+        }
+
+        .botoes-aviso {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-aviso {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn-aviso.retirar {
+            background: #C83232;
+            color: white;
+        }
+
+        .btn-aviso.retirar:hover {
+            background: #A02828;
+        }
+
+        .btn-aviso.agendar {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-aviso.agendar:hover {
+            background: #388E3C;
+        }
+
+        .btn-aviso.cancelar {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-aviso.cancelar:hover {
+            background: #ddd;
+        }
+
         /* ITENS DO CARRINHO */
         .cart-items {
             max-height: 300px;
@@ -356,6 +412,11 @@
             border-color: #C83232;
         }
 
+        .form-row input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
         .delivery-options {
             display: flex;
             gap: 15px;
@@ -384,6 +445,11 @@
             background: #C83232;
             color: white;
             border-color: #C83232;
+        }
+
+        .delivery-options label.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .address-grid {
@@ -432,6 +498,11 @@
 
         .whatsapp-btn:hover {
             background: #128C7E;
+        }
+
+        .whatsapp-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
 
         .loading {
@@ -499,16 +570,19 @@
                 <span>Total:</span> <strong>R$ <span id="cartTotal">0,00</span></strong>
             </div>
 
+            <!-- ÁREA DE AVISOS -->
+            <div id="avisoDelivery" style="display: none;"></div>
+
             <!-- FORMULÁRIO DE ENTREGA -->
             <div class="form-section">
                 <h3>📋 Dados para entrega</h3>
                 
                 <div class="delivery-options">
-                    <input type="radio" name="deliveryType" value="delivery" id="deliveryOption" checked onchange="toggleDelivery(true)">
-                    <label for="deliveryOption">🚚 Delivery</label>
+                    <input type="radio" name="deliveryType" value="delivery" id="deliveryOption" onchange="toggleDelivery(true)">
+                    <label for="deliveryOption" id="deliveryLabel">🚚 Delivery</label>
                     
                     <input type="radio" name="deliveryType" value="pickup" id="pickupOption" onchange="toggleDelivery(false)">
-                    <label for="pickupOption">🏠 Retirada</label>
+                    <label for="pickupOption" id="pickupLabel">🏠 Retirada</label>
                 </div>
 
                 <div id="deliveryFields">
@@ -525,7 +599,7 @@
                     <div class="form-row">
                         <label>📍 CEP *</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;" onblur="calcularFretePorCEP()">
+                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;">
                             <button type="button" onclick="calcularFretePorCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Calcular Frete</button>
                         </div>
                         <div class="cep-info" id="cepInfo"></div>
@@ -567,13 +641,29 @@
                     </div>
                 </div>
 
+                <div id="agendamentoFields" style="display: none;">
+                    <div class="form-row">
+                        <label>📅 Data para entrega agendada</label>
+                        <input type="date" id="dataAgendamento" min="">
+                    </div>
+                    <div class="form-row">
+                        <label>⏰ Horário para entrega agendada</label>
+                        <select id="horarioAgendamento">
+                            <option value="">Selecione um horário</option>
+                        </select>
+                    </div>
+                    <div class="frete-info" id="agendamentoInfo">
+                        📅 Escolha uma data e horário para agendar sua entrega
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <label>📝 Observações</label>
                     <textarea id="observacoes" placeholder="Ex: ponto da carne, tirar cebola, sem salada..." rows="2"></textarea>
                 </div>
             </div>
 
-            <button class="whatsapp-btn" onclick="finalizarPedido()">
+            <button class="whatsapp-btn" id="finalizarBtn" onclick="finalizarPedido()">
                 📲 Finalizar Pedido no WhatsApp
             </button>
         </div>
@@ -592,6 +682,9 @@
         let configuracoesLoja = {};
         let taxaFrete = 0;
         let distanciaKm = 0;
+        let deliveryDisponivel = true;
+        let horariosDelivery = [];
+        let modoAgendamento = false;
 
         // ===== CARREGAR CONFIGURAÇÕES DA LOJA =====
         async function carregarConfiguracoes() {
@@ -608,8 +701,21 @@
                 // Exibir mensagem personalizada
                 exibirMensagemPersonalizada();
                 
+                // Carregar horários
+                await carregarHorarios();
+                
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
+            }
+        }
+
+        // ===== CARREGAR HORÁRIOS DE DELIVERY =====
+        async function carregarHorarios() {
+            try {
+                const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
+                horariosDelivery = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar horários:', error);
             }
         }
 
@@ -751,6 +857,15 @@
                 document.getElementById('cartItems').innerHTML = itemsHtml;
                 calcularTotal();
             }
+            
+            // Resetar modo de agendamento
+            modoAgendamento = false;
+            document.getElementById('agendamentoFields').style.display = 'none';
+            document.getElementById('avisoDelivery').style.display = 'none';
+            
+            // Verificar disponibilidade do delivery
+            verificarDisponibilidadeDelivery();
+            
             document.getElementById('cartModal').style.display = 'block';
         }
 
@@ -761,9 +876,12 @@
         function toggleDelivery(isDelivery) {
             document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
             document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
+            document.getElementById('agendamentoFields').style.display = 'none';
+            
             if (!isDelivery) {
                 taxaFrete = 0;
                 distanciaKm = 0;
+                modoAgendamento = false;
                 calcularTotal();
             }
         }
@@ -791,9 +909,6 @@
                     return;
                 }
 
-                // Buscar dados do CEP da loja (opcional, só para referência)
-                await fetch(`https://viacep.com.br/ws/${cepLoja}/json/`);
-
                 // Preencher endereço automaticamente
                 document.getElementById('clienteEndereco').value = dadosCliente.logradouro || '';
                 document.getElementById('clienteBairro').value = dadosCliente.bairro || '';
@@ -818,18 +933,8 @@
                 const kmMaximo = configuracoesLoja.km_maximo_entrega || 30;
                 
                 if (distanciaKm > kmMaximo) {
-                    document.getElementById('freteInfo').innerHTML = `❌ Distância muito grande (${distanciaKm.toFixed(1)} km). Não entregamos nesta região.`;
-                    document.getElementById('freteInfo').className = 'frete-info erro';
-                    
-                    // Desabilitar delivery
-                    const deliveryOption = document.getElementById('deliveryOption');
-                    if (deliveryOption) {
-                        deliveryOption.disabled = true;
-                        deliveryOption.checked = false;
-                        document.getElementById('pickupOption').checked = true;
-                        toggleDelivery(false);
-                    }
-                    document.getElementById('cepInfo').innerHTML = '✅ CEP válido, mas fora da área de entrega';
+                    // Mostrar aviso de área não atendida
+                    mostrarAvisoAreaNaoAtendida();
                     return;
                 }
 
@@ -869,6 +974,112 @@
             }
         }
 
+        // ===== MOSTRAR AVISO DE ÁREA NÃO ATENDIDA =====
+        function mostrarAvisoAreaNaoAtendida() {
+            const avisoDiv = document.getElementById('avisoDelivery');
+            avisoDiv.innerHTML = `
+                <div class="aviso-box">
+                    <p>😕 Seu endereço não é atendido pelo nosso delivery, mas você pode retirar com a gente!</p>
+                    <div class="botoes-aviso">
+                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">Quero retirar!</button>
+                        <button class="btn-aviso cancelar" onclick="fecharAviso()">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            avisoDiv.style.display = 'block';
+            
+            // Desabilitar opção de delivery
+            const deliveryOption = document.getElementById('deliveryOption');
+            const deliveryLabel = document.getElementById('deliveryLabel');
+            if (deliveryOption) {
+                deliveryOption.disabled = true;
+                deliveryLabel.classList.add('disabled');
+                deliveryOption.checked = false;
+                document.getElementById('pickupOption').checked = true;
+                toggleDelivery(false);
+            }
+        }
+
+        // ===== MOSTRAR AVISO DE HORÁRIO INDISPONÍVEL =====
+        function mostrarAvisoHorarioIndisponivel(mensagem) {
+            const avisoDiv = document.getElementById('avisoDelivery');
+            
+            // Gerar opções de horários para agendamento
+            const horariosOptions = gerarOpcoesHorarios();
+            
+            avisoDiv.innerHTML = `
+                <div class="aviso-box">
+                    <p>😕 ${mensagem}</p>
+                    <div class="botoes-aviso">
+                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">Quero retirar!</button>
+                        <button class="btn-aviso agendar" onclick="mostrarAgendamento()">Quero agendar a entrega</button>
+                        <button class="btn-aviso cancelar" onclick="fecharAviso()">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            avisoDiv.style.display = 'block';
+        }
+
+        // ===== GERAR OPÇÕES DE HORÁRIOS PARA AGENDAMENTO =====
+        function gerarOpcoesHorarios() {
+            const select = document.getElementById('horarioAgendamento');
+            select.innerHTML = '<option value="">Selecione um horário</option>';
+            
+            // Próximos 5 dias
+            const hoje = new Date();
+            for (let i = 1; i <= 5; i++) {
+                const data = new Date(hoje);
+                data.setDate(hoje.getDate() + i);
+                const diaSemana = data.getDay();
+                
+                // Buscar horário configurado para este dia
+                const horarioDia = horariosDelivery.find(h => h.dia_semana === diaSemana);
+                
+                if (horarioDia && horarioDia.aberto) {
+                    const dataStr = data.toISOString().split('T')[0];
+                    const option = document.createElement('option');
+                    option.value = dataStr;
+                    option.textContent = `${data.toLocaleDateString('pt-BR')} (${horarioDia.abertura} às ${horarioDia.fechamento})`;
+                    select.appendChild(option);
+                }
+            }
+            
+            // Definir data mínima no input date
+            const dataMin = new Date();
+            dataMin.setDate(dataMin.getDate() + 1);
+            document.getElementById('dataAgendamento').min = dataMin.toISOString().split('T')[0];
+        }
+
+        // ===== MOSTRAR CAMPOS DE AGENDAMENTO =====
+        function mostrarAgendamento() {
+            document.getElementById('avisoDelivery').style.display = 'none';
+            document.getElementById('agendamentoFields').style.display = 'block';
+            document.getElementById('deliveryFields').style.display = 'block';
+            document.getElementById('pickupFields').style.display = 'none';
+            
+            modoAgendamento = true;
+            
+            // Habilitar opção delivery e selecionar
+            const deliveryOption = document.getElementById('deliveryOption');
+            deliveryOption.disabled = false;
+            deliveryOption.checked = true;
+            document.getElementById('deliveryLabel').classList.remove('disabled');
+            
+            document.getElementById('agendamentoInfo').innerHTML = '📅 Escolha uma data e horário para agendar sua entrega';
+        }
+
+        // ===== SELECIONAR RETIRADA =====
+        function selecionarRetirada() {
+            document.getElementById('avisoDelivery').style.display = 'none';
+            document.getElementById('pickupOption').checked = true;
+            toggleDelivery(false);
+        }
+
+        // ===== FECHAR AVISO =====
+        function fecharAviso() {
+            document.getElementById('avisoDelivery').style.display = 'none';
+        }
+
         function calcularTotal() {
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + taxaFrete;
@@ -883,26 +1094,22 @@
                 
                 const deliveryOption = document.getElementById('deliveryOption');
                 const pickupOption = document.getElementById('pickupOption');
+                const deliveryLabel = document.getElementById('deliveryLabel');
                 const freteInfo = document.getElementById('freteInfo');
                 
                 if (!data.disponivel) {
-                    // Desabilitar delivery
-                    if (deliveryOption) {
-                        deliveryOption.disabled = true;
-                        deliveryOption.checked = false;
-                        if (pickupOption) pickupOption.checked = true;
-                        toggleDelivery(false);
-                    }
+                    deliveryDisponivel = false;
                     
-                    // Mostrar aviso
-                    if (freteInfo) {
-                        freteInfo.innerHTML = `⚠️ ${data.mensagem}`;
-                        freteInfo.classList.add('aviso');
-                    }
+                    // Mostrar aviso de horário indisponível
+                    mostrarAvisoHorarioIndisponivel(data.mensagem);
+                    
                 } else {
+                    deliveryDisponivel = true;
+                    
                     // Habilitar delivery
                     if (deliveryOption) {
                         deliveryOption.disabled = false;
+                        deliveryLabel.classList.remove('disabled');
                     }
                     if (freteInfo) {
                         freteInfo.classList.remove('aviso');
@@ -924,6 +1131,7 @@
             const tipoEntrega = document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
             
             let nome, telefone;
+            let infoAgendamento = '';
             
             if (tipoEntrega === 'delivery') {
                 nome = document.getElementById('clienteNome').value;
@@ -936,6 +1144,19 @@
                 if (!nome || !telefone || !endereco || !numero || !bairro || !cep) {
                     alert('❌ Preencha todos os campos obrigatórios para entrega');
                     return;
+                }
+                
+                if (modoAgendamento) {
+                    const dataAgendamento = document.getElementById('dataAgendamento').value;
+                    const horarioAgendamento = document.getElementById('horarioAgendamento').value;
+                    
+                    if (!dataAgendamento || !horarioAgendamento) {
+                        alert('❌ Selecione data e horário para o agendamento');
+                        return;
+                    }
+                    
+                    const dataFormatada = new Date(dataAgendamento).toLocaleDateString('pt-BR');
+                    infoAgendamento = `\n📅 *Entrega agendada:* ${dataFormatada} - ${horarioAgendamento}`;
                 }
             } else {
                 nome = document.getElementById('pickupNome').value;
@@ -956,9 +1177,13 @@
             mensagem += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
             
             mensagem += `👤 *Cliente:* ${nome}\n`;
-            mensagem += `📱 *Contato:* ${telefone}\n\n`;
+            mensagem += `📱 *Contato:* ${telefone}\n`;
             
-            mensagem += `📋 *ITENS DO PEDIDO:*\n`;
+            if (modoAgendamento) {
+                mensagem += `${infoAgendamento}\n`;
+            }
+            
+            mensagem += `\n📋 *ITENS DO PEDIDO:*\n`;
             mensagem += `━━━━━━━━━━━━━━━━━━━━━\n`;
             
             carrinho.forEach(item => {
@@ -1027,6 +1252,13 @@
             document.getElementById('clienteNumero').value = '';
             document.getElementById('clienteBairro').value = '';
             document.getElementById('clienteComplemento').value = '';
+            document.getElementById('clienteNome').value = '';
+            document.getElementById('clienteTelefone').value = '';
+            document.getElementById('pickupNome').value = '';
+            document.getElementById('pickupTelefone').value = '';
+            document.getElementById('observacoes').value = '';
+            document.getElementById('dataAgendamento').value = '';
+            document.getElementById('horarioAgendamento').value = '';
         }
 
         // ===== INICIALIZAR =====
@@ -1034,7 +1266,6 @@
             console.log('Inicializando sistema...');
             await carregarConfiguracoes();
             await carregarProdutos();
-            await verificarDisponibilidadeDelivery();
             
             // Garantir que a mensagem seja exibida após carregar as configurações
             setTimeout(() => {
