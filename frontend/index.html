@@ -617,6 +617,10 @@
         function exibirMensagemPersonalizada() {
             if (configuracoesLoja && configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
                 const header = document.querySelector('.header');
+                
+                // Verificar se já existe uma mensagem para não duplicar
+                if (document.querySelector('.mensagem-personalizada')) return;
+                
                 const mensagemDiv = document.createElement('div');
                 mensagemDiv.className = 'mensagem-personalizada';
                 mensagemDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
@@ -696,7 +700,7 @@
                         <h3>${p.nome}</h3>
                         <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
                     </div>
-                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome}', ${p.preco})">
+                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${p.preco})">
                         Adicionar
                     </button>
                 </div>
@@ -778,25 +782,23 @@
             document.getElementById('cepInfo').innerHTML = '🔄 Calculando distância e frete...';
 
             try {
-                // Buscar coordenadas do CEP do cliente
+                // Buscar dados do CEP do cliente
                 const responseCliente = await fetch(`https://viacep.com.br/ws/${cepCliente}/json/`);
-                const dadosCliente = await response.json();
+                const dadosCliente = await responseCliente.json();
                 
                 if (dadosCliente.erro) {
                     document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado';
                     return;
                 }
 
-                // Buscar coordenadas do CEP da loja
-                const responseLoja = await fetch(`https://viacep.com.br/ws/${cepLoja}/json/`);
-                const dadosLoja = await responseLoja.json();
+                // Buscar dados do CEP da loja (opcional, só para referência)
+                await fetch(`https://viacep.com.br/ws/${cepLoja}/json/`);
 
                 // Preencher endereço automaticamente
                 document.getElementById('clienteEndereco').value = dadosCliente.logradouro || '';
                 document.getElementById('clienteBairro').value = dadosCliente.bairro || '';
 
                 // Calcular distância aproximada baseada nos primeiros dígitos do CEP
-                // Quanto mais próximos os primeiros dígitos, menor a distância
                 const prefixoCliente = parseInt(cepCliente.substring(0, 5));
                 const prefixoLoja = parseInt(cepLoja.substring(0, 5));
                 
@@ -804,8 +806,6 @@
                 const diferenca = Math.abs(prefixoCliente - prefixoLoja);
                 
                 // Converter diferença em km aproximado
-                // Região metropolitana: diferença pequena = poucos km
-                // Outras regiões: diferença maior = mais km
                 if (diferenca < 100) {
                     distanciaKm = 3 + (diferenca / 50);
                 } else if (diferenca < 500) {
@@ -829,6 +829,7 @@
                         document.getElementById('pickupOption').checked = true;
                         toggleDelivery(false);
                     }
+                    document.getElementById('cepInfo').innerHTML = '✅ CEP válido, mas fora da área de entrega';
                     return;
                 }
 
@@ -862,8 +863,9 @@
                 calcularTotal();
                 
             } catch (error) {
-                console.error('Erro ao calcular frete:', error);
+                console.error('Erro detalhado:', error);
                 document.getElementById('cepInfo').innerHTML = '❌ Erro ao calcular frete. Tente novamente.';
+                document.getElementById('freteInfo').innerHTML = '❌ Erro no cálculo. Verifique o CEP.';
             }
         }
 
@@ -904,6 +906,7 @@
                     }
                     if (freteInfo) {
                         freteInfo.classList.remove('aviso');
+                        freteInfo.innerHTML = '👆 Informe seu CEP para calcular o frete';
                     }
                 }
             } catch (error) {
@@ -928,8 +931,9 @@
                 const endereco = document.getElementById('clienteEndereco').value;
                 const numero = document.getElementById('clienteNumero').value;
                 const bairro = document.getElementById('clienteBairro').value;
+                const cep = document.getElementById('cepInput').value;
                 
-                if (!nome || !telefone || !endereco || !numero || !bairro) {
+                if (!nome || !telefone || !endereco || !numero || !bairro || !cep) {
                     alert('❌ Preencha todos os campos obrigatórios para entrega');
                     return;
                 }
@@ -984,13 +988,15 @@
                 const numero = document.getElementById('clienteNumero').value;
                 const bairro = document.getElementById('clienteBairro').value;
                 const complemento = document.getElementById('clienteComplemento').value;
+                const cep = document.getElementById('cepInput').value;
                 
                 mensagem += `📍 *Endereço:* ${endereco}, ${numero}`;
                 if (complemento) mensagem += ` - ${complemento}`;
                 mensagem += `\n📍 *Bairro:* ${bairro}\n`;
-                mensagem += `📍 *CEP:* ${document.getElementById('cepInput').value}\n`;
+                mensagem += `📍 *CEP:* ${cep}\n`;
             } else {
                 mensagem += `🏠 *Retirada no local*\n`;
+                mensagem += `📍 *Endereço da loja:* ${configuracoesLoja.endereco_completo || 'Bairro Santa Marta'}\n`;
             }
             
             mensagem += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1014,6 +1020,13 @@
             carrinho = [];
             atualizarCarrinho();
             fecharCarrinho();
+            
+            // Limpar formulário
+            document.getElementById('cepInput').value = '';
+            document.getElementById('clienteEndereco').value = '';
+            document.getElementById('clienteNumero').value = '';
+            document.getElementById('clienteBairro').value = '';
+            document.getElementById('clienteComplemento').value = '';
         }
 
         // ===== INICIALIZAR =====
@@ -1025,10 +1038,7 @@
             
             // Garantir que a mensagem seja exibida após carregar as configurações
             setTimeout(() => {
-                if (configuracoesLoja.mensagem_banner_ativo) {
-                    console.log('Exibindo mensagem:', configuracoesLoja.mensagem_banner);
-                    exibirMensagemPersonalizada();
-                }
+                exibirMensagemPersonalizada();
             }, 500);
         };
     </script>
