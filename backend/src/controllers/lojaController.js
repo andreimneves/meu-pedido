@@ -6,36 +6,12 @@ const lojaController = {
         try {
             const { subdominio } = req.params;
             
-            const tenantQuery = await pool.query(
-                'SELECT id FROM tenants WHERE subdominio = $1',
-                [subdominio]
-            );
-            
-            if (tenantQuery.rows.length === 0) {
-                return res.status(404).json({ erro: 'Loja não encontrada' });
-            }
-            
-            const tenantId = tenantQuery.rows[0].id;
-            
-            // Buscar configurações da loja
-            const configQuery = await pool.query(
-                'SELECT horario_funcionamento FROM configuracoes_loja WHERE tenant_id = $1',
-                [tenantId]
-            );
-            
-            const agora = new Date();
-            const diaSemana = agora.getDay();
-            const horaAtual = agora.getHours() * 60 + agora.getMinutes(); // minutos desde meia-noite
-            
-            // Buscar horário da loja (precisa criar tabela horarios_loja)
-            // Por enquanto, retorna simulado
-            const lojaAberta = true; // Simulado
-            
+            // Versão simplificada - retorna sempre aberto por enquanto
             res.json({
-                loja_aberta: lojaAberta,
-                mensagem: lojaAberta ? 'Loja aberta' : 'Loja fechada',
+                loja_aberta: true,
+                mensagem: 'Loja aberta',
                 pode_agendar: true,
-                delivery_disponivel: lojaAberta
+                delivery_disponivel: true
             });
             
         } catch (error) {
