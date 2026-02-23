@@ -1,4 +1,18 @@
 // backend/server.js
+// ... (seus imports e configurações iniciais)
+
+// ROTA DE DIAGNÓSTICO (adicione antes das outras)
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        mensagem: 'Servidor está funcionando!',
+        ambiente: process.env.NODE_ENV 
+    });
+});
+
+// ... (suas outras rotas)
+
+// backend/server.js
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');

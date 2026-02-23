@@ -1,38 +1,35 @@
 // backend/src/config/database.js
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
-const path = require('path');
 
-// Em produção (Render), as variáveis de ambiente já estão definidas
-// Em desenvolvimento, carrega do arquivo .env
-if (process.env.NODE_ENV !== 'production') {
-    const envPath = path.resolve(__dirname, '../../.env');
-    console.log('📁 Carregando .env de:', envPath);
-    dotenv.config({ path: envPath });
-}
-
-console.log('📊 Configurações do banco:');
+console.log('📊 Configurações do banco (Produção):');
 console.log('   DB_USER:', process.env.DB_USER ? '✅ definido' : '❌ NÃO DEFINIDO');
 console.log('   DB_HOST:', process.env.DB_HOST ? '✅ definido' : '❌ NÃO DEFINIDO');
 console.log('   DB_NAME:', process.env.DB_NAME ? '✅ definido' : '❌ NÃO DEFINIDO');
 console.log('   NODE_ENV:', process.env.NODE_ENV);
 
-const pool = new Pool({
+const poolConfig = {
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     password: process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD) : '',
     port: process.env.DB_PORT || 5432,
-    ssl: process.env.NODE_ENV === 'production' 
-        ? { rejectUnauthorized: false } 
-        : false
-});
+    // Configuração SSL essencial para o Neon
+    ssl: {
+        rejectUnauthorized: false
+    },
+    connectionTimeoutMillis: 10000, // 10 segundos de timeout
+};
 
-// Testar conexão (mas não travar o servidor se falhar)
+const pool = new Pool(poolConfig);
+
+// Testar a conexão sem travar o servidor
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('⚠️ AVISO: Banco de dados não conectado:', err.message);
-        console.error('   O servidor continuará rodando, mas funcionalidades que dependem do banco falharão.');
+        console.error('❌ ERRO CRÍTICO: Falha na conexão com o banco de dados:');
+        console.error('   Mensagem:', err.message);
+        console.error('   Código:', err.code);
+        console.error('   Verifique as variáveis de ambiente no Render.');
+        // Não encerramos o processo, mas o servidor pode não funcionar corretamente.
     } else {
         console.log('✅ Conectado ao PostgreSQL com sucesso!');
         release();
