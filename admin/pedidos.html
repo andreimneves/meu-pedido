@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
+    // Adicione esta função no início do script
+async function testarConexaoAPI() {
+    try {
+        const response = await fetch(`${API_URL}/debug`);
+        const data = await response.json();
+        console.log('✅ API conectada:', data);
+        return true;
+    } catch (error) {
+        console.error('❌ API não respondeu:', error);
+        mostrarNotificacao('❌ Backend não está respondendo. Verifique se o servidor está rodando.', 'erro');
+        return false;
+    }
+}
+
+// Chame no início
+testarConexaoAPI();
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedidos - Meu Pedido</title>
