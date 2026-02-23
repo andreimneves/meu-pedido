@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta name="google-site-verification" content="6SUBY2gEfdK1cl1q1KmcvCExd3vG7hnygyPWKJlO6v8" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="google-site-verification" content="MmXyrQBZsJs0SrKiY_XWxPesPa8Pvpp53_5" />
     <title>DL Crepes e Lanches - Cardápio Online</title>
     <style>
         * {
@@ -561,7 +561,7 @@
             <!-- Link de suporte WhatsApp -->
             <div class="suporte-whatsapp" id="suporteWhatsapp" onclick="abrirWhatsappSuporte()">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-                <span>Tem alguma dúvida ou algo não funcionou? Conte com a gente! 💬</span>
+                <span>Tem alguma dúvida ou algo não funcionou? Conte com a gente!</span>
             </div>
             
             <div class="cart-icon" onclick="abrirCarrinho()">
@@ -754,37 +754,58 @@
 
         // ===== EXIBIR MENSAGEM PERSONALIZADA =====
         function exibirMensagemPersonalizada() {
+            // Remover mensagem antiga se existir
+            const mensagemAntiga = document.querySelector('.mensagem-personalizada');
+            if (mensagemAntiga) mensagemAntiga.remove();
+            
             if (configuracoesLoja && configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
                 const header = document.querySelector('.header');
-                
-                // Verificar se já existe uma mensagem para não duplicar
-                if (document.querySelector('.mensagem-personalizada')) return;
+                if (!header) return;
                 
                 const mensagemDiv = document.createElement('div');
                 mensagemDiv.className = 'mensagem-personalizada';
                 mensagemDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
                 mensagemDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                mensagemDiv.style.padding = '10px 20px';
+                mensagemDiv.style.textAlign = 'center';
+                mensagemDiv.style.fontSize = '14px';
+                mensagemDiv.style.display = 'flex';
+                mensagemDiv.style.alignItems = 'center';
+                mensagemDiv.style.justifyContent = 'center';
+                mensagemDiv.style.gap = '10px';
                 
                 mensagemDiv.innerHTML = `
                     <span style="font-size: 20px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
                     <span>${configuracoesLoja.mensagem_banner}</span>
                 `;
                 
-                if (header) {
-                    header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
-                }
+                header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
             }
         }
 
         // ===== CARREGAR PRODUTOS DA API =====
         async function carregarProdutos() {
             try {
-                const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`);
-                produtos = await response.json();
-                produtosFiltrados = produtos;
-                exibirProdutos();
-                carregarCategorias();
+                // FORÇAR cache: false para sempre buscar novo
+                const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`, {
+                    cache: 'no-store',
+                    headers: { 'Pragma': 'no-cache' }
+                });
+                
+                if (!response.ok) throw new Error('Erro na rede');
+                
+                const novosProdutos = await response.json();
+                
+                // Comparar com os produtos antigos para ver se mudou
+                if (JSON.stringify(produtos) !== JSON.stringify(novosProdutos)) {
+                    console.log('🔄 Cardápio atualizado!');
+                    produtos = novosProdutos;
+                    produtosFiltrados = produtos;
+                    exibirProdutos();
+                    carregarCategorias();
+                }
             } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
                 document.getElementById('produtos').innerHTML = `
                     <div style="text-align: center; padding: 40px; color: red;">
                         ❌ Erro ao carregar cardápio<br>
@@ -1219,8 +1240,8 @@
                     }
                     
                     const dataFormatada = new Date(dataAgendamento).toLocaleDateString('pt-BR');
-                    infoAgendamento = `\n📅 *Entrega agendada:* ${dataFormatada} - ${horarioAgendamento}`;
-                    dadosPedido.observacoes += `\nEntrega agendada: ${dataFormatada} ${horarioAgendamento}`;
+                    infoAgendamento = `\nEntrega agendada: ${dataFormatada} ${horarioAgendamento}`;
+                    dadosPedido.observacoes += `\n${infoAgendamento}`;
                 }
             } else {
                 nome = document.getElementById('pickupNome').value;
@@ -1253,15 +1274,14 @@
             const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
             const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
 
-            // ===== SALVAR PEDIDO NO BANCO DE DADOS =====
+            // ===== 1. PRIMEIRO: SALVAR PEDIDO NO BANCO =====
+            let pedidoSalvo = false;
             try {
                 console.log('💾 Salvando pedido no banco...', dadosPedido);
                 
                 const response = await fetch(`${API_URL}/pedidos`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         subdominio: SUBDOMINIO,
                         pedido: dadosPedido
@@ -1272,50 +1292,46 @@
                 
                 if (response.ok) {
                     console.log('✅ Pedido salvo com sucesso! ID:', responseData.pedido_id);
+                    pedidoSalvo = true;
                 } else {
                     console.error('❌ Erro ao salvar pedido:', responseData);
-                    alert('⚠️ Pedido enviado ao WhatsApp, mas houve um erro ao salvar no sistema. Entre em contato para confirmar.');
+                    if (!confirm('Erro ao registrar pedido. Deseja continuar mesmo assim?')) {
+                        return;
+                    }
                 }
             } catch (error) {
-                console.error('❌ Erro ao salvar pedido:', error);
-                alert('⚠️ Pedido enviado ao WhatsApp, mas houve um erro de conexão. Entre em contato para confirmar.');
+                console.error('❌ Erro de conexão ao salvar pedido:', error);
+                if (!confirm('Erro de conexão. Deseja tentar enviar só por WhatsApp?')) {
+                    return;
+                }
             }
 
-            // Montar mensagem para WhatsApp
-            let mensagem = `🍽️ *NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
-            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-            
-            mensagem += `👤 *Cliente:* ${nome}\n`;
-            mensagem += `📱 *Contato:* ${telefone}\n`;
+            // ===== 2. DEPOIS: MONTAR MENSAGEM LIMPA PARA WHATSAPP =====
+            let mensagem = `*NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
+            mensagem += `----------------------------\n`;
+            mensagem += `Cliente: ${nome}\n`;
+            mensagem += `Contato: ${telefone}\n`;
             
             if (modoAgendamento) {
                 mensagem += `${infoAgendamento}\n`;
             }
             
-            mensagem += `\n📋 *ITENS DO PEDIDO:*\n`;
-            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n`;
-            
+            // Itens do pedido
+            mensagem += `\nITENS DO PEDIDO:\n`;
             carrinho.forEach(item => {
-                mensagem += `• ${item.nome}\n`;
-                mensagem += `  └─ R$ ${item.preco.toFixed(2)}\n`;
+                mensagem += `- ${item.nome}: R$ ${item.preco.toFixed(2)}\n`;
             });
             
-            mensagem += `━━━━━━━━━━━━━━━━━━━━━\n`;
-            mensagem += `💰 *Subtotal:* R$ ${subtotal.toFixed(2)}\n`;
+            mensagem += `\nSubtotal: R$ ${subtotal.toFixed(2)}`;
             
             if (tipoEntrega === 'delivery') {
-                if (taxaFrete === 0) {
-                    mensagem += `🎉 *Frete:* GRÁTIS`;
+                if (taxaFrete > 0) {
+                    mensagem += `\nFrete: R$ ${taxaFrete.toFixed(2)}`;
                     if (distanciaKm > 0) {
                         mensagem += ` (${distanciaKm.toFixed(1)} km)`;
                     }
-                    mensagem += `\n`;
                 } else {
-                    mensagem += `🚚 *Frete:* R$ ${taxaFrete.toFixed(2)}`;
-                    if (distanciaKm > 0) {
-                        mensagem += ` (${distanciaKm.toFixed(1)} km)`;
-                    }
-                    mensagem += `\n`;
+                    mensagem += `\nFrete: GRATIS`;
                 }
                 
                 const endereco = document.getElementById('clienteEndereco').value;
@@ -1324,31 +1340,24 @@
                 const complemento = document.getElementById('clienteComplemento').value;
                 const cep = document.getElementById('cepInput').value;
                 
-                mensagem += `📍 *Endereço:* ${endereco}, ${numero}`;
-                if (complemento) mensagem += ` - ${complemento}`;
-                mensagem += `\n📍 *Bairro:* ${bairro}\n`;
-                mensagem += `📍 *CEP:* ${cep}\n`;
+                mensagem += `\nEndereco: ${endereco}, ${numero}`;
+                if (complemento) mensagem += ` (${complemento})`;
+                mensagem += `\nBairro: ${bairro}`;
+                mensagem += `\nCEP: ${cep}`;
             } else {
-                mensagem += `🏠 *Retirada no local*\n`;
-                mensagem += `📍 *Endereço da loja:* ${configuracoesLoja.endereco_completo || 'Bairro Santa Marta'}\n`;
+                mensagem += `\nRetirada no local`;
             }
             
-            mensagem += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
-            mensagem += `💵 *TOTAL:* R$ ${total.toFixed(2)}\n`;
+            mensagem += `\n\nTOTAL: R$ ${total.toFixed(2)}`;
             
             const observacoes = document.getElementById('observacoes').value;
             if (observacoes) {
-                mensagem += `\n📝 *Observações:*\n${observacoes}\n`;
+                mensagem += `\n\nObservacoes: ${observacoes}`;
             }
 
-            // Codificar para URL
-            const mensagemCodificada = encodeURIComponent(mensagem);
-            
-            // Número do WhatsApp
-            const whatsappNumber = configuracoesLoja.whatsapp || '5551999999999';
-            
             // Abrir WhatsApp
-            window.open(`https://wa.me/${whatsappNumber}?text=${mensagemCodificada}`, '_blank');
+            const whatsappNumber = configuracoesLoja.whatsapp || '5551999999999';
+            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`, '_blank');
             
             // Limpar carrinho
             carrinho = [];
@@ -1368,7 +1377,14 @@
             document.getElementById('observacoes').value = '';
             document.getElementById('dataAgendamento').value = '';
             document.getElementById('horarioAgendamento').value = '';
+            
+            if (pedidoSalvo) {
+                alert('✅ Pedido registrado com sucesso!');
+            }
         }
+
+        // ===== ATUALIZAR A CADA 30 SEGUNDOS =====
+        setInterval(carregarProdutos, 30000);
 
         // ===== INICIALIZAR =====
         window.onload = async function() {

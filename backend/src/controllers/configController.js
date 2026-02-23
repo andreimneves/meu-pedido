@@ -2,172 +2,173 @@
 const pool = require('../config/database');
 
 const configController = {
-    // --- Buscar configurações ---
-    buscarConfiguracoes: async (req, res) => {
+    // Buscar configurações
+    async buscarConfiguracoes(req, res) {
         try {
             const { subdominio } = req.params;
-            console.log('🔍 Buscando config para:', subdominio);
-
-            // Buscar tenant
+            
+            console.log('🔍 Buscando configurações para:', subdominio);
+            
+            // Buscar tenant pelo subdomínio
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
             );
+            
             if (tenantQuery.rows.length === 0) {
                 return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
             }
+            
             const tenantId = tenantQuery.rows[0].id;
-
-            // Buscar configurações da loja
+            
+            // Buscar configurações
             const configQuery = await pool.query(
                 'SELECT * FROM configuracoes_loja WHERE tenant_id = $1',
                 [tenantId]
             );
-
-            // Buscar bairros com restrição
-            const restricoesQuery = await pool.query(
-                'SELECT bairro, motivo FROM restricoes_bairro WHERE tenant_id = $1 AND ativo = true ORDER BY bairro',
-                [tenantId]
-            );
-
-            let configData = {};
+            
+            // Se não existir configuração, retorna valores padrão
             if (configQuery.rows.length === 0) {
-                // Valores padrão se não existir
-                configData = {
+                return res.json({
                     tenant_id: tenantId,
                     nome_loja: 'DL Crepes e Lanches',
                     slogan: 'Seu refúgio de sabores no coração do Santa Marta',
                     horario_funcionamento: 'Seg a Dom: 18h às 23h',
                     endereco_completo: 'Bairro Santa Marta, Santa Maria - RS',
                     whatsapp: '5551999999999',
-                    cep_loja: '97000-000',
-                    km_maximo_entrega: 10.00,
-                    mensagem_km_excedido: 'Sua localização está fora da nossa área de entrega. Você pode escolher a opção "Retirada" para buscar o pedido.',
+                    cep_loja: '97000000',
+                    km_maximo_entrega: 30.00,
+                    mensagem_km_excedido: 'Fora da área de entrega. Escolha retirada.',
                     cor_principal: '#C83232',
                     taxa_por_km: 2.00,
                     taxa_minima: 5.00,
-                    frete_gratis_acima: 50.00
-                };
-            } else {
-                configData = configQuery.rows[0];
+                    frete_gratis_acima: 50.00,
+                    mensagem_banner_ativo: false,
+                    mensagem_banner: '',
+                    mensagem_banner_cor: '#FFF3E0',
+                    mensagem_banner_texto: '#E65100',
+                    mensagem_banner_icone: '📢'
+                });
             }
-
-            // Adicionar a lista de bairros com restrição à resposta
-            configData.bairros_restritos = restricoesQuery.rows;
-
-            res.json(configData);
-
+            
+            res.json(configQuery.rows[0]);
+            
         } catch (error) {
-            console.error('❌ Erro ao buscar:', error);
+            console.error('❌ Erro ao buscar configurações:', error);
             res.status(500).json({ erro: error.message });
         }
     },
 
-    // --- Atualizar configurações ---
-    atualizarConfiguracoes: async (req, res) => {
-        const client = await pool.connect(); // Usar cliente para transação
+    // Atualizar configurações
+    async atualizarConfiguracoes(req, res) {
         try {
             const { subdominio } = req.params;
-            const dados = req.body; // Agora dados pode incluir um array 'bairros_restritos'
-            console.log('📝 Atualizando config para:', subdominio);
-
-            await client.query('BEGIN'); // Iniciar transação
-
+            const dados = req.body;
+            
+            console.log('📝 Atualizando configurações para:', subdominio);
+            
             // Buscar tenant
-            const tenantQuery = await client.query(
+            const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
             );
+            
             if (tenantQuery.rows.length === 0) {
-                await client.query('ROLLBACK');
                 return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
             }
+            
             const tenantId = tenantQuery.rows[0].id;
-
-            // 1. Atualizar ou Inserir configurações da loja
-            const existe = await client.query(
+            
+            // Verificar se já existe configuração
+            const existe = await pool.query(
                 'SELECT * FROM configuracoes_loja WHERE tenant_id = $1',
                 [tenantId]
             );
-
-            const configLoja = {
-                nome_loja: dados.nome_loja,
-                slogan: dados.slogan,
-                horario_funcionamento: dados.horario_funcionamento,
-                endereco_completo: dados.endereco_completo,
-                whatsapp: dados.whatsapp,
-                cep_loja: dados.cep_loja,
-                km_maximo_entrega: dados.km_maximo_entrega,
-                mensagem_km_excedido: dados.mensagem_km_excedido,
-                cor_principal: dados.cor_principal,
-                taxa_por_km: dados.taxa_por_km,
-                taxa_minima: dados.taxa_minima,
-                frete_gratis_acima: dados.frete_gratis_acima
-            };
-
+            
             if (existe.rows.length > 0) {
                 // Atualizar
-                await client.query(
+                await pool.query(
                     `UPDATE configuracoes_loja SET
-                        nome_loja = $1, slogan = $2, horario_funcionamento = $3,
-                        endereco_completo = $4, whatsapp = $5, cep_loja = $6,
-                        km_maximo_entrega = $7, mensagem_km_excedido = $8, cor_principal = $9,
-                        taxa_por_km = $10, taxa_minima = $11, frete_gratis_acima = $12
-                    WHERE tenant_id = $13`,
+                        nome_loja = $1,
+                        slogan = $2,
+                        horario_funcionamento = $3,
+                        endereco_completo = $4,
+                        whatsapp = $5,
+                        cep_loja = $6,
+                        km_maximo_entrega = $7,
+                        mensagem_km_excedido = $8,
+                        cor_principal = $9,
+                        taxa_por_km = $10,
+                        taxa_minima = $11,
+                        frete_gratis_acima = $12,
+                        mensagem_banner_ativo = $13,
+                        mensagem_banner = $14,
+                        mensagem_banner_cor = $15,
+                        mensagem_banner_texto = $16,
+                        mensagem_banner_icone = $17
+                    WHERE tenant_id = $18`,
                     [
-                        configLoja.nome_loja, configLoja.slogan, configLoja.horario_funcionamento,
-                        configLoja.endereco_completo, configLoja.whatsapp, configLoja.cep_loja,
-                        configLoja.km_maximo_entrega, configLoja.mensagem_km_excedido, configLoja.cor_principal,
-                        configLoja.taxa_por_km, configLoja.taxa_minima, configLoja.frete_gratis_acima,
+                        dados.nome_loja,
+                        dados.slogan,
+                        dados.horario_funcionamento,
+                        dados.endereco_completo,
+                        dados.whatsapp,
+                        dados.cep_loja,
+                        dados.km_maximo_entrega,
+                        dados.mensagem_km_excedido,
+                        dados.cor_principal,
+                        dados.taxa_por_km,
+                        dados.taxa_minima,
+                        dados.frete_gratis_acima,
+                        dados.mensagem_banner_ativo || false,
+                        dados.mensagem_banner || '',
+                        dados.mensagem_banner_cor || '#FFF3E0',
+                        dados.mensagem_banner_texto || '#E65100',
+                        dados.mensagem_banner_icone || '📢',
                         tenantId
                     ]
                 );
-                console.log('✅ Configurações da loja atualizadas');
+                console.log('✅ Configurações atualizadas');
             } else {
-                // Inserir
-                await client.query(
+                // Inserir nova
+                await pool.query(
                     `INSERT INTO configuracoes_loja (
-                        tenant_id, nome_loja, slogan, horario_funcionamento, endereco_completo,
-                        whatsapp, cep_loja, km_maximo_entrega, mensagem_km_excedido, cor_principal,
-                        taxa_por_km, taxa_minima, frete_gratis_acima
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                        tenant_id, nome_loja, slogan, horario_funcionamento,
+                        endereco_completo, whatsapp, cep_loja, km_maximo_entrega,
+                        mensagem_km_excedido, cor_principal, taxa_por_km,
+                        taxa_minima, frete_gratis_acima, mensagem_banner_ativo,
+                        mensagem_banner, mensagem_banner_cor, mensagem_banner_texto,
+                        mensagem_banner_icone
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
                     [
-                        tenantId, configLoja.nome_loja, configLoja.slogan, configLoja.horario_funcionamento,
-                        configLoja.endereco_completo, configLoja.whatsapp, configLoja.cep_loja,
-                        configLoja.km_maximo_entrega, configLoja.mensagem_km_excedido, configLoja.cor_principal,
-                        configLoja.taxa_por_km, configLoja.taxa_minima, configLoja.frete_gratis_acima
+                        tenantId,
+                        dados.nome_loja,
+                        dados.slogan,
+                        dados.horario_funcionamento,
+                        dados.endereco_completo,
+                        dados.whatsapp,
+                        dados.cep_loja,
+                        dados.km_maximo_entrega,
+                        dados.mensagem_km_excedido,
+                        dados.cor_principal,
+                        dados.taxa_por_km,
+                        dados.taxa_minima,
+                        dados.frete_gratis_acima,
+                        dados.mensagem_banner_ativo || false,
+                        dados.mensagem_banner || '',
+                        dados.mensagem_banner_cor || '#FFF3E0',
+                        dados.mensagem_banner_texto || '#E65100',
+                        dados.mensagem_banner_icone || '📢'
                     ]
                 );
-                console.log('✅ Novas configurações da loja inseridas');
+                console.log('✅ Novas configurações inseridas');
             }
-
-            // 2. Processar a lista de bairros restritos (se enviada)
-            if (dados.bairros_restritos && Array.isArray(dados.bairros_restritos)) {
-                // Primeiro, desativa todos os registros antigos para este tenant (ou deleta, como preferir)
-                // Opção: Deletar e recriar é mais simples para o exemplo.
-                await client.query('DELETE FROM restricoes_bairro WHERE tenant_id = $1', [tenantId]);
-
-                // Inserir os novos bairros da lista
-                for (let b of dados.bairros_restritos) {
-                    if (b.bairro && b.bairro.trim() !== '') {
-                        await client.query(
-                            'INSERT INTO restricoes_bairro (tenant_id, bairro, motivo, ativo) VALUES ($1, $2, $3, $4)',
-                            [tenantId, b.bairro.trim(), b.motivo || 'Restrição manual', true]
-                        );
-                    }
-                }
-                console.log(`✅ ${dados.bairros_restritos.length} bairros restritos atualizados.`);
-            }
-
-            await client.query('COMMIT'); // Finalizar transação
-            res.json({ mensagem: 'Configurações e restrições salvas com sucesso!' });
-
+            
+            res.json({ mensagem: 'Configurações salvas com sucesso!' });
+            
         } catch (error) {
-            await client.query('ROLLBACK');
-            console.error('❌ Erro ao salvar:', error);
+            console.error('❌ Erro ao salvar configurações:', error);
             res.status(500).json({ erro: error.message });
-        } finally {
-            client.release(); // Liberar conexão
         }
     }
 };

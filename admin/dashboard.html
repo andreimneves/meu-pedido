@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .status-novo { background: #ff9800; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .status-preparando { background: #2196F3; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .status-pronto { background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .status-entregue { background: #9C27B0; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .status-cancelado { background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
 </head>
 <body>
     <div class="admin-header">
@@ -29,7 +36,7 @@
         <div class="admin-content">
             <h1>📊 Dashboard</h1>
             
-            <div class="dashboard-cards" id="cards">
+            <div class="dashboard-cards">
                 <div class="card">
                     <h3>Pedidos Hoje</h3>
                     <div class="valor" id="pedidosHoje">0</div>
@@ -87,17 +94,17 @@
             try {
                 // Carregar dados do dashboard
                 const dashResponse = await fetch(`${API_URL}/dashboard/${SUBDOMINIO}`);
+                if (!dashResponse.ok) throw new Error('Erro na API');
+                
                 const dashData = await dashResponse.json();
                 
                 document.getElementById('pedidosHoje').textContent = dashData.hoje.pedidos;
-                document.getElementById('faturamentoHoje').textContent = `R$ ${dashData.hoje.faturamento.toFixed(2)}`;
+                document.getElementById('faturamentoHoje').textContent = 
+                    `R$ ${dashData.hoje.faturamento.toFixed(2)}`;
                 
-                // Carregar últimos pedidos
-                const pedidosResponse = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
-                const pedidos = await pedidosResponse.json();
-                
+                // Últimos pedidos
                 const tbody = document.getElementById('pedidosTable');
-                tbody.innerHTML = pedidos.slice(0, 10).map(p => `
+                tbody.innerHTML = dashData.ultimos_pedidos.map(p => `
                     <tr>
                         <td>#${p.id}</td>
                         <td>${p.cliente_nome}</td>
@@ -121,10 +128,15 @@
                 
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
+                document.getElementById('pedidosTable').innerHTML = 
+                    '<tr><td colspan="5" style="color: red;">Erro ao carregar dados</td></tr>';
             }
         }
 
+        // Carregar ao iniciar
         carregarDashboard();
+        
+        // Atualizar a cada 30 segundos
         setInterval(carregarDashboard, 30000);
     </script>
 </body>
