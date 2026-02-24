@@ -47,6 +47,18 @@
             background: white;
         }
         
+        .btn-view {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
         .table-container {
             background: white;
             border-radius: 10px;
@@ -58,7 +70,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px;
+            min-width: 1000px;
         }
         
         th {
@@ -72,6 +84,13 @@
         td {
             padding: 12px;
             border-bottom: 1px solid #eee;
+        }
+        
+        .acoes-cell {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
         .loading {
@@ -209,7 +228,6 @@
         function filtrarPedidos(filtro) {
             filtroAtual = filtro;
             
-            // Atualizar botões
             document.querySelectorAll('.filtro-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -250,13 +268,16 @@
                         <td><strong style="color:#C83232">R$ ${parseFloat(p.total).toFixed(2)}</strong></td>
                         <td><span class="status-${p.status}">${p.status}</span></td>
                         <td>${data}</td>
-                        <td>
+                        <td class="acoes-cell">
+                            <a href="pedido-detalhe.html?id=${p.id}" class="btn-view">
+                                👁️ Detalhes
+                            </a>
                             <select class="status-select" onchange="atualizarStatus(${p.id}, this.value)">
-                                <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>🆕 Novo</option>
-                                <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>👨‍🍳 Preparando</option>
-                                <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>✅ Pronto</option>
-                                <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>🚚 Entregue</option>
-                                <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>❌ Cancelado</option>
+                                <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>Novo</option>
+                                <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>Preparando</option>
+                                <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>Pronto</option>
+                                <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>Entregue</option>
+                                <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
                             </select>
                         </td>
                     </tr>
@@ -276,7 +297,6 @@
                 
                 if (response.ok) {
                     await carregarPedidos();
-                    alert('✅ Status atualizado com sucesso!');
                 } else {
                     const erro = await response.json();
                     alert('❌ Erro: ' + (erro.erro || 'Erro desconhecido'));
