@@ -5,219 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configurações - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .config-section {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .config-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #555;
-        }
-        
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border 0.3s;
-        }
-        
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #C83232;
-        }
-        
-        .btn-save {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: background 0.3s;
-        }
-        
-        .btn-save:hover {
-            background: #388E3C;
-        }
-        
-        .mensagem-preview {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        
-        .horarios-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .dia-card {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        
-        .dia-card h4 {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 16px;
-        }
-        
-        .horario-inputs {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-top: 10px;
-        }
-        
-        .horario-inputs input[type="time"] {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .toggle-slider {
-            background-color: #4CAF50;
-        }
-        
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-        
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196F3;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 14px;
-            border-radius: 4px;
-        }
-        
-        .success-message {
-            background: #4CAF50;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .error-message {
-            background: #f44336;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .warning-message {
-            background: #ff9800;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #C83232;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 </head>
 <body>
     <div class="admin-header">
@@ -260,7 +47,8 @@
         const SUBDOMINIO = 'dlcrepes';
         
         let configuracoes = {};
-        let horariosDelivery = [];
+        let horariosOriginais = [];
+        let horariosAtuais = [];
 
         // Verificar login
         if (!localStorage.getItem('adminLogado')) {
@@ -277,7 +65,6 @@
             const warning = document.getElementById('warningMessage');
             const error = document.getElementById('errorMessage');
             
-            // Esconder todos
             success.style.display = 'none';
             warning.style.display = 'none';
             error.style.display = 'none';
@@ -312,23 +99,14 @@
                     const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
                     if (horariosResponse.ok) {
                         const data = await horariosResponse.json();
-                        horariosDelivery = Array.isArray(data) ? data : [];
-                        console.log('✅ Horários carregados:', horariosDelivery);
+                        horariosOriginais = Array.isArray(data) ? data : [];
+                        console.log('✅ Horários carregados:', horariosOriginais);
                     } else {
-                        console.log('⚠️ Usando horários padrão (API não respondeu)');
-                        horariosDelivery = [
-                            { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                            { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
-                        ];
+                        throw new Error('Erro na resposta');
                     }
                 } catch (error) {
-                    console.log('⚠️ Erro ao carregar horários, usando padrão:', error.message);
-                    horariosDelivery = [
+                    console.log('⚠️ Usando horários padrão');
+                    horariosOriginais = [
                         { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
                         { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
                         { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
@@ -338,6 +116,9 @@
                         { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
                     ];
                 }
+                
+                // Fazer uma cópia para edição
+                horariosAtuais = JSON.parse(JSON.stringify(horariosOriginais));
                 
                 exibirFormulario();
             } catch (error) {
@@ -356,21 +137,8 @@
         function exibirFormulario() {
             const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
             
-            // Garantir que horariosDelivery é um array
-            const horariosParaExibir = Array.isArray(horariosDelivery) && horariosDelivery.length > 0 
-                ? horariosDelivery 
-                : [
-                    { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
-                ];
-            
             // Gerar HTML dos horários
-            const horariosHtml = horariosParaExibir.map(h => {
+            const horariosHtml = horariosAtuais.map(h => {
                 const diaSemana = h.dia_semana !== undefined ? h.dia_semana : 0;
                 const aberto = h.aberto !== undefined ? h.aberto : true;
                 const abertura = h.abertura || '18:00';
@@ -379,7 +147,7 @@
                 return `
                     <div class="dia-card">
                         <h4>
-                            ${dias[diaSemana] || 'Dia'}
+                            ${dias[diaSemana]}
                             <label class="toggle-switch">
                                 <input type="checkbox" class="horario-checkbox" data-dia="${diaSemana}" ${aberto ? 'checked' : ''}>
                                 <span class="toggle-slider"></span>
@@ -482,7 +250,6 @@
                         <h2>⏰ Horários do Delivery</h2>
                         <div class="info-box">
                             🚚 Configure os dias e horários em que o delivery está disponível.
-                            Fora destes horários, o cliente verá opção de agendamento.
                         </div>
                         
                         <div class="horarios-grid">
@@ -532,7 +299,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-save">💾 Salvar Todas as Configurações</button>
+                    <button type="submit" class="btn-save">💾 Salvar Configurações</button>
                 </form>
             `;
             
@@ -544,16 +311,41 @@
             document.getElementById('banner_cor_fundo')?.addEventListener('input', atualizarPreview);
             document.getElementById('banner_cor_texto')?.addEventListener('input', atualizarPreview);
             
-            // Eventos para horários
+            // Eventos para horários - atualizar horariosAtuais em tempo real
             document.querySelectorAll('.horario-checkbox').forEach(cb => {
                 cb.addEventListener('change', function() {
-                    const dia = this.dataset.dia;
+                    const dia = parseInt(this.dataset.dia);
+                    const horario = horariosAtuais.find(h => h.dia_semana === dia);
+                    if (horario) {
+                        horario.aberto = this.checked;
+                    }
+                    
                     const abertura = document.querySelector(`.horario-abertura[data-dia="${dia}"]`);
                     const fechamento = document.querySelector(`.horario-fechamento[data-dia="${dia}"]`);
                     
                     if (abertura && fechamento) {
                         abertura.disabled = !this.checked;
                         fechamento.disabled = !this.checked;
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.horario-abertura').forEach(input => {
+                input.addEventListener('change', function() {
+                    const dia = parseInt(this.dataset.dia);
+                    const horario = horariosAtuais.find(h => h.dia_semana === dia);
+                    if (horario) {
+                        horario.abertura = this.value;
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.horario-fechamento').forEach(input => {
+                input.addEventListener('change', function() {
+                    const dia = parseInt(this.dataset.dia);
+                    const horario = horariosAtuais.find(h => h.dia_semana === dia);
+                    if (horario) {
+                        horario.fechamento = this.value;
                     }
                 });
             });
@@ -574,8 +366,24 @@
             }
         }
 
+        // Função para comparar se os horários foram alterados
+        function horariosForamAlterados() {
+            if (horariosOriginais.length !== horariosAtuais.length) return true;
+            
+            for (let i = 0; i < horariosOriginais.length; i++) {
+                const original = horariosOriginais[i];
+                const atual = horariosAtuais[i];
+                
+                if (original.aberto !== atual.aberto ||
+                    original.abertura !== atual.abertura ||
+                    original.fechamento !== atual.fechamento) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         async function salvarConfiguracoes() {
-            // Mostrar loading
             const btn = document.querySelector('.btn-save');
             const textoOriginal = btn.textContent;
             btn.textContent = '💾 Salvando...';
@@ -602,27 +410,10 @@
                 mensagem_banner_texto: document.getElementById('banner_cor_texto').value
             };
 
-            // Horários do delivery
-            const horarios = [];
-            for (let dia = 0; dia < 7; dia++) {
-                const checkbox = document.querySelector(`.horario-checkbox[data-dia="${dia}"]`);
-                const abertura = document.querySelector(`.horario-abertura[data-dia="${dia}"]`);
-                const fechamento = document.querySelector(`.horario-fechamento[data-dia="${dia}"]`);
-                
-                if (checkbox && abertura && fechamento) {
-                    horarios.push({
-                        dia_semana: dia,
-                        aberto: checkbox.checked,
-                        abertura: abertura.value,
-                        fechamento: fechamento.value
-                    });
-                }
-            }
-
             try {
                 console.log('💾 Salvando configurações...', config);
                 
-                // 1. Salvar configurações
+                // 1. Salvar configurações (sempre salva, pode ter alterado)
                 const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -638,26 +429,39 @@
                     const erro = await configResponse.json().catch(() => ({}));
                     mensagem = '❌ Erro ao salvar configurações: ' + (erro.erro || 'Erro desconhecido');
                     tipo = 'error';
+                    mostrarMensagem(tipo, mensagem);
+                    btn.textContent = textoOriginal;
+                    btn.disabled = false;
+                    return;
                 }
 
-                // 2. Tentar salvar horários (não crítico)
-                try {
-                    const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ horarios })
-                    });
-                    
-                    if (!horariosResponse.ok && configResponse.ok) {
-                        mensagem += ' ⚠️ Horários não foram salvos (não crítico)';
+                // 2. Verificar se horários foram alterados antes de tentar salvar
+                const horariosAlterados = horariosForamAlterados();
+                
+                if (horariosAlterados) {
+                    try {
+                        const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ horarios: horariosAtuais })
+                        });
+                        
+                        if (horariosResponse.ok) {
+                            mensagem += ' ✅ Horários atualizados.';
+                            // Atualizar horários originais com os novos valores
+                            horariosOriginais = JSON.parse(JSON.stringify(horariosAtuais));
+                        } else {
+                            const erro = await horariosResponse.json().catch(() => ({}));
+                            mensagem += ` ⚠️ Horários não salvos: ${erro.erro || 'erro na API'}`;
+                            tipo = 'warning';
+                        }
+                    } catch (horarioError) {
+                        console.warn('Erro ao salvar horários:', horarioError);
+                        mensagem += ' ⚠️ Erro de conexão ao salvar horários.';
                         tipo = 'warning';
                     }
-                } catch (horarioError) {
-                    console.warn('Erro ao salvar horários:', horarioError);
-                    if (configResponse.ok) {
-                        mensagem += ' ⚠️ Horários não foram salvos (não crítico)';
-                        tipo = 'warning';
-                    }
+                } else {
+                    console.log('⏰ Horários não foram alterados, pulando salvamento');
                 }
 
                 mostrarMensagem(tipo, mensagem);
@@ -666,7 +470,6 @@
                 console.error('❌ Erro ao salvar:', error);
                 mostrarMensagem('error', '❌ Erro de conexão: ' + error.message);
             } finally {
-                // Restaurar botão
                 btn.textContent = textoOriginal;
                 btn.disabled = false;
             }
