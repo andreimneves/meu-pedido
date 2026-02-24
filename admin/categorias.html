@@ -5,45 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Categorias - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            max-width: 500px;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 10px;
-            position: relative;
-        }
-        .close {
-            position: absolute;
-            right: 20px;
-            top: 10px;
-            font-size: 30px;
-            cursor: pointer;
-            color: #999;
-        }
-        .btn-save {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 20px;
-            width: 100%;
-        }
-    </style>
 </head>
 <body>
     <div class="admin-header">
@@ -96,12 +57,12 @@
             <form onsubmit="event.preventDefault(); salvarCategoria();">
                 <div class="form-group">
                     <label>Nome da Categoria</label>
-                    <input type="text" id="categoriaNome" required style="width:100%; padding:8px; margin-top:5px;">
+                    <input type="text" id="categoriaNome" required>
                 </div>
                 
-                <div class="form-group" style="margin-top:15px;">
+                <div class="form-group">
                     <label>Ordem (1, 2, 3...)</label>
-                    <input type="number" id="categoriaOrdem" value="0" style="width:100%; padding:8px; margin-top:5px;">
+                    <input type="number" id="categoriaOrdem" value="0">
                 </div>
                 
                 <button type="submit" class="btn-save">Salvar Categoria</button>
@@ -131,10 +92,7 @@
                     document.getElementById('categoriaOrdem').value = categoria.ordem || 0;
                     document.getElementById('categoriaModal').style.display = 'block';
                 })
-                .catch(error => {
-                    console.error('Erro ao carregar categoria:', error);
-                    alert('Erro ao carregar categoria');
-                });
+                .catch(() => alert('Erro ao carregar categoria'));
         }
         
         async function salvarCategoria() {
@@ -170,14 +128,12 @@
                 
                 if (response.ok) {
                     fecharModalCategoria();
-                    await carregarCategorias();
-                    alert('✅ Categoria salva!');
+                    window.location.reload();
                 } else {
-                    const erro = await response.json();
-                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                    alert('Erro ao salvar');
                 }
             } catch (error) {
-                alert('Erro de conexão: ' + error.message);
+                alert('Erro de conexão');
             }
         }
         
