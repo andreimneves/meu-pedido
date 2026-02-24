@@ -746,3 +746,60 @@ footer {
 .mb-20 {
     margin-bottom: 20px;
 }
+
+/* AVISOS E BOTÕES */
+.aviso-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 8px;
+    animation: pulse 1s;
+}
+
+.aviso-box p {
+    margin-bottom: 15px;
+    color: #e65100;
+    font-weight: 500;
+}
+
+.botoes-aviso {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-aviso {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-aviso.retirar {
+    background: #C83232;
+    color: white;
+}
+
+.btn-aviso.retirar:hover {
+    background: #A02828;
+    transform: translateY(-2px);
+}
+
+.btn-aviso.agendar {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-aviso.agendar:hover {
+    background: #388E3C;
+    transform: translateY(-2px);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
