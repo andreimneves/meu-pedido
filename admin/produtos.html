@@ -52,10 +52,10 @@
 </head>
 <body>
     <div class="admin-header">
-        <h1>Meu Pedido - Painel Administrativo</h1>
+        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
         <div class="user-info">
-            <span>DL Crepes e Lanches</span>
-            <button class="logout" onclick="logout()">Sair</button>
+            <span>👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
         </div>
     </div>
     
@@ -123,144 +123,5 @@
     </div>
     
     <script src="script.js"></script>
-    <script>
-        let produtos = [];
-        let categorias = [];
-        let produtoEditando = null;
-        
-        async function carregarDados() {
-            await Promise.all([
-                carregarProdutos(),
-                carregarCategoriasSelect()
-            ]);
-        }
-        
-        async function carregarProdutos() {
-            try {
-                const response = await fetch(`${API_URL}/produtos`);
-                produtos = await response.json();
-                exibirProdutos();
-            } catch (error) {
-                console.error('Erro ao carregar produtos:', error);
-                document.getElementById('produtosTable').innerHTML = 
-                    '<tr><td colspan="4" style="color:red">Erro ao carregar</td></tr>';
-            }
-        }
-        
-        async function carregarCategoriasSelect() {
-            try {
-                const response = await fetch(`${API_URL}/categorias`);
-                categorias = await response.json();
-                
-                const select = document.getElementById('produtoCategoria');
-                select.innerHTML = '<option value="">Selecione...</option>' + 
-                    categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-                    
-            } catch (error) {
-                console.error('Erro ao carregar categorias:', error);
-            }
-        }
-        
-        function exibirProdutos() {
-            const tbody = document.getElementById('produtosTable');
-            tbody.innerHTML = produtos.map(p => `
-                <tr>
-                    <td>${p.nome}</td>
-                    <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
-                    <td>${p.categoria_nome || '-'}</td>
-                    <td>
-                        <button class="btn-edit" onclick="editarProduto(${p.id})">Editar</button>
-                        <button class="btn-delete" onclick="excluirProduto(${p.id})">Excluir</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        function abrirModalProduto() {
-            produtoEditando = null;
-            document.getElementById('modalTituloProduto').textContent = 'Novo Produto';
-            document.getElementById('produtoNome').value = '';
-            document.getElementById('produtoPreco').value = '';
-            document.getElementById('produtoCategoria').value = '';
-            document.getElementById('produtoModal').style.display = 'block';
-        }
-        
-        function editarProduto(id) {
-            produtoEditando = produtos.find(p => p.id === id);
-            document.getElementById('modalTituloProduto').textContent = 'Editar Produto';
-            document.getElementById('produtoNome').value = produtoEditando.nome;
-            document.getElementById('produtoPreco').value = produtoEditando.preco;
-            document.getElementById('produtoCategoria').value = produtoEditando.categoria_id || '';
-            document.getElementById('produtoModal').style.display = 'block';
-        }
-        
-        async function salvarProduto() {
-            const nome = document.getElementById('produtoNome').value;
-            const preco = document.getElementById('produtoPreco').value;
-            const categoriaId = document.getElementById('produtoCategoria').value;
-            
-            const produto = {
-                nome,
-                preco: parseFloat(preco),
-                categoria_id: categoriaId || null,
-                tenant_id: 1,
-                disponivel: true
-            };
-            
-            try {
-                let response;
-                
-                if (produtoEditando) {
-                    response = await fetch(`${API_URL}/produtos/${produtoEditando.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(produto)
-                    });
-                } else {
-                    response = await fetch(`${API_URL}/produtos`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(produto)
-                    });
-                }
-                
-                if (response.ok) {
-                    fecharModalProduto();
-                    await carregarProdutos();
-                    alert('✅ Produto salvo com sucesso!');
-                } else {
-                    const erro = await response.json();
-                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
-                }
-            } catch (error) {
-                alert('Erro de conexão: ' + error.message);
-            }
-        }
-        
-        async function excluirProduto(id) {
-            if (!confirm('Tem certeza que deseja excluir este produto?')) return;
-            
-            try {
-                const response = await fetch(`${API_URL}/produtos/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    await carregarProdutos();
-                    alert('✅ Produto excluído!');
-                } else {
-                    alert('Erro ao excluir');
-                }
-            } catch (error) {
-                alert('Erro de conexão');
-            }
-        }
-        
-        function fecharModalProduto() {
-            document.getElementById('produtoModal').style.display = 'none';
-        }
-        
-        carregarDados();
-    </script>
 </body>
 </html>
