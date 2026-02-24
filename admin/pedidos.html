@@ -20,12 +20,16 @@
         }
         
         .filtro-btn {
-            padding: 8px 15px;
+            padding: 8px 20px;
             border: 1px solid #ddd;
             background: white;
             border-radius: 20px;
             cursor: pointer;
             transition: all 0.3s;
+        }
+        
+        .filtro-btn:hover {
+            background: #f0f0f0;
         }
         
         .filtro-btn.active {
@@ -34,17 +38,20 @@
             border-color: #C83232;
         }
         
-        .filtro-btn:hover {
-            background: #f0f0f0;
+        .status-select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <div class="admin-header">
-        <h1>Meu Pedido - Painel Administrativo</h1>
+        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
         <div class="user-info">
-            <span>DL Crepes e Lanches</span>
-            <button class="logout" onclick="logout()">Sair</button>
+            <span>👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
         </div>
     </div>
     
@@ -62,7 +69,7 @@
         <div class="admin-content">
             <h1>📋 Pedidos</h1>
             
-            <div class="filtros">
+            <div class="filtros" id="filtros">
                 <button class="filtro-btn active" onclick="filtrarPedidos('todos')">Todos</button>
                 <button class="filtro-btn" onclick="filtrarPedidos('novo')">🆕 Novos</button>
                 <button class="filtro-btn" onclick="filtrarPedidos('preparando')">👨‍🍳 Preparando</button>
@@ -85,29 +92,17 @@
                         </tr>
                     </thead>
                     <tbody id="pedidosTable">
-                        <tr><td colspan="7">Carregando...</td></tr>
+                        <tr><td colspan="7">Carregando pedidos...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    
+
     <script src="script.js"></script>
     <script>
         let todosPedidos = [];
         let filtroAtual = 'todos';
-        
-        async function carregarPedidos() {
-            try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
-                todosPedidos = await response.json();
-                aplicarFiltro();
-            } catch (error) {
-                console.error('Erro ao carregar pedidos:', error);
-                document.getElementById('pedidosTable').innerHTML = 
-                    '<tr><td colspan="7" style="color:red">Erro ao carregar pedidos</td></tr>';
-            }
-        }
         
         function filtrarPedidos(filtro) {
             filtroAtual = filtro;
@@ -117,14 +112,10 @@
             });
             event.target.classList.add('active');
             
-            aplicarFiltro();
-        }
-        
-        function aplicarFiltro() {
-            let pedidosFiltrados = todosPedidos;
-            if (filtroAtual !== 'todos') {
-                pedidosFiltrados = todosPedidos.filter(p => p.status === filtroAtual);
-            }
+            const pedidosFiltrados = filtro === 'todos' 
+                ? todosPedidos 
+                : todosPedidos.filter(p => p.status === filtro);
+            
             exibirPedidos(pedidosFiltrados);
         }
         
@@ -136,48 +127,31 @@
                 return;
             }
             
-            tbody.innerHTML = pedidos.map(p => `
-                <tr>
-                    <td>#${p.id}</td>
-                    <td>${p.cliente_nome}</td>
-                    <td>${p.cliente_telefone}</td>
-                    <td>R$ ${parseFloat(p.total).toFixed(2)}</td>
-                    <td><span class="status-${p.status}">${p.status}</span></td>
-                    <td>${new Date(p.data_pedido).toLocaleString('pt-BR')}</td>
-                    <td>
-                        <select onchange="atualizarStatus(${p.id}, this.value)" style="padding:5px; border-radius:5px;">
-                            <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>Novo</option>
-                            <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>Preparando</option>
-                            <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>Pronto</option>
-                            <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>Entregue</option>
-                            <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
-                        </select>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = pedidos.map(p => {
+                const data = new Date(p.data_pedido).toLocaleString('pt-BR');
+                return `
+                    <tr>
+                        <td>#${p.id}</td>
+                        <td>${p.cliente_nome}</td>
+                        <td>${p.cliente_telefone}</td>
+                        <td>R$ ${parseFloat(p.total).toFixed(2)}</td>
+                        <td><span class="status-${p.status}">${p.status}</span></td>
+                        <td>${data}</td>
+                        <td>
+                            <select class="status-select" onchange="atualizarStatus(${p.id}, this.value)">
+                                <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>Novo</option>
+                                <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>Preparando</option>
+                                <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>Pronto</option>
+                                <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>Entregue</option>
+                                <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
         
-        async function atualizarStatus(pedidoId, novoStatus) {
-            try {
-                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
-                });
-                
-                if (response.ok) {
-                    await carregarPedidos();
-                    alert('✅ Status atualizado!');
-                } else {
-                    alert('Erro ao atualizar status');
-                }
-            } catch (error) {
-                alert('Erro de conexão');
-            }
-        }
-        
-        carregarPedidos();
-        setInterval(carregarPedidos, 30000); // Atualizar a cada 30s
+        // A função carregarPedidos já está no script.js
     </script>
 </body>
 </html>
