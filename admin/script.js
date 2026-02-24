@@ -1,3 +1,79 @@
+// ===== SISTEMA DE NOTIFICAÇÕES POPUP =====
+// Criar container de notificações se não existir
+if (!document.getElementById('notificacaoContainer')) {
+    const container = document.createElement('div');
+    container.id = 'notificacaoContainer';
+    container.className = 'notificacao-container';
+    document.body.appendChild(container);
+}
+
+function mostrarNotificacao(mensagem, tipo = 'info', tempo = 5000) {
+    const container = document.getElementById('notificacaoContainer');
+    if (!container) return;
+    
+    // Criar elemento de notificação
+    const notificacao = document.createElement('div');
+    notificacao.className = `notificacao ${tipo}`;
+    
+    // Definir título baseado no tipo
+    let titulo = '';
+    switch(tipo) {
+        case 'sucesso':
+            titulo = '✅ Sucesso';
+            break;
+        case 'erro':
+            titulo = '❌ Erro';
+            break;
+        case 'aviso':
+            titulo = '⚠️ Aviso';
+            break;
+        default:
+            titulo = 'ℹ️ Informação';
+    }
+    
+    // Conteúdo da notificação
+    notificacao.innerHTML = `
+        <div class="notificacao-conteudo">
+            <div class="notificacao-titulo">${titulo}</div>
+            <div class="notificacao-mensagem">${mensagem}</div>
+        </div>
+        <button class="notificacao-fechar" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    // Adicionar ao container
+    container.appendChild(notificacao);
+    
+    // Remover após o tempo determinado
+    if (tempo > 0) {
+        setTimeout(() => {
+            notificacao.classList.add('saindo');
+            setTimeout(() => {
+                if (notificacao.parentNode) {
+                    notificacao.remove();
+                }
+            }, 300);
+        }, tempo);
+    }
+    
+    // Fechar ao clicar
+    notificacao.addEventListener('click', function(e) {
+        if (e.target === notificacao || e.target.classList.contains('notificacao-conteudo')) {
+            notificacao.classList.add('saindo');
+            setTimeout(() => {
+                if (notificacao.parentNode) {
+                    notificacao.remove();
+                }
+            }, 300);
+        }
+    });
+}
+
+// Substituir todos os alerts por notificações
+const originalAlert = window.alert;
+window.alert = function(mensagem) {
+    mostrarNotificacao(mensagem, 'aviso', 4000);
+};
+
 // admin/script.js - VERSÃO COMPLETA E FINAL
 const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';

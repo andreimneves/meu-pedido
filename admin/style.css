@@ -668,3 +668,269 @@ input:checked + .toggle-slider:before {
         text-align: center;
     }
 }
+
+/* ===== PEDIDO DETALHE ===== */
+.pedido-card {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.pedido-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.pedido-id {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+}
+
+.pedido-id span {
+    color: #C83232;
+}
+
+.pedido-status {
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.pedido-data {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.secao {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.secao h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.info-item {
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+}
+
+.info-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+.itens-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.itens-tabela th {
+    text-align: left;
+    padding: 12px;
+    background: #f0f0f0;
+    color: #333;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.itens-tabela td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.total-pedido {
+    text-align: right;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #eee;
+}
+
+.total-pedido .total-label {
+    font-size: 16px;
+    color: #666;
+    margin-right: 15px;
+}
+
+.total-pedido .total-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #C83232;
+}
+
+.acoes {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: #C83232;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #A02828;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: #25D366;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #128C7E;
+    transform: translateY(-2px);
+}
+
+/* ===== NOTIFICAÇÕES POPUP ===== */
+.notificacao-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.notificacao {
+    min-width: 300px;
+    max-width: 400px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.notificacao.sucesso {
+    background: #4CAF50;
+    border-left: 4px solid #388E3C;
+}
+
+.notificacao.erro {
+    background: #f44336;
+    border-left: 4px solid #d32f2f;
+}
+
+.notificacao.aviso {
+    background: #ff9800;
+    border-left: 4px solid #f57c00;
+}
+
+.notificacao.info {
+    background: #2196F3;
+    border-left: 4px solid #1976D2;
+}
+
+.notificacao-conteudo {
+    flex: 1;
+}
+
+.notificacao-titulo {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.notificacao-mensagem {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.notificacao-fechar {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+    padding: 0 5px;
+}
+
+.notificacao-fechar:hover {
+    opacity: 1;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.notificacao.saindo {
+    animation: slideOut 0.3s ease forwards;
+}
