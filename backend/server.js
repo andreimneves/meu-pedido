@@ -36,3 +36,32 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Servidor rodando na porta ${PORT}`);
     console.log(`📂 Diretório atual: ${__dirname}`);
 });
+
+// Rota para testar banco de dados
+app.get('/api/teste-banco', async (req, res) => {
+    try {
+        const { Pool } = require('pg');
+        const pool = new Pool({
+            user: process.env.DB_USER,
+            host: process.env.DB_HOST,
+            database: process.env.DB_NAME,
+            password: process.env.DB_PASSWORD,
+            port: process.env.DB_PORT,
+            ssl: { rejectUnauthorized: false }
+        });
+        
+        const result = await pool.query('SELECT NOW()');
+        res.json({ 
+            conectado: true, 
+            horario: result.rows[0],
+            ambiente: process.env.NODE_ENV
+        });
+        await pool.end();
+    } catch (error) {
+        res.json({ 
+            conectado: false, 
+            erro: error.message,
+            ambiente: process.env.NODE_ENV
+        });
+    }
+});
