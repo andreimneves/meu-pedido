@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Meu Pedido</title>
+    <title>Pedidos - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .status-novo { background: #ff9800; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
-        .status-preparando { background: #2196F3; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
-        .status-pronto { background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
-        .status-entregue { background: #9C27B0; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
-        .status-cancelado { background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .status-novo { background: #ff9800; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-preparando { background: #2196F3; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-pronto { background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-entregue { background: #9C27B0; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-cancelado { background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; }
     </style>
 </head>
 <body>
     <div class="admin-header">
-        <h1>Meu Pedido - Painel Administrativo</h1>
+        <h1>Meu Pedido - Painel</h1>
         <div class="user-info">
-            <span>DL Crepes e Lanches</span>
+            <span>DL Crepes</span>
             <button class="logout" onclick="logout()">Sair</button>
         </div>
     </div>
@@ -25,39 +25,27 @@
     <div class="admin-container">
         <div class="admin-sidebar">
             <ul>
-                <li><a href="dashboard.html" class="active">📊 Dashboard</a></li>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
                 <li><a href="produtos.html">📦 Produtos</a></li>
                 <li><a href="categorias.html">📁 Categorias</a></li>
-                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="pedidos.html" class="active">📋 Pedidos</a></li>
                 <li><a href="config.html">⚙️ Configurações</a></li>
             </ul>
         </div>
         
         <div class="admin-content">
-            <h1>📊 Dashboard</h1>
+            <h1>📋 Pedidos</h1>
             
-            <div class="dashboard-cards">
-                <div class="card">
-                    <h3>Pedidos Hoje</h3>
-                    <div class="valor" id="pedidosHoje">0</div>
-                </div>
-                <div class="card">
-                    <h3>Faturamento Hoje</h3>
-                    <div class="valor" id="faturamentoHoje">R$ 0,00</div>
-                </div>
-                <div class="card">
-                    <h3>Total de Produtos</h3>
-                    <div class="valor" id="totalProdutos">0</div>
-                </div>
-                <div class="card">
-                    <h3>Total de Categorias</h3>
-                    <div class="valor" id="totalCategorias">0</div>
-                </div>
+            <div class="filtros">
+                <button class="filtro-btn active">Todos</button>
+                <button class="filtro-btn">Novos</button>
+                <button class="filtro-btn">Preparando</button>
+                <button class="filtro-btn">Pronto</button>
+                <button class="filtro-btn">Entregue</button>
             </div>
             
             <div class="table-container">
-                <h2>Últimos Pedidos</h2>
-                <table id="ultimosPedidos">
+                <table>
                     <thead>
                         <tr>
                             <th>#</th>
@@ -68,76 +56,13 @@
                         </tr>
                     </thead>
                     <tbody id="pedidosTable">
-                        <tr>
-                            <td colspan="5">Carregando...</td>
-                        </tr>
+                        <tr><td colspan="5">Em breve...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <script>
-        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
-        const SUBDOMINIO = 'dlcrepes';
-
-        function logout() {
-            localStorage.removeItem('adminLogado');
-            window.location.href = 'index.html';
-        }
-
-        if (!localStorage.getItem('adminLogado')) {
-            window.location.href = 'index.html';
-        }
-
-        async function carregarDashboard() {
-            try {
-                // Carregar dados do dashboard
-                const dashResponse = await fetch(`${API_URL}/dashboard/${SUBDOMINIO}`);
-                if (!dashResponse.ok) throw new Error('Erro na API');
-                
-                const dashData = await dashResponse.json();
-                
-                document.getElementById('pedidosHoje').textContent = dashData.hoje.pedidos;
-                document.getElementById('faturamentoHoje').textContent = 
-                    `R$ ${dashData.hoje.faturamento.toFixed(2)}`;
-                
-                // Últimos pedidos
-                const tbody = document.getElementById('pedidosTable');
-                tbody.innerHTML = dashData.ultimos_pedidos.map(p => `
-                    <tr>
-                        <td>#${p.id}</td>
-                        <td>${p.cliente_nome}</td>
-                        <td>R$ ${p.total.toFixed(2)}</td>
-                        <td><span class="status-${p.status}">${p.status}</span></td>
-                        <td>${new Date(p.data_pedido).toLocaleString('pt-BR')}</td>
-                    </tr>
-                `).join('');
-                
-                // Carregar produtos e categorias
-                const [prodResponse, catResponse] = await Promise.all([
-                    fetch(`${API_URL}/produtos`),
-                    fetch(`${API_URL}/categorias`)
-                ]);
-                
-                const produtos = await prodResponse.json();
-                const categorias = await catResponse.json();
-                
-                document.getElementById('totalProdutos').textContent = produtos.length;
-                document.getElementById('totalCategorias').textContent = categorias.length;
-                
-            } catch (error) {
-                console.error('Erro ao carregar dashboard:', error);
-                document.getElementById('pedidosTable').innerHTML = 
-                    '<tr><td colspan="5" style="color: red;">Erro ao carregar dados</td></tr>';
-            }
-        }
-
-        // Carregar ao iniciar
-        carregarDashboard();
-        
-        // Atualizar a cada 30 segundos
-        setInterval(carregarDashboard, 30000);
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

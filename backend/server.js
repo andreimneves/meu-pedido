@@ -5,18 +5,13 @@ const path = require('path');
 
 const app = express();
 
-// Middlewares básicos
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// ===== ROTAS DE TESTE E DEBUG (PRIMEIRAS) =====
-app.get('/ping', (req, res) => {
-    res.send('pong');
-});
-
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
+// ===== ROTAS DE TESTE =====
+app.get('/ping', (req, res) => res.send('pong'));
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.get('/', (req, res) => {
     res.json({ 
@@ -25,17 +20,17 @@ app.get('/', (req, res) => {
     });
 });
 
-// ===== ROTA DE TESTE DO BANCO (COPIADA DO SEU TESTE) =====
+app.get('/api/teste', (req, res) => {
+    res.json({ status: 'ok', mensagem: 'API funcionando' });
+});
+
 app.get('/api/teste-banco', async (req, res) => {
     try {
         const { Pool } = require('pg');
-        
-        console.log('🔍 Testando conexão com o banco...');
-        
         const pool = new Pool({
-            user: process.env.DB_USER || 'postgres',
-            host: process.env.DB_HOST || 'localhost',
-            database: process.env.DB_NAME || 'meu_pedido_db',
+            user: process.env.DB_USER,
+            host: process.env.DB_HOST,
+            database: process.env.DB_NAME,
             password: process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD) : '',
             port: process.env.DB_PORT || 5432,
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -48,33 +43,32 @@ app.get('/api/teste-banco', async (req, res) => {
             sucesso: true, 
             mensagem: 'Conectado ao banco!',
             hora: result.rows[0].hora,
-            ambiente: process.env.NODE_ENV
+            ambiente: process.env.NODE_ENV || 'development'
         });
-        
     } catch (error) {
-        console.error('❌ Erro no banco:', error);
-        res.json({ 
-            sucesso: false, 
-            erro: error.message 
-        });
+        res.json({ sucesso: false, erro: error.message });
     }
 });
 
-// ===== ROTAS DOS MÓDULOS (DEPOIS DAS ROTAS DE TESTE) =====
-// Função auxiliar para importar
-function importar(relativePath) {
-    return require(path.join(__dirname, relativePath));
-}
+// ===== IMPORTAÇÃO DAS ROTAS =====
+const produtoRoutes = require('./src/routes/produtos');
+const categoriaRoutes = require('./src/routes/categorias');
+const configRoutes = require('./src/routes/config');
+const pedidoRoutes = require('./src/routes/pedidos');
 
-// Importar rotas
-const produtoRoutes = importar('./src/routes/produtos');
-const categoriaRoutes = importar('./src/routes/categorias');
-const configRoutes = importar('./src/routes/config');
-
-// Usar rotas
+// ===== REGISTRO DAS ROTAS =====
 app.use('/api', produtoRoutes);
 app.use('/api', categoriaRoutes);
 app.use('/api', configRoutes);
+app.use('/api', pedidoRoutes);
+
+// ===== TRATAMENTO DE ERROS 404 =====
+app.use('*', (req, res) => {
+    res.status(404).json({ 
+        erro: 'Rota não encontrada',
+        caminho: req.originalUrl
+    });
+});
 
 // ===== INICIAR SERVIDOR =====
 const PORT = process.env.PORT || 3000;
@@ -85,8 +79,10 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   - GET /ping`);
     console.log(`   - GET /health`);
     console.log(`   - GET /`);
+    console.log(`   - GET /api/teste`);
     console.log(`   - GET /api/teste-banco`);
     console.log(`   - GET /api/produtos`);
     console.log(`   - GET /api/categorias`);
     console.log(`   - GET /api/config/:subdominio`);
+    console.log(`   - GET /api/pedidos/:subdominio`);
 });

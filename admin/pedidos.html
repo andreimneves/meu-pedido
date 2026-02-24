@@ -1,578 +1,50 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
-    // Adicione esta função no início do script
-async function testarConexaoAPI() {
-    try {
-        const response = await fetch(`${API_URL}/debug`);
-        const data = await response.json();
-        console.log('✅ API conectada:', data);
-        return true;
-    } catch (error) {
-        console.error('❌ API não respondeu:', error);
-        mostrarNotificacao('❌ Backend não está respondendo. Verifique se o servidor está rodando.', 'erro');
-        return false;
-    }
-}
-
-// Chame no início
-testarConexaoAPI();
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedidos - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Mantenha TODO o CSS que eu enviei anteriormente - é o mesmo */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f5f5f5;
-        }
-
-        /* HEADER */
-        .admin-header {
-            background: linear-gradient(135deg, #C83232, #A02828);
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .admin-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .user-info span {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .logout {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .logout:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-
-        /* CONTAINER PRINCIPAL */
-        .admin-container {
-            display: flex;
-            min-height: calc(100vh - 70px);
-        }
-
-        /* SIDEBAR */
-        .admin-sidebar {
-            width: 250px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-            padding: 20px 0;
-        }
-
-        .admin-sidebar ul {
-            list-style: none;
-        }
-
-        .admin-sidebar li {
-            margin-bottom: 5px;
-        }
-
-        .admin-sidebar a {
-            display: block;
-            padding: 12px 20px;
-            color: #333;
-            text-decoration: none;
-            font-size: 15px;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-        }
-
-        .admin-sidebar a:hover {
-            background: #f8f8f8;
-            border-left-color: #C83232;
-            color: #C83232;
-        }
-
-        .admin-sidebar a.active {
-            background: #f0f0f0;
-            border-left-color: #C83232;
-            color: #C83232;
-            font-weight: 500;
-        }
-
-        /* CONTEÚDO PRINCIPAL */
-        .admin-content {
-            flex: 1;
-            padding: 30px;
-            background: #f9f9f9;
-        }
-
-        .admin-content h1 {
-            font-size: 28px;
-            color: #333;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* FILTROS */
-        .filtros-container {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .filtros-titulo {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .filtros-botoes {
+        .status-novo { background: #ff9800; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-preparando { background: #2196F3; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-pronto { background: #4CAF50; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-entregue { background: #9C27B0; color: white; padding: 3px 8px; border-radius: 12px; }
+        .status-cancelado { background: #f44336; color: white; padding: 3px 8px; border-radius: 12px; }
+        
+        .filtros {
+            margin-bottom: 20px;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
-
+        
         .filtro-btn {
-            padding: 10px 20px;
-            border: 1px solid #e0e0e0;
+            padding: 8px 15px;
+            border: 1px solid #ddd;
             background: white;
-            border-radius: 30px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-
-        .filtro-btn:hover {
-            background: #f0f0f0;
-            border-color: #C83232;
-            transform: translateY(-2px);
-        }
-
+        
         .filtro-btn.active {
             background: #C83232;
             color: white;
             border-color: #C83232;
-            box-shadow: 0 4px 10px rgba(200,50,50,0.2);
         }
-
-        /* LISTA DE PEDIDOS */
-        .pedidos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-        }
-
-        /* CARD DE PEDIDO */
-        .pedido-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-            border: 1px solid #eee;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .pedido-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(200,50,50,0.1);
-            border-color: #C83232;
-        }
-
-        /* BADGE DE STATUS */
-        .pedido-status-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-novo { background: #ff9800; color: white; }
-        .status-preparando { background: #2196F3; color: white; }
-        .status-pronto { background: #4CAF50; color: white; }
-        .status-entregue { background: #9C27B0; color: white; }
-        .status-cancelado { background: #f44336; color: white; }
-
-        /* CABEÇALHO DO PEDIDO */
-        .pedido-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .pedido-id {
-            font-size: 18px;
-            font-weight: 700;
-            color: #333;
-        }
-
-        .pedido-id span {
-            color: #C83232;
-            margin-right: 5px;
-        }
-
-        .pedido-data {
-            font-size: 12px;
-            color: #999;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* INFORMAÇÕES DO CLIENTE */
-        .cliente-info {
-            margin-bottom: 15px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 12px;
-        }
-
-        .cliente-nome {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .cliente-telefone {
-            font-size: 14px;
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .cliente-endereco {
-            font-size: 13px;
-            color: #666;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            line-height: 1.4;
-        }
-
-        /* ITENS DO PEDIDO */
-        .itens-titulo {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .itens-lista {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-
-        .item-pedido {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed #ddd;
-        }
-
-        .item-pedido:last-child {
-            border-bottom: none;
-        }
-
-        .item-nome {
-            font-size: 14px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .item-quantidade {
-            background: #C83232;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            margin-left: 8px;
-        }
-
-        .item-preco {
-            font-size: 14px;
-            font-weight: 600;
-            color: #C83232;
-        }
-
-        /* TOTAL DO PEDIDO */
-        .pedido-total {
-            text-align: right;
-            font-size: 18px;
-            font-weight: 700;
-            color: #333;
-            margin: 15px 0;
-            padding-top: 10px;
-            border-top: 2px solid #f0f0f0;
-        }
-
-        .pedido-total span {
-            color: #C83232;
-            font-size: 22px;
-            margin-left: 10px;
-        }
-
-        /* AÇÕES DO PEDIDO */
-        .pedido-acoes {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .status-select {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: white;
-        }
-
-        .status-select:hover {
-            border-color: #C83232;
-        }
-
-        .status-select:focus {
-            outline: none;
-            border-color: #C83232;
-            box-shadow: 0 0 0 3px rgba(200,50,50,0.1);
-        }
-
-        .btn-excluir {
-            padding: 10px 15px;
-            background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-excluir:hover {
-            background: #d32f2f;
-            transform: translateY(-2px);
-        }
-
-        /* ESTADOS DE CARREGAMENTO */
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: #666;
-            font-size: 16px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            grid-column: 1 / -1;
-        }
-
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #C83232;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .sem-pedidos {
-            text-align: center;
-            padding: 60px;
-            color: #999;
-            font-size: 16px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            grid-column: 1 / -1;
-        }
-
-        .sem-pedidos-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
-        /* NOTIFICAÇÕES */
-        .notificacao {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .notificacao.sucesso {
-            background: #4CAF50;
-        }
-
-        .notificacao.erro {
-            background: #f44336;
-        }
-
-        .notificacao.aviso {
-            background: #ff9800;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        /* RESPONSIVIDADE */
-        @media (max-width: 768px) {
-            .admin-container {
-                flex-direction: column;
-            }
-
-            .admin-sidebar {
-                width: 100%;
-            }
-
-            .pedidos-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .filtros-botoes {
-                flex-direction: column;
-            }
-
-            .filtro-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        .erro-container {
-            grid-column: 1 / -1;
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            border: 2px solid #f44336;
-        }
-
-        .erro-titulo {
-            color: #f44336;
-            font-size: 20px;
-            margin-bottom: 15px;
-        }
-
-        .erro-detalhes {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            text-align: left;
-            font-family: monospace;
-            font-size: 12px;
-            color: #666;
-            overflow-x: auto;
-        }
-
-        .btn-tentar-novamente {
-            background: #C83232;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-tentar-novamente:hover {
-            background: #A02828;
-            transform: translateY(-2px);
+        
+        .filtro-btn:hover {
+            background: #f0f0f0;
         }
     </style>
 </head>
 <body>
     <div class="admin-header">
-        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
+        <h1>Meu Pedido - Painel Administrativo</h1>
         <div class="user-info">
-            <span>👤 DL Crepes e Lanches</span>
-            <button class="logout" onclick="logout()">🚪 Sair</button>
+            <span>DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">Sair</button>
         </div>
     </div>
     
@@ -588,381 +60,124 @@ testarConexaoAPI();
         </div>
         
         <div class="admin-content">
-            <h1>
-                <span>📋</span> 
-                Pedidos
-                <span style="font-size: 14px; color: #999; margin-left: 15px; font-weight: normal;" id="totalPedidos"></span>
-            </h1>
+            <h1>📋 Pedidos</h1>
             
-            <div class="filtros-container" id="filtrosContainer" style="display: none;">
-                <div class="filtros-titulo">
-                    <span>🔍</span> Filtrar por status:
-                </div>
-                <div class="filtros-botoes">
-                    <button class="filtro-btn active" onclick="filtrarPedidos('todos')">
-                        <span>📋</span> Todos
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarPedidos('novo')">
-                        <span>🆕</span> Novos
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarPedidos('preparando')">
-                        <span>👨‍🍳</span> Preparando
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarPedidos('pronto')">
-                        <span>✅</span> Pronto
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarPedidos('entregue')">
-                        <span>🚚</span> Entregue
-                    </button>
-                    <button class="filtro-btn" onclick="filtrarPedidos('cancelado')">
-                        <span>❌</span> Cancelado
-                    </button>
-                </div>
+            <div class="filtros">
+                <button class="filtro-btn active" onclick="filtrarPedidos('todos')">Todos</button>
+                <button class="filtro-btn" onclick="filtrarPedidos('novo')">🆕 Novos</button>
+                <button class="filtro-btn" onclick="filtrarPedidos('preparando')">👨‍🍳 Preparando</button>
+                <button class="filtro-btn" onclick="filtrarPedidos('pronto')">✅ Pronto</button>
+                <button class="filtro-btn" onclick="filtrarPedidos('entregue')">🚚 Entregue</button>
+                <button class="filtro-btn" onclick="filtrarPedidos('cancelado')">❌ Cancelado</button>
             </div>
             
-            <div id="pedidosList" class="pedidos-grid">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    Carregando pedidos...
-                </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pedidosTable">
+                        <tr><td colspan="7">Carregando...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-
-    <div id="notificacao" class="notificacao" style="display: none;"></div>
-
+    
+    <script src="script.js"></script>
     <script>
-        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
-        const SUBDOMINIO = 'dlcrepes';
         let todosPedidos = [];
         let filtroAtual = 'todos';
-
-        // Função segura para mostrar notificações
-        function mostrarNotificacao(mensagem, tipo = 'sucesso') {
-            const notif = document.getElementById('notificacao');
-            if (notif) {
-                notif.textContent = mensagem;
-                notif.className = `notificacao ${tipo}`;
-                notif.style.display = 'block';
-                
-                setTimeout(() => {
-                    notif.style.display = 'none';
-                }, 3000);
-            } else {
-                alert(mensagem);
-            }
-        }
-
-        // Logout
-        function logout() {
-            localStorage.removeItem('adminLogado');
-            window.location.href = 'index.html';
-        }
-
-        // Verificar login
-        if (!localStorage.getItem('adminLogado')) {
-            window.location.href = 'index.html';
-        }
-
-        // Função segura para fazer fetch com tratamento de erros
-        async function fetchSeguro(url, options = {}) {
-            try {
-                const response = await fetch(url, options);
-                
-                // Verificar se a resposta é OK
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                // Verificar se a resposta é JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const texto = await response.text();
-                    throw new Error(`Resposta não é JSON: ${texto.substring(0, 100)}`);
-                }
-                
-                // Tentar fazer parse do JSON
-                const dados = await response.json();
-                return { sucesso: true, dados };
-                
-            } catch (error) {
-                console.error('Erro no fetch:', error);
-                return { 
-                    sucesso: false, 
-                    erro: error.message,
-                    url: url
-                };
-            }
-        }
-
-        // Carregar pedidos com tratamento de erro robusto
+        
         async function carregarPedidos() {
             try {
-                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}`);
-                
-                if (!resultado.sucesso) {
-                    throw new Error(resultado.erro);
-                }
-                
-                todosPedidos = resultado.dados;
-                
-                // Mostrar filtros apenas se tiver pedidos
-                document.getElementById('filtrosContainer').style.display = todosPedidos.length > 0 ? 'block' : 'none';
-                document.getElementById('totalPedidos').textContent = `(${todosPedidos.length} total)`;
-                
-                // Aplicar filtro atual
-                const pedidosFiltrados = filtroAtual === 'todos' 
-                    ? todosPedidos 
-                    : todosPedidos.filter(p => p.status === filtroAtual);
-                
-                await exibirPedidos(pedidosFiltrados);
-                
+                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}`);
+                todosPedidos = await response.json();
+                aplicarFiltro();
             } catch (error) {
                 console.error('Erro ao carregar pedidos:', error);
-                
-                document.getElementById('filtrosContainer').style.display = 'none';
-                document.getElementById('pedidosList').innerHTML = `
-                    <div class="erro-container">
-                        <div class="erro-titulo">❌ Erro ao carregar pedidos</div>
-                        <p style="margin-bottom: 20px;">${error.message}</p>
-                        <div class="erro-detalhes">
-                            URL tentada: ${API_URL}/pedidos/${SUBDOMINIO}<br>
-                            Verifique se:
-                            <br>1. O backend está rodando em: ${API_URL}
-                            <br>2. A rota /pedidos existe no backend
-                            <br>3. O subdomínio '${SUBDOMINIO}' está correto
-                        </div>
-                        <button class="btn-tentar-novamente" onclick="carregarPedidos()">
-                            🔄 Tentar novamente
-                        </button>
-                    </div>
-                `;
+                document.getElementById('pedidosTable').innerHTML = 
+                    '<tr><td colspan="7" style="color:red">Erro ao carregar pedidos</td></tr>';
             }
         }
-
-        // Filtrar pedidos
+        
         function filtrarPedidos(filtro) {
             filtroAtual = filtro;
             
-            // Atualizar botões
             document.querySelectorAll('.filtro-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            event.target.classList.add('active');
             
+            aplicarFiltro();
+        }
+        
+        function aplicarFiltro() {
             let pedidosFiltrados = todosPedidos;
-            if (filtro !== 'todos') {
-                pedidosFiltrados = todosPedidos.filter(p => p.status === filtro);
+            if (filtroAtual !== 'todos') {
+                pedidosFiltrados = todosPedidos.filter(p => p.status === filtroAtual);
             }
-            
             exibirPedidos(pedidosFiltrados);
         }
-
-        // Buscar itens de um pedido específico
-        async function buscarItensPedido(pedidoId) {
-            const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`);
-            if (resultado.sucesso) {
-                return resultado.dados.itens || [];
-            }
-            return [];
-        }
-
-        // Exibir pedidos
-        async function exibirPedidos(pedidos) {
-            const lista = document.getElementById('pedidosList');
+        
+        function exibirPedidos(pedidos) {
+            const tbody = document.getElementById('pedidosTable');
             
-            if (!pedidos || pedidos.length === 0) {
-                lista.innerHTML = `
-                    <div class="sem-pedidos">
-                        <div class="sem-pedidos-icon">📭</div>
-                        <h3>Nenhum pedido encontrado</h3>
-                        <p style="color: #666; margin-top: 10px;">
-                            ${filtroAtual === 'todos' 
-                                ? 'Os pedidos aparecerão aqui quando chegarem' 
-                                : `Nenhum pedido com status "${filtroAtual}"`}
-                        </p>
-                    </div>
-                `;
+            if (pedidos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">Nenhum pedido encontrado</td></tr>';
                 return;
             }
             
-            // Mostrar loading
-            lista.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    Carregando detalhes dos pedidos...
-                </div>
-            `;
-            
-            // Buscar itens para cada pedido (com limite de 5 por vez para não sobrecarregar)
-            const pedidosComItens = [];
-            for (const p of pedidos.slice(0, 20)) { // Limite de 20 pedidos
-                try {
-                    const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${p.id}`);
-                    if (resultado.sucesso) {
-                        pedidosComItens.push(resultado.dados);
-                    } else {
-                        pedidosComItens.push({ ...p, itens: [] });
-                    }
-                } catch (error) {
-                    pedidosComItens.push({ ...p, itens: [] });
-                }
-            }
-            
-            const html = pedidosComItens.map(p => {
-                const data = new Date(p.data_pedido).toLocaleString('pt-BR');
-                const statusClass = `status-${p.status}`;
-                
-                return `
-                    <div class="pedido-card" data-id="${p.id}">
-                        <div class="pedido-status-badge ${statusClass}">
-                            ${p.status === 'novo' ? '🆕' : ''}
-                            ${p.status === 'preparando' ? '👨‍🍳' : ''}
-                            ${p.status === 'pronto' ? '✅' : ''}
-                            ${p.status === 'entregue' ? '🚚' : ''}
-                            ${p.status === 'cancelado' ? '❌' : ''}
-                            ${p.status.toUpperCase()}
-                        </div>
-                        
-                        <div class="pedido-header">
-                            <div class="pedido-id">
-                                <span>#</span>${p.id}
-                            </div>
-                            <div class="pedido-data">
-                                <span>📅</span> ${data}
-                            </div>
-                        </div>
-                        
-                        <div class="cliente-info">
-                            <div class="cliente-nome">
-                                <span>👤</span> ${p.cliente_nome || 'Nome não informado'}
-                            </div>
-                            <div class="cliente-telefone">
-                                <span>📱</span> ${p.cliente_telefone || 'Telefone não informado'}
-                            </div>
-                            ${p.cliente_endereco ? `
-                                <div class="cliente-endereco">
-                                    <span>📍</span> ${p.cliente_endereco}
-                                </div>
-                            ` : ''}
-                            ${p.cliente_bairro ? `
-                                <div class="cliente-endereco">
-                                    <span>🏘️</span> ${p.cliente_bairro}
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="itens-titulo">
-                            <span>📋</span> Itens do pedido:
-                        </div>
-                        <div class="itens-lista">
-                            ${p.itens && p.itens.length > 0 ? p.itens.map(item => `
-                                <div class="item-pedido">
-                                    <div class="item-nome">
-                                        <span>•</span> ${item.produto_nome || 'Item não identificado'}
-                                        <span class="item-quantidade">x${item.quantidade || 1}</span>
-                                    </div>
-                                    <div class="item-preco">
-                                        R$ ${item.preco_unitario ? parseFloat(item.preco_unitario).toFixed(2) : '0,00'}
-                                    </div>
-                                </div>
-                            `).join('') : `
-                                <div style="text-align: center; padding: 10px; color: #999;">
-                                    Nenhum item encontrado
-                                </div>
-                            `}
-                        </div>
-                        
-                        <div class="pedido-total">
-                            Total: <span>R$ ${p.total ? parseFloat(p.total).toFixed(2) : '0,00'}</span>
-                        </div>
-                        
-                        <div class="pedido-acoes">
-                            <select class="status-select" onchange="atualizarStatus(${p.id}, this.value)" style="background: ${getStatusColor(p.status)}20; color: ${getStatusColor(p.status)}; border-color: ${getStatusColor(p.status)};">
-                                <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>🆕 Novo</option>
-                                <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>👨‍🍳 Preparando</option>
-                                <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>✅ Pronto</option>
-                                <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>🚚 Entregue</option>
-                                <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>❌ Cancelado</option>
-                            </select>
-                            <button class="btn-excluir" onclick="excluirPedido(${p.id})">
-                                <span>🗑️</span> Excluir
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            lista.innerHTML = html;
+            tbody.innerHTML = pedidos.map(p => `
+                <tr>
+                    <td>#${p.id}</td>
+                    <td>${p.cliente_nome}</td>
+                    <td>${p.cliente_telefone}</td>
+                    <td>R$ ${parseFloat(p.total).toFixed(2)}</td>
+                    <td><span class="status-${p.status}">${p.status}</span></td>
+                    <td>${new Date(p.data_pedido).toLocaleString('pt-BR')}</td>
+                    <td>
+                        <select onchange="atualizarStatus(${p.id}, this.value)" style="padding:5px; border-radius:5px;">
+                            <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>Novo</option>
+                            <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>Preparando</option>
+                            <option value="pronto" ${p.status === 'pronto' ? 'selected' : ''}>Pronto</option>
+                            <option value="entregue" ${p.status === 'entregue' ? 'selected' : ''}>Entregue</option>
+                            <option value="cancelado" ${p.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
         }
-
-        function getStatusColor(status) {
-            const cores = {
-                'novo': '#ff9800',
-                'preparando': '#2196F3',
-                'pronto': '#4CAF50',
-                'entregue': '#9C27B0',
-                'cancelado': '#f44336'
-            };
-            return cores[status] || '#999';
-        }
-
+        
         async function atualizarStatus(pedidoId, novoStatus) {
-            const selectOriginal = event.target;
-            const valorOriginal = selectOriginal.value;
-            
             try {
-                selectOriginal.disabled = true;
-                selectOriginal.style.opacity = '0.5';
-                
-                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
+                const response = await fetch(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}/status`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: novoStatus })
                 });
                 
-                if (resultado.sucesso) {
-                    mostrarNotificacao(`✅ Status do pedido #${pedidoId} atualizado para ${novoStatus}!`, 'sucesso');
-                    await carregarPedidos(); // Recarrega a lista completa
+                if (response.ok) {
+                    await carregarPedidos();
+                    alert('✅ Status atualizado!');
                 } else {
-                    throw new Error(resultado.erro);
+                    alert('Erro ao atualizar status');
                 }
             } catch (error) {
-                mostrarNotificacao(`❌ Erro: ${error.message}`, 'erro');
-                selectOriginal.disabled = false;
-                selectOriginal.style.opacity = '1';
-                selectOriginal.value = valorOriginal;
+                alert('Erro de conexão');
             }
         }
-
-        async function excluirPedido(pedidoId) {
-            if (!confirm(`Tem certeza que deseja excluir o pedido #${pedidoId}?`)) {
-                return;
-            }
-            
-            try {
-                const resultado = await fetchSeguro(`${API_URL}/pedidos/${SUBDOMINIO}/${pedidoId}`, {
-                    method: 'DELETE'
-                });
-                
-                if (resultado.sucesso) {
-                    mostrarNotificacao(`✅ Pedido #${pedidoId} excluído com sucesso!`, 'sucesso');
-                    await carregarPedidos(); // Recarrega a lista
-                } else {
-                    throw new Error(resultado.erro);
-                }
-            } catch (error) {
-                mostrarNotificacao(`❌ Erro: ${error.message}`, 'erro');
-            }
-        }
-
-        // Carregar pedidos ao iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            carregarPedidos();
-        });
         
-        // Atualizar a cada 30 segundos
-        setInterval(carregarPedidos, 30000);
+        carregarPedidos();
+        setInterval(carregarPedidos, 30000); // Atualizar a cada 30s
     </script>
 </body>
 </html>

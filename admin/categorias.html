@@ -5,6 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Categorias - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 30px;
+            cursor: pointer;
+            color: #999;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .btn-save {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .btn-save:hover {
+            background: #388E3C;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-header">
@@ -27,7 +71,7 @@
         </div>
         
         <div class="admin-content">
-            <h1>Gerenciar Categorias</h1>
+            <h1>📁 Gerenciar Categorias</h1>
             
             <button class="btn-add" onclick="abrirModalCategoria()">+ Nova Categoria</button>
             
@@ -41,9 +85,7 @@
                         </tr>
                     </thead>
                     <tbody id="categoriasTable">
-                        <tr>
-                            <td colspan="3">Carregando...</td>
-                        </tr>
+                        <tr><td colspan="3">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -67,24 +109,25 @@
                     <input type="number" id="categoriaOrdem" value="0">
                 </div>
                 
-                <button type="submit" class="btn-save">Salvar</button>
+                <button type="submit" class="btn-save">Salvar Categoria</button>
             </form>
         </div>
     </div>
     
     <script src="script.js"></script>
     <script>
-        // Funções específicas para categorias
         let categorias = [];
         let categoriaEditando = null;
         
         async function carregarCategorias() {
             try {
-                const response = await fetch('http://localhost:3000/api/categorias');
+                const response = await fetch(`${API_URL}/categorias`);
                 categorias = await response.json();
                 exibirCategorias();
             } catch (error) {
                 console.error('Erro ao carregar categorias:', error);
+                document.getElementById('categoriasTable').innerHTML = 
+                    '<tr><td colspan="3" style="color:red">Erro ao carregar</td></tr>';
             }
         }
         
@@ -122,19 +165,19 @@
             const nome = document.getElementById('categoriaNome').value;
             const ordem = document.getElementById('categoriaOrdem').value;
             
-            const categoria = { nome, ordem: parseInt(ordem) };
+            const categoria = { nome, ordem: parseInt(ordem), tenant_id: 1 };
             
             try {
                 let response;
                 
                 if (categoriaEditando) {
-                    response = await fetch(`http://localhost:3000/api/categorias/${categoriaEditando.id}`, {
+                    response = await fetch(`${API_URL}/categorias/${categoriaEditando.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(categoria)
                     });
                 } else {
-                    response = await fetch('http://localhost:3000/api/categorias', {
+                    response = await fetch(`${API_URL}/categorias`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(categoria)
@@ -142,35 +185,34 @@
                 }
                 
                 if (response.ok) {
-                    document.getElementById('categoriaModal').style.display = 'none';
+                    fecharModalCategoria();
                     await carregarCategorias();
+                    alert('✅ Categoria salva com sucesso!');
                 } else {
-                    alert('Erro ao salvar categoria');
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
                 }
             } catch (error) {
-                console.error('Erro ao salvar categoria:', error);
-                alert('Erro ao salvar categoria');
+                alert('Erro de conexão: ' + error.message);
             }
         }
         
         async function excluirCategoria(id) {
-            if (!confirm('Tem certeza que deseja excluir esta categoria?')) {
-                return;
-            }
+            if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
             
             try {
-                const response = await fetch(`http://localhost:3000/api/categorias/${id}`, {
+                const response = await fetch(`${API_URL}/categorias/${id}`, {
                     method: 'DELETE'
                 });
                 
                 if (response.ok) {
                     await carregarCategorias();
+                    alert('✅ Categoria excluída!');
                 } else {
-                    alert('Erro ao excluir categoria');
+                    alert('Erro ao excluir');
                 }
             } catch (error) {
-                console.error('Erro ao excluir categoria:', error);
-                alert('Erro ao excluir categoria');
+                alert('Erro de conexão');
             }
         }
         

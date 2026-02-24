@@ -2,8 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="google-site-verification" content="MmXyrQBZsJs0SrKiY_XWxPesPa8Pvpp53_5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DL Crepes e Lanches - Cardápio Online</title>
     <style>
         * {
@@ -26,7 +25,6 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* MENSAGEM PERSONALIZADA */
         .mensagem-personalizada {
             padding: 12px 20px;
             text-align: center;
@@ -38,7 +36,6 @@
             border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* HEADER */
         .header {
             background: linear-gradient(135deg, #C83232, #A02828);
             color: white;
@@ -71,7 +68,6 @@
             border-radius: 20px;
         }
 
-        /* Suporte WhatsApp */
         .suporte-whatsapp {
             margin-top: 15px;
             padding: 10px 15px;
@@ -111,11 +107,6 @@
             font-size: 20px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-        }
-
-        .cart-icon:hover {
-            transform: scale(1.1);
         }
 
         .cart-count {
@@ -129,7 +120,6 @@
             right: -5px;
         }
 
-        /* BUSCA */
         .search-box {
             padding: 15px;
         }
@@ -140,30 +130,13 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
-            transition: border 0.3s;
         }
 
-        .search-box input:focus {
-            outline: none;
-            border-color: #C83232;
-        }
-
-        /* CATEGORIAS */
         .categorias {
             display: flex;
             overflow-x: auto;
             padding: 0 15px 15px;
             gap: 10px;
-            scrollbar-width: thin;
-        }
-
-        .categorias::-webkit-scrollbar {
-            height: 5px;
-        }
-
-        .categorias::-webkit-scrollbar-thumb {
-            background: #C83232;
-            border-radius: 10px;
         }
 
         .categoria-btn {
@@ -177,16 +150,11 @@
             transition: all 0.3s;
         }
 
-        .categoria-btn:hover {
-            background: #e0e0e0;
-        }
-
         .categoria-btn.ativa {
             background: #C83232;
             color: white;
         }
 
-        /* PRODUTOS */
         .produtos {
             padding: 0 15px 20px;
         }
@@ -201,12 +169,6 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .produto-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         .produto-info h3 {
@@ -227,15 +189,8 @@
             padding: 8px 20px;
             border-radius: 5px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background 0.3s;
         }
 
-        .btn-adicionar:hover {
-            background: #A02828;
-        }
-
-        /* MODAL DO CARRINHO */
         .modal {
             display: none;
             position: fixed;
@@ -266,14 +221,8 @@
             font-size: 28px;
             cursor: pointer;
             color: #999;
-            transition: color 0.3s;
         }
 
-        .close:hover {
-            color: #333;
-        }
-
-        /* MENSAGENS DE AVISO */
         .aviso-box {
             background: #fff3e0;
             border-left: 4px solid #ff9800;
@@ -298,8 +247,6 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background 0.3s;
         }
 
         .btn-aviso.retirar {
@@ -307,17 +254,9 @@
             color: white;
         }
 
-        .btn-aviso.retirar:hover {
-            background: #A02828;
-        }
-
         .btn-aviso.agendar {
             background: #4CAF50;
             color: white;
-        }
-
-        .btn-aviso.agendar:hover {
-            background: #388E3C;
         }
 
         .btn-aviso.cancelar {
@@ -325,11 +264,6 @@
             color: #333;
         }
 
-        .btn-aviso.cancelar:hover {
-            background: #ddd;
-        }
-
-        /* ITENS DO CARRINHO */
         .cart-items {
             max-height: 300px;
             overflow-y: auto;
@@ -350,10 +284,6 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .cart-item-info {
-            flex: 1;
-        }
-
         .cart-item-name {
             font-weight: 600;
             font-size: 14px;
@@ -372,11 +302,6 @@
             font-size: 22px;
             cursor: pointer;
             padding: 0 10px;
-            transition: color 0.3s;
-        }
-
-        .cart-item-remove:hover {
-            color: #A02828;
         }
 
         .cart-total {
@@ -393,20 +318,11 @@
             font-size: 22px;
         }
 
-        /* FORMULÁRIO */
         .form-section {
             margin: 20px 0;
             padding: 15px;
             background: #f9f9f9;
             border-radius: 8px;
-        }
-
-        .form-section h3 {
-            margin-bottom: 15px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
         .form-row {
@@ -428,19 +344,6 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
-            transition: border 0.3s;
-        }
-
-        .form-row input:focus,
-        .form-row select:focus,
-        .form-row textarea:focus {
-            outline: none;
-            border-color: #C83232;
-        }
-
-        .form-row input:disabled {
-            background: #f5f5f5;
-            cursor: not-allowed;
         }
 
         .delivery-options {
@@ -460,22 +363,6 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .delivery-options input[type="radio"] {
-            display: none;
-        }
-
-        .delivery-options input[type="radio"]:checked + label {
-            background: #C83232;
-            color: white;
-            border-color: #C83232;
-        }
-
-        .delivery-options label.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
 
         .address-grid {
@@ -519,16 +406,6 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 15px;
-            transition: background 0.3s;
-        }
-
-        .whatsapp-btn:hover {
-            background: #128C7E;
-        }
-
-        .whatsapp-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
         }
 
         .loading {
@@ -549,19 +426,17 @@
 </head>
 <body>
     <div class="container">
-        <!-- HEADER -->
         <div class="header" id="header">
             <h1 id="nomeLoja">DL Crepes e Lanches</h1>
-            <div class="slogan" id="slogan">Seu refúgio de sabores no coração do Santa Marta</div>
+            <div class="slogan" id="slogan">Seu refúgio de sabores</div>
             <div class="info">
                 <span id="horario">🕒 18h às 23h</span>
                 <span id="endereco">📍 Santa Marta</span>
             </div>
             
-            <!-- Link de suporte WhatsApp -->
             <div class="suporte-whatsapp" id="suporteWhatsapp" onclick="abrirWhatsappSuporte()">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-                <span>Tem alguma dúvida ou algo não funcionou? Conte com a gente!</span>
+                <span>Tem alguma dúvida? Conte com a gente!</span>
             </div>
             
             <div class="cart-icon" onclick="abrirCarrinho()">
@@ -570,28 +445,23 @@
             </div>
         </div>
 
-        <!-- BUSCA -->
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Buscar no cardápio..." onkeyup="filtrarProdutos()">
         </div>
 
-        <!-- CATEGORIAS -->
         <div class="categorias" id="categorias">
             <button class="categoria-btn ativa" onclick="filtrarCategoria('Todos')">Todos</button>
         </div>
 
-        <!-- PRODUTOS -->
         <div class="produtos" id="produtos">
             <div class="loading">Carregando cardápio...</div>
         </div>
 
-        <!-- RODAPÉ -->
         <footer>
-            <p>© DL Crepes e Lanches - Todos os direitos reservados</p>
+            <p>© DL Crepes e Lanches</p>
         </footer>
     </div>
 
-    <!-- MODAL DO CARRINHO -->
     <div id="cartModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharCarrinho()">&times;</span>
@@ -603,25 +473,23 @@
                 <span>Total:</span> <strong>R$ <span id="cartTotal">0,00</span></strong>
             </div>
 
-            <!-- ÁREA DE AVISOS -->
             <div id="avisoDelivery" style="display: none;"></div>
 
-            <!-- FORMULÁRIO DE ENTREGA -->
             <div class="form-section">
                 <h3>📋 Dados para entrega</h3>
                 
                 <div class="delivery-options">
                     <input type="radio" name="deliveryType" value="delivery" id="deliveryOption" onchange="toggleDelivery(true)">
-                    <label for="deliveryOption" id="deliveryLabel">🚚 Delivery</label>
+                    <label for="deliveryOption">🚚 Delivery</label>
                     
                     <input type="radio" name="deliveryType" value="pickup" id="pickupOption" onchange="toggleDelivery(false)">
-                    <label for="pickupOption" id="pickupLabel">🏠 Retirada</label>
+                    <label for="pickupOption">🏠 Retirada</label>
                 </div>
 
                 <div id="deliveryFields">
                     <div class="form-row">
                         <label>👤 Nome completo *</label>
-                        <input type="text" id="clienteNome" placeholder="Digite seu nome">
+                        <input type="text" id="clienteNome">
                     </div>
 
                     <div class="form-row">
@@ -633,7 +501,7 @@
                         <label>📍 CEP *</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;">
-                            <button type="button" onclick="calcularFretePorCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Calcular Frete</button>
+                            <button type="button" onclick="calcularFretePorCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Calcular</button>
                         </div>
                         <div class="cep-info" id="cepInfo"></div>
                     </div>
@@ -641,32 +509,32 @@
                     <div class="address-grid">
                         <div class="form-row" style="grid-column: 1/-1;">
                             <label>🏠 Endereço *</label>
-                            <input type="text" id="clienteEndereco" placeholder="Rua, Avenida...">
+                            <input type="text" id="clienteEndereco">
                         </div>
                         <div class="form-row">
                             <label>Número *</label>
-                            <input type="text" id="clienteNumero" placeholder="123">
+                            <input type="text" id="clienteNumero">
                         </div>
                         <div class="form-row">
                             <label>Bairro *</label>
-                            <input type="text" id="clienteBairro" placeholder="Seu bairro">
+                            <input type="text" id="clienteBairro">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <label>📍 Complemento</label>
-                        <input type="text" id="clienteComplemento" placeholder="Apto, Bloco, Referência...">
+                        <input type="text" id="clienteComplemento">
                     </div>
 
                     <div class="frete-info" id="freteInfo">
-                        👆 Informe seu CEP para calcular o frete
+                        👆 Informe seu CEP
                     </div>
                 </div>
 
                 <div id="pickupFields" style="display: none;">
                     <div class="form-row">
                         <label>👤 Nome completo *</label>
-                        <input type="text" id="pickupNome" placeholder="Digite seu nome">
+                        <input type="text" id="pickupNome">
                     </div>
                     <div class="form-row">
                         <label>📱 WhatsApp *</label>
@@ -674,40 +542,22 @@
                     </div>
                 </div>
 
-                <div id="agendamentoFields" style="display: none;">
-                    <div class="form-row">
-                        <label>📅 Data para entrega agendada</label>
-                        <input type="date" id="dataAgendamento" min="">
-                    </div>
-                    <div class="form-row">
-                        <label>⏰ Horário para entrega agendada</label>
-                        <select id="horarioAgendamento">
-                            <option value="">Selecione um horário</option>
-                        </select>
-                    </div>
-                    <div class="frete-info" id="agendamentoInfo">
-                        📅 Escolha uma data e horário para agendar sua entrega
-                    </div>
-                </div>
-
                 <div class="form-row">
                     <label>📝 Observações</label>
-                    <textarea id="observacoes" placeholder="Ex: ponto da carne, tirar cebola, sem salada..." rows="2"></textarea>
+                    <textarea id="observacoes" rows="2"></textarea>
                 </div>
             </div>
 
-            <button class="whatsapp-btn" id="finalizarBtn" onclick="finalizarPedido()">
-                📲 Finalizar Pedido no WhatsApp
+            <button class="whatsapp-btn" onclick="finalizarPedido()">
+                📲 Finalizar Pedido
             </button>
         </div>
     </div>
 
     <script>
-        // ===== CONFIGURAÇÕES =====
-        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const API_URL = 'http://localhost:3000/api';
         const SUBDOMINIO = 'dlcrepes';
         
-        // ===== VARIÁVEIS GLOBAIS =====
         let produtos = [];
         let carrinho = [];
         let categoriaAtiva = 'Todos';
@@ -715,211 +565,128 @@
         let configuracoesLoja = {};
         let taxaFrete = 0;
         let distanciaKm = 0;
-        let deliveryDisponivel = true;
-        let horariosDelivery = [];
-        let modoAgendamento = false;
 
-        // ===== CARREGAR CONFIGURAÇÕES DA LOJA =====
+        console.log('🚀 Frontend iniciado');
+        console.log('📡 API_URL:', API_URL);
+
         async function carregarConfiguracoes() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
                 configuracoesLoja = await response.json();
                 
-                // Atualizar header com dados da loja
-                document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'DL Crepes e Lanches';
-                document.getElementById('slogan').textContent = configuracoesLoja.slogan || 'Seu refúgio de sabores no coração do Santa Marta';
-                document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || '18h às 23h'}`;
+                document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'DL Crepes';
+                document.getElementById('slogan').textContent = configuracoesLoja.slogan || 'Seu refúgio';
+                document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || '18h'}`;
                 document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || 'Santa Marta'}`;
                 
-                // Exibir mensagem personalizada
                 exibirMensagemPersonalizada();
                 
-                // Carregar horários
-                await carregarHorarios();
-                
             } catch (error) {
-                console.error('Erro ao carregar configurações:', error);
+                console.error('Erro ao carregar config:', error);
             }
         }
 
-        // ===== CARREGAR HORÁRIOS DE DELIVERY =====
-        async function carregarHorarios() {
-            try {
-                const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
-                horariosDelivery = await response.json();
-            } catch (error) {
-                console.error('Erro ao carregar horários:', error);
-            }
-        }
-
-        // ===== EXIBIR MENSAGEM PERSONALIZADA =====
         function exibirMensagemPersonalizada() {
-            // Remover mensagem antiga se existir
-            const mensagemAntiga = document.querySelector('.mensagem-personalizada');
-            if (mensagemAntiga) mensagemAntiga.remove();
+            const antiga = document.querySelector('.mensagem-personalizada');
+            if (antiga) antiga.remove();
             
-            if (configuracoesLoja && configuracoesLoja.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
+            if (configuracoesLoja?.mensagem_banner_ativo && configuracoesLoja.mensagem_banner) {
                 const header = document.querySelector('.header');
                 if (!header) return;
                 
-                const mensagemDiv = document.createElement('div');
-                mensagemDiv.className = 'mensagem-personalizada';
-                mensagemDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
-                mensagemDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
-                mensagemDiv.style.padding = '10px 20px';
-                mensagemDiv.style.textAlign = 'center';
-                mensagemDiv.style.fontSize = '14px';
-                mensagemDiv.style.display = 'flex';
-                mensagemDiv.style.alignItems = 'center';
-                mensagemDiv.style.justifyContent = 'center';
-                mensagemDiv.style.gap = '10px';
-                
-                mensagemDiv.innerHTML = `
-                    <span style="font-size: 20px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
+                const div = document.createElement('div');
+                div.className = 'mensagem-personalizada';
+                div.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
+                div.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                div.innerHTML = `
+                    <span style="font-size:20px">${configuracoesLoja.mensagem_banner_icone || '📢'}</span>
                     <span>${configuracoesLoja.mensagem_banner}</span>
                 `;
-                
-                header.parentNode.insertBefore(mensagemDiv, header.nextSibling);
+                header.parentNode.insertBefore(div, header.nextSibling);
             }
         }
 
-        // ===== CARREGAR PRODUTOS DA API =====
         async function carregarProdutos() {
             try {
-                // FORÇAR cache: false para sempre buscar novo
-                const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`, {
-                    cache: 'no-store',
-                    headers: { 'Pragma': 'no-cache' }
-                });
-                
-                if (!response.ok) throw new Error('Erro na rede');
-                
-                const novosProdutos = await response.json();
-                
-                // Comparar com os produtos antigos para ver se mudou
-                if (JSON.stringify(produtos) !== JSON.stringify(novosProdutos)) {
-                    console.log('🔄 Cardápio atualizado!');
-                    produtos = novosProdutos;
-                    produtosFiltrados = produtos;
-                    exibirProdutos();
-                    carregarCategorias();
-                }
+                const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`);
+                produtos = await response.json();
+                console.log(`${produtos.length} produtos carregados`);
+                produtosFiltrados = produtos;
+                exibirProdutos();
+                carregarCategorias();
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);
-                document.getElementById('produtos').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: red;">
-                        ❌ Erro ao carregar cardápio<br>
-                        Verifique se o servidor está rodando
-                    </div>
-                `;
+                document.getElementById('produtos').innerHTML = `<div style="padding:40px;color:red">Erro: ${error.message}</div>`;
             }
         }
 
-        // ===== CARREGAR CATEGORIAS =====
         function carregarCategorias() {
-            const categorias = ['Todos', ...new Set(produtos.map(p => p.categoria_nome))];
-            const html = categorias.map(cat => `
-                <button class="categoria-btn ${cat === categoriaAtiva ? 'ativa' : ''}" 
-                        onclick="filtrarCategoria('${cat}')">
-                    ${cat}
-                </button>
-            `).join('');
-            document.getElementById('categorias').innerHTML = html;
+            const cats = ['Todos', ...new Set(produtos.map(p => p.categoria_nome))];
+            document.getElementById('categorias').innerHTML = cats.map(c => 
+                `<button class="categoria-btn ${c === categoriaAtiva ? 'ativa' : ''}" onclick="filtrarCategoria('${c}')">${c}</button>`
+            ).join('');
         }
 
-        // ===== FILTRAR POR CATEGORIA =====
         function filtrarCategoria(categoria) {
             categoriaAtiva = categoria;
             carregarCategorias();
             filtrarProdutos();
         }
 
-        // ===== FILTRAR POR BUSCA E CATEGORIA =====
         function filtrarProdutos() {
             const busca = document.getElementById('searchInput').value.toLowerCase();
-            
-            produtosFiltrados = produtos.filter(p => {
-                const matchCategoria = categoriaAtiva === 'Todos' || p.categoria_nome === categoriaAtiva;
-                const matchBusca = p.nome.toLowerCase().includes(busca);
-                return matchCategoria && matchBusca;
-            });
-            
+            produtosFiltrados = produtos.filter(p => 
+                (categoriaAtiva === 'Todos' || p.categoria_nome === categoriaAtiva) &&
+                p.nome.toLowerCase().includes(busca)
+            );
             exibirProdutos();
         }
 
-        // ===== EXIBIR PRODUTOS =====
         function exibirProdutos() {
             if (produtosFiltrados.length === 0) {
-                document.getElementById('produtos').innerHTML = '<div style="text-align: center; padding: 20px;">Nenhum produto encontrado</div>';
+                document.getElementById('produtos').innerHTML = '<div style="padding:20px">Nenhum produto</div>';
                 return;
             }
             
-            const html = produtosFiltrados.map(p => `
+            document.getElementById('produtos').innerHTML = produtosFiltrados.map(p => `
                 <div class="produto-card">
-                    <div class="produto-info">
+                    <div>
                         <h3>${p.nome}</h3>
                         <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
                     </div>
-                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${p.preco})">
-                        Adicionar
-                    </button>
+                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${p.preco})">+</button>
                 </div>
             `).join('');
-            
-            document.getElementById('produtos').innerHTML = html;
         }
 
-        // ===== CARRINHO =====
         function adicionarAoCarrinho(id, nome, preco) {
-            carrinho.push({
-                id: id,
-                nome: nome,
-                preco: preco
-            });
-            atualizarCarrinho();
-            
-            // Feedback visual
-            alert('✅ Produto adicionado ao carrinho!');
+            carrinho.push({ id, nome, preco });
+            document.getElementById('cartCount').textContent = carrinho.length;
+            alert('✅ Adicionado');
         }
 
         function removerDoCarrinho(index) {
             carrinho.splice(index, 1);
-            atualizarCarrinho();
+            document.getElementById('cartCount').textContent = carrinho.length;
             abrirCarrinho();
         }
 
-        function atualizarCarrinho() {
-            document.getElementById('cartCount').textContent = carrinho.length;
-        }
-
-        // ===== MODAL DO CARRINHO =====
         function abrirCarrinho() {
             if (carrinho.length === 0) {
-                document.getElementById('cartItems').innerHTML = '<div style="text-align: center; padding: 20px;">🛒 Carrinho vazio</div>';
+                document.getElementById('cartItems').innerHTML = '<div style="padding:20px">🛒 Vazio</div>';
                 document.getElementById('cartTotal').textContent = '0,00';
             } else {
-                const itemsHtml = carrinho.map((item, index) => `
+                document.getElementById('cartItems').innerHTML = carrinho.map((item, index) => `
                     <div class="cart-item">
-                        <div class="cart-item-info">
+                        <div>
                             <div class="cart-item-name">${item.nome}</div>
                             <div class="cart-item-price">R$ ${item.preco.toFixed(2)}</div>
                         </div>
-                        <button class="cart-item-remove" onclick="removerDoCarrinho(${index})">&times;</button>
+                        <button class="cart-item-remove" onclick="removerDoCarrinho(${index})">×</button>
                     </div>
                 `).join('');
-                
-                document.getElementById('cartItems').innerHTML = itemsHtml;
                 calcularTotal();
             }
-            
-            // Resetar modo de agendamento
-            modoAgendamento = false;
-            document.getElementById('agendamentoFields').style.display = 'none';
-            document.getElementById('avisoDelivery').style.display = 'none';
-            
-            // Verificar disponibilidade do delivery
-            verificarDisponibilidadeDelivery();
-            
             document.getElementById('cartModal').style.display = 'block';
         }
 
@@ -930,472 +697,171 @@
         function toggleDelivery(isDelivery) {
             document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
             document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
-            document.getElementById('agendamentoFields').style.display = 'none';
-            
             if (!isDelivery) {
                 taxaFrete = 0;
                 distanciaKm = 0;
-                modoAgendamento = false;
                 calcularTotal();
             }
         }
 
-        // ===== CALCULAR FRETE POR CEP =====
         async function calcularFretePorCEP() {
-            const cepCliente = document.getElementById('cepInput').value.replace(/\D/g, '');
-            
-            if (cepCliente.length !== 8) {
-                document.getElementById('cepInfo').innerHTML = '❌ Digite um CEP válido com 8 números';
+            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
+            if (cep.length !== 8) {
+                document.getElementById('cepInfo').innerHTML = '❌ CEP inválido';
                 return;
             }
 
-            const cepLoja = configuracoesLoja.cep_loja?.replace(/\D/g, '') || '97000000';
+            document.getElementById('cepInfo').innerHTML = '🔄...';
             
-            document.getElementById('cepInfo').innerHTML = '🔄 Calculando distância e frete...';
-
             try {
-                // Buscar dados do CEP do cliente
-                const responseCliente = await fetch(`https://viacep.com.br/ws/${cepCliente}/json/`);
-                const dadosCliente = await responseCliente.json();
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const dados = await res.json();
                 
-                if (dadosCliente.erro) {
-                    document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado';
+                if (dados.erro) throw new Error('CEP não encontrado');
+                
+                document.getElementById('clienteEndereco').value = dados.logradouro || '';
+                document.getElementById('clienteBairro').value = dados.bairro || '';
+                document.getElementById('cepInfo').innerHTML = '✅ OK';
+                
+                distanciaKm = Math.abs(parseInt(cep.substring(0, 5)) - 97000) / 1000;
+                if (distanciaKm < 1) distanciaKm = 3;
+                
+                const kmMax = configuracoesLoja.km_maximo_entrega || 30;
+                if (distanciaKm > kmMax) {
+                    document.getElementById('freteInfo').innerHTML = `❌ Fora da área (${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').className = 'frete-info erro';
                     return;
                 }
-
-                // Preencher endereço automaticamente
-                document.getElementById('clienteEndereco').value = dadosCliente.logradouro || '';
-                document.getElementById('clienteBairro').value = dadosCliente.bairro || '';
-
-                // Calcular distância aproximada baseada nos primeiros dígitos do CEP
-                const prefixoCliente = parseInt(cepCliente.substring(0, 5));
-                const prefixoLoja = parseInt(cepLoja.substring(0, 5));
                 
-                // Calcular diferença absoluta
-                const diferenca = Math.abs(prefixoCliente - prefixoLoja);
+                const taxaKm = configuracoesLoja.taxa_por_km || 2;
+                const taxaMin = configuracoesLoja.taxa_minima || 5;
+                let frete = distanciaKm * taxaKm;
+                if (frete < taxaMin) frete = taxaMin;
                 
-                // Converter diferença em km aproximado
-                if (diferenca < 100) {
-                    distanciaKm = 3 + (diferenca / 50);
-                } else if (diferenca < 500) {
-                    distanciaKm = 8 + (diferenca / 100);
-                } else {
-                    distanciaKm = 20 + (diferenca / 200);
-                }
-
-                // Limitar a distância máxima para entrega
-                const kmMaximo = configuracoesLoja.km_maximo_entrega || 30;
+                taxaFrete = frete;
                 
-                if (distanciaKm > kmMaximo) {
-                    // Mostrar aviso de área não atendida
-                    mostrarAvisoAreaNaoAtendida();
-                    return;
-                }
-
-                // Calcular frete baseado nas configurações
-                const taxaPorKm = configuracoesLoja.taxa_por_km || 2.00;
-                const taxaMinima = configuracoesLoja.taxa_minima || 5.00;
-                
-                let freteCalculado = distanciaKm * taxaPorKm;
-                
-                // Aplicar taxa mínima
-                if (freteCalculado < taxaMinima) {
-                    freteCalculado = taxaMinima;
-                }
-                
-                taxaFrete = freteCalculado;
-                
-                // Verificar frete grátis por valor do pedido
-                const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
-                const freteGratisAcima = configuracoesLoja.frete_gratis_acima || 50;
-                
-                if (subtotal >= freteGratisAcima) {
+                const subtotal = carrinho.reduce((s, i) => s + i.preco, 0);
+                if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50)) {
                     taxaFrete = 0;
-                    document.getElementById('freteInfo').innerHTML = `🎉 Frete grátis! (Distância: ${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
                     document.getElementById('freteInfo').className = 'frete-info';
                 } else {
-                    document.getElementById('freteInfo').innerHTML = `🚚 Frete: R$ ${taxaFrete.toFixed(2)} (${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').innerHTML = `🚚 R$ ${taxaFrete.toFixed(2)} (${distanciaKm.toFixed(1)} km)`;
                     document.getElementById('freteInfo').className = 'frete-info';
                 }
                 
-                document.getElementById('cepInfo').innerHTML = '✅ CEP válido!';
                 calcularTotal();
                 
             } catch (error) {
-                console.error('Erro detalhado:', error);
-                document.getElementById('cepInfo').innerHTML = '❌ Erro ao calcular frete. Tente novamente.';
-                document.getElementById('freteInfo').innerHTML = '❌ Erro no cálculo. Verifique o CEP.';
+                document.getElementById('cepInfo').innerHTML = '❌ Erro';
+                console.error(error);
             }
-        }
-
-        // ===== MOSTRAR AVISO DE ÁREA NÃO ATENDIDA =====
-        function mostrarAvisoAreaNaoAtendida() {
-            const avisoDiv = document.getElementById('avisoDelivery');
-            avisoDiv.innerHTML = `
-                <div class="aviso-box">
-                    <p>😕 Seu endereço não é atendido pelo nosso delivery, mas você pode retirar com a gente!</p>
-                    <div class="botoes-aviso">
-                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">Quero retirar!</button>
-                        <button class="btn-aviso cancelar" onclick="fecharAviso()">Cancelar</button>
-                    </div>
-                </div>
-            `;
-            avisoDiv.style.display = 'block';
-            
-            // Desabilitar opção de delivery
-            const deliveryOption = document.getElementById('deliveryOption');
-            const deliveryLabel = document.getElementById('deliveryLabel');
-            if (deliveryOption) {
-                deliveryOption.disabled = true;
-                deliveryLabel.classList.add('disabled');
-                deliveryOption.checked = false;
-                document.getElementById('pickupOption').checked = true;
-                toggleDelivery(false);
-            }
-        }
-
-        // ===== MOSTRAR AVISO DE HORÁRIO INDISPONÍVEL =====
-        function mostrarAvisoHorarioIndisponivel(mensagem) {
-            const avisoDiv = document.getElementById('avisoDelivery');
-            
-            // Gerar opções de horários para agendamento
-            gerarOpcoesHorarios();
-            
-            avisoDiv.innerHTML = `
-                <div class="aviso-box">
-                    <p>😕 ${mensagem}</p>
-                    <div class="botoes-aviso">
-                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">Quero retirar!</button>
-                        <button class="btn-aviso agendar" onclick="mostrarAgendamento()">Quero agendar a entrega</button>
-                        <button class="btn-aviso cancelar" onclick="fecharAviso()">Cancelar</button>
-                    </div>
-                </div>
-            `;
-            avisoDiv.style.display = 'block';
-        }
-
-        // ===== GERAR OPÇÕES DE HORÁRIOS PARA AGENDAMENTO =====
-        function gerarOpcoesHorarios() {
-            const select = document.getElementById('horarioAgendamento');
-            select.innerHTML = '<option value="">Selecione um horário</option>';
-            
-            // Próximos 5 dias
-            const hoje = new Date();
-            for (let i = 1; i <= 5; i++) {
-                const data = new Date(hoje);
-                data.setDate(hoje.getDate() + i);
-                const diaSemana = data.getDay();
-                
-                // Buscar horário configurado para este dia
-                const horarioDia = horariosDelivery.find(h => h.dia_semana === diaSemana);
-                
-                if (horarioDia && horarioDia.aberto) {
-                    const dataStr = data.toISOString().split('T')[0];
-                    const option = document.createElement('option');
-                    option.value = dataStr;
-                    option.textContent = `${data.toLocaleDateString('pt-BR')} (${horarioDia.abertura} às ${horarioDia.fechamento})`;
-                    select.appendChild(option);
-                }
-            }
-            
-            // Definir data mínima no input date
-            const dataMin = new Date();
-            dataMin.setDate(dataMin.getDate() + 1);
-            document.getElementById('dataAgendamento').min = dataMin.toISOString().split('T')[0];
-        }
-
-        // ===== MOSTRAR CAMPOS DE AGENDAMENTO =====
-        function mostrarAgendamento() {
-            document.getElementById('avisoDelivery').style.display = 'none';
-            document.getElementById('agendamentoFields').style.display = 'block';
-            document.getElementById('deliveryFields').style.display = 'block';
-            document.getElementById('pickupFields').style.display = 'none';
-            
-            modoAgendamento = true;
-            
-            // Habilitar opção delivery e selecionar
-            const deliveryOption = document.getElementById('deliveryOption');
-            deliveryOption.disabled = false;
-            deliveryOption.checked = true;
-            document.getElementById('deliveryLabel').classList.remove('disabled');
-            
-            document.getElementById('agendamentoInfo').innerHTML = '📅 Escolha uma data e horário para agendar sua entrega';
-        }
-
-        // ===== SELECIONAR RETIRADA =====
-        function selecionarRetirada() {
-            document.getElementById('avisoDelivery').style.display = 'none';
-            document.getElementById('pickupOption').checked = true;
-            toggleDelivery(false);
-        }
-
-        // ===== FECHAR AVISO =====
-        function fecharAviso() {
-            document.getElementById('avisoDelivery').style.display = 'none';
         }
 
         function calcularTotal() {
-            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
-            const total = subtotal + taxaFrete;
-            document.getElementById('cartTotal').textContent = total.toFixed(2);
+            const subtotal = carrinho.reduce((s, i) => s + i.preco, 0);
+            document.getElementById('cartTotal').textContent = (subtotal + taxaFrete).toFixed(2);
         }
 
-        // ===== VERIFICAR DISPONIBILIDADE DO DELIVERY =====
-        async function verificarDisponibilidadeDelivery() {
-            try {
-                const response = await fetch(`${API_URL}/horarios/disponibilidade/${SUBDOMINIO}`);
-                const data = await response.json();
-                
-                const deliveryOption = document.getElementById('deliveryOption');
-                const pickupOption = document.getElementById('pickupOption');
-                const deliveryLabel = document.getElementById('deliveryLabel');
-                const freteInfo = document.getElementById('freteInfo');
-                
-                if (!data.disponivel) {
-                    deliveryDisponivel = false;
-                    
-                    // Mostrar aviso de horário indisponível
-                    mostrarAvisoHorarioIndisponivel(data.mensagem);
-                    
-                } else {
-                    deliveryDisponivel = true;
-                    
-                    // Habilitar delivery
-                    if (deliveryOption) {
-                        deliveryOption.disabled = false;
-                        deliveryLabel.classList.remove('disabled');
-                    }
-                    if (freteInfo) {
-                        freteInfo.classList.remove('aviso');
-                        freteInfo.innerHTML = '👆 Informe seu CEP para calcular o frete';
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao verificar disponibilidade:', error);
-            }
-        }
-
-        // ===== ABRIR WHATSAPP DE SUPORTE =====
         function abrirWhatsappSuporte() {
             const numero = configuracoesLoja.whatsapp || '5551999999999';
-            const mensagem = encodeURIComponent('Olá! Preciso de ajuda com o pedido. 😊');
-            window.open(`https://wa.me/${numero}?text=${mensagem}`, '_blank');
+            window.open(`https://wa.me/${numero}?text=${encodeURIComponent('Preciso de ajuda')}`, '_blank');
         }
 
-        // ===== FINALIZAR PEDIDO NO WHATSAPP =====
         async function finalizarPedido() {
             if (carrinho.length === 0) {
-                alert('❌ Carrinho vazio!');
+                alert('❌ Carrinho vazio');
                 return;
             }
 
-            const tipoEntrega = document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
+            const tipo = document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
             
-            let nome, telefone;
-            let infoAgendamento = '';
-            let dadosPedido = {};
-            
-            if (tipoEntrega === 'delivery') {
+            let nome, tel;
+            if (tipo === 'delivery') {
                 nome = document.getElementById('clienteNome').value;
-                telefone = document.getElementById('clienteTelefone').value;
-                const endereco = document.getElementById('clienteEndereco').value;
-                const numero = document.getElementById('clienteNumero').value;
+                tel = document.getElementById('clienteTelefone').value;
+                const end = document.getElementById('clienteEndereco').value;
+                const num = document.getElementById('clienteNumero').value;
                 const bairro = document.getElementById('clienteBairro').value;
                 const cep = document.getElementById('cepInput').value;
                 
-                if (!nome || !telefone || !endereco || !numero || !bairro || !cep) {
-                    alert('❌ Preencha todos os campos obrigatórios para entrega');
+                if (!nome || !tel || !end || !num || !bairro || !cep) {
+                    alert('Preencha todos os campos');
                     return;
-                }
-                
-                // Montar endereço completo
-                const enderecoCompleto = `${endereco}, ${numero}${document.getElementById('clienteComplemento').value ? ' - ' + document.getElementById('clienteComplemento').value : ''}`;
-                
-                dadosPedido = {
-                    cliente_nome: nome,
-                    cliente_telefone: telefone,
-                    cliente_endereco: enderecoCompleto,
-                    cliente_bairro: bairro,
-                    tipo_entrega: 'delivery',
-                    taxa_entrega: taxaFrete,
-                    subtotal: carrinho.reduce((sum, item) => sum + item.preco, 0),
-                    total: carrinho.reduce((sum, item) => sum + item.preco, 0) + taxaFrete,
-                    observacoes: document.getElementById('observacoes').value,
-                    itens: carrinho.map(item => ({
-                        produto_id: item.id,
-                        produto_nome: item.nome,
-                        quantidade: 1,
-                        preco_unitario: item.preco,
-                        subtotal: item.preco
-                    }))
-                };
-                
-                if (modoAgendamento) {
-                    const dataAgendamento = document.getElementById('dataAgendamento').value;
-                    const horarioAgendamento = document.getElementById('horarioAgendamento').value;
-                    
-                    if (!dataAgendamento || !horarioAgendamento) {
-                        alert('❌ Selecione data e horário para o agendamento');
-                        return;
-                    }
-                    
-                    const dataFormatada = new Date(dataAgendamento).toLocaleDateString('pt-BR');
-                    infoAgendamento = `\nEntrega agendada: ${dataFormatada} ${horarioAgendamento}`;
-                    dadosPedido.observacoes += `\n${infoAgendamento}`;
                 }
             } else {
                 nome = document.getElementById('pickupNome').value;
-                telefone = document.getElementById('pickupTelefone').value;
-                
-                if (!nome || !telefone) {
-                    alert('❌ Preencha nome e telefone para retirada');
+                tel = document.getElementById('pickupTelefone').value;
+                if (!nome || !tel) {
+                    alert('Preencha nome e telefone');
                     return;
                 }
-                
-                dadosPedido = {
-                    cliente_nome: nome,
-                    cliente_telefone: telefone,
-                    tipo_entrega: 'pickup',
-                    taxa_entrega: 0,
-                    subtotal: carrinho.reduce((sum, item) => sum + item.preco, 0),
-                    total: carrinho.reduce((sum, item) => sum + item.preco, 0),
-                    observacoes: document.getElementById('observacoes').value,
-                    itens: carrinho.map(item => ({
-                        produto_id: item.id,
-                        produto_nome: item.nome,
-                        quantidade: 1,
-                        preco_unitario: item.preco,
-                        subtotal: item.preco
-                    }))
-                };
             }
 
-            // Calcular totais
-            const subtotal = carrinho.reduce((sum, item) => sum + item.preco, 0);
-            const total = subtotal + (tipoEntrega === 'delivery' ? taxaFrete : 0);
+            const subtotal = carrinho.reduce((s, i) => s + i.preco, 0);
+            const total = subtotal + (tipo === 'delivery' ? taxaFrete : 0);
 
-            // ===== 1. PRIMEIRO: SALVAR PEDIDO NO BANCO =====
-            let pedidoSalvo = false;
+            const pedido = {
+                cliente_nome: nome,
+                cliente_telefone: tel,
+                tipo_entrega: tipo,
+                taxa_entrega: tipo === 'delivery' ? taxaFrete : 0,
+                subtotal,
+                total,
+                observacoes: document.getElementById('observacoes').value,
+                itens: carrinho.map(i => ({
+                    produto_id: i.id,
+                    produto_nome: i.nome,
+                    quantidade: 1,
+                    preco_unitario: i.preco,
+                    subtotal: i.preco
+                }))
+            };
+
+            if (tipo === 'delivery') {
+                pedido.cliente_endereco = `${document.getElementById('clienteEndereco').value}, ${document.getElementById('clienteNumero').value}`;
+                if (document.getElementById('clienteComplemento').value) {
+                    pedido.cliente_endereco += ` - ${document.getElementById('clienteComplemento').value}`;
+                }
+                pedido.cliente_bairro = document.getElementById('clienteBairro').value;
+            }
+
             try {
-                console.log('💾 Salvando pedido no banco...', dadosPedido);
-                
                 const response = await fetch(`${API_URL}/pedidos`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        subdominio: SUBDOMINIO,
-                        pedido: dadosPedido
-                    })
+                    body: JSON.stringify({ subdominio: SUBDOMINIO, pedido })
                 });
                 
-                const responseData = await response.json();
-                
                 if (response.ok) {
-                    console.log('✅ Pedido salvo com sucesso! ID:', responseData.pedido_id);
-                    pedidoSalvo = true;
-                } else {
-                    console.error('❌ Erro ao salvar pedido:', responseData);
-                    if (!confirm('Erro ao registrar pedido. Deseja continuar mesmo assim?')) {
-                        return;
-                    }
+                    console.log('✅ Pedido salvo');
                 }
             } catch (error) {
-                console.error('❌ Erro de conexão ao salvar pedido:', error);
-                if (!confirm('Erro de conexão. Deseja tentar enviar só por WhatsApp?')) {
-                    return;
-                }
+                console.error('Erro ao salvar:', error);
             }
 
-            // ===== 2. DEPOIS: MONTAR MENSAGEM LIMPA PARA WHATSAPP =====
-            let mensagem = `*NOVO PEDIDO - ${configuracoesLoja.nome_loja || 'DL Crepes'}*\n`;
-            mensagem += `----------------------------\n`;
-            mensagem += `Cliente: ${nome}\n`;
-            mensagem += `Contato: ${telefone}\n`;
-            
-            if (modoAgendamento) {
-                mensagem += `${infoAgendamento}\n`;
-            }
-            
-            // Itens do pedido
-            mensagem += `\nITENS DO PEDIDO:\n`;
-            carrinho.forEach(item => {
-                mensagem += `- ${item.nome}: R$ ${item.preco.toFixed(2)}\n`;
-            });
-            
-            mensagem += `\nSubtotal: R$ ${subtotal.toFixed(2)}`;
-            
-            if (tipoEntrega === 'delivery') {
-                if (taxaFrete > 0) {
-                    mensagem += `\nFrete: R$ ${taxaFrete.toFixed(2)}`;
-                    if (distanciaKm > 0) {
-                        mensagem += ` (${distanciaKm.toFixed(1)} km)`;
-                    }
-                } else {
-                    mensagem += `\nFrete: GRATIS`;
-                }
-                
-                const endereco = document.getElementById('clienteEndereco').value;
-                const numero = document.getElementById('clienteNumero').value;
-                const bairro = document.getElementById('clienteBairro').value;
-                const complemento = document.getElementById('clienteComplemento').value;
-                const cep = document.getElementById('cepInput').value;
-                
-                mensagem += `\nEndereco: ${endereco}, ${numero}`;
-                if (complemento) mensagem += ` (${complemento})`;
-                mensagem += `\nBairro: ${bairro}`;
-                mensagem += `\nCEP: ${cep}`;
+            let msg = `*NOVO PEDIDO*\n----------------\nCliente: ${nome}\nContato: ${tel}\n\nITENS:\n`;
+            carrinho.forEach(i => msg += `- ${i.nome}: R$ ${i.preco.toFixed(2)}\n`);
+            msg += `\nSubtotal: R$ ${subtotal.toFixed(2)}`;
+            if (tipo === 'delivery') {
+                msg += `\nFrete: ${taxaFrete > 0 ? 'R$ ' + taxaFrete.toFixed(2) : 'GRÁTIS'}`;
+                msg += `\nEndereço: ${pedido.cliente_endereco}\nBairro: ${pedido.cliente_bairro}`;
             } else {
-                mensagem += `\nRetirada no local`;
+                msg += `\nRetirada no local`;
             }
-            
-            mensagem += `\n\nTOTAL: R$ ${total.toFixed(2)}`;
-            
-            const observacoes = document.getElementById('observacoes').value;
-            if (observacoes) {
-                mensagem += `\n\nObservacoes: ${observacoes}`;
-            }
+            msg += `\n\nTOTAL: R$ ${total.toFixed(2)}`;
+            if (pedido.observacoes) msg += `\n\nObs: ${pedido.observacoes}`;
 
-            // Abrir WhatsApp
-            const whatsappNumber = configuracoesLoja.whatsapp || '5551999999999';
-            window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`, '_blank');
+            window.open(`https://wa.me/${configuracoesLoja.whatsapp || '5551999999999'}?text=${encodeURIComponent(msg)}`, '_blank');
             
-            // Limpar carrinho
             carrinho = [];
-            atualizarCarrinho();
+            document.getElementById('cartCount').textContent = '0';
             fecharCarrinho();
-            
-            // Limpar formulário
-            document.getElementById('cepInput').value = '';
-            document.getElementById('clienteEndereco').value = '';
-            document.getElementById('clienteNumero').value = '';
-            document.getElementById('clienteBairro').value = '';
-            document.getElementById('clienteComplemento').value = '';
-            document.getElementById('clienteNome').value = '';
-            document.getElementById('clienteTelefone').value = '';
-            document.getElementById('pickupNome').value = '';
-            document.getElementById('pickupTelefone').value = '';
-            document.getElementById('observacoes').value = '';
-            document.getElementById('dataAgendamento').value = '';
-            document.getElementById('horarioAgendamento').value = '';
-            
-            if (pedidoSalvo) {
-                alert('✅ Pedido registrado com sucesso!');
-            }
         }
 
-        // ===== ATUALIZAR A CADA 30 SEGUNDOS =====
-        setInterval(carregarProdutos, 30000);
-
-        // ===== INICIALIZAR =====
-        window.onload = async function() {
-            console.log('Inicializando sistema...');
+        window.onload = async () => {
             await carregarConfiguracoes();
             await carregarProdutos();
-            
-            // Garantir que a mensagem seja exibida após carregar as configurações
-            setTimeout(() => {
-                exibirMensagemPersonalizada();
-            }, 500);
         };
     </script>
 </body>

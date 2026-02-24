@@ -3,15 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Pedido - Admin</title>
+    <title>Meu Pedido - Admin Login</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .login-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #C83232, #A02828);
+            margin: 0;
+            padding: 0;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        .login-box {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-logo h1 {
+            color: #333;
+            font-size: 24px;
+        }
+        .login-logo p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #C83232;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-login:hover {
+            background: #A02828;
+        }
+        .error-message {
+            color: #C83232;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body class="login-body">
     <div class="login-container">
         <div class="login-box">
             <div class="login-logo">
-                <img src="https://via.placeholder.com/80x80/C83232/ffffff?text=DL" alt="Logo">
                 <h1>Meu Pedido</h1>
                 <p>Painel Administrativo</p>
             </div>
