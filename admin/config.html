@@ -40,6 +40,14 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
+            transition: border 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #C83232;
         }
         
         .btn-save {
@@ -53,6 +61,7 @@
             cursor: pointer;
             width: 100%;
             margin-top: 20px;
+            transition: background 0.3s;
         }
         
         .btn-save:hover {
@@ -67,6 +76,7 @@
             align-items: center;
             gap: 10px;
             font-size: 14px;
+            border: 1px solid rgba(0,0,0,0.1);
         }
         
         .horarios-grid {
@@ -88,6 +98,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            font-size: 16px;
         }
         
         .horario-inputs {
@@ -155,6 +166,7 @@
             padding: 10px;
             margin: 10px 0;
             font-size: 14px;
+            border-radius: 4px;
         }
         
         .success-message {
@@ -173,6 +185,28 @@
             border-radius: 5px;
             margin-bottom: 20px;
             display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #C83232;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -203,7 +237,10 @@
             <div id="errorMessage" class="error-message"></div>
             
             <div id="configContainer">
-                <div class="loading">Carregando configurações...</div>
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Carregando configurações...
+                </div>
             </div>
         </div>
     </div>
@@ -214,6 +251,16 @@
         
         let configuracoes = {};
         let horariosDelivery = [];
+
+        // Verificar login
+        if (!localStorage.getItem('adminLogado')) {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('adminLogado');
+            window.location.href = 'index.html';
+        }
 
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage');
@@ -231,77 +278,85 @@
             }
         }
 
-        aasync function carregarConfiguracoes() {
-    try {
-        // Carregar configurações da loja
-        const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
-        configuracoes = await configResponse.json();
-        
-        // Carregar horários do delivery - COM TRATAMENTO DE ERRO
-        try {
-            const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
-            const data = await horariosResponse.json();
-            
-            // Garantir que é um array
-            horariosDelivery = Array.isArray(data) ? data : [];
-            
-            // Se veio vazio, criar array padrão
-            if (horariosDelivery.length === 0) {
-                horariosDelivery = [
-                    { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                    { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
-                ];
+        async function carregarConfiguracoes() {
+            try {
+                console.log('🔄 Carregando configurações...');
+                
+                // Carregar configurações da loja
+                const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
+                if (!configResponse.ok) throw new Error('Erro ao carregar configurações');
+                configuracoes = await configResponse.json();
+                console.log('✅ Configurações carregadas:', configuracoes);
+                
+                // Carregar horários do delivery
+                try {
+                    const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
+                    if (horariosResponse.ok) {
+                        const data = await horariosResponse.json();
+                        // Garantir que é um array
+                        horariosDelivery = Array.isArray(data) ? data : [];
+                        console.log('✅ Horários carregados:', horariosDelivery);
+                    } else {
+                        throw new Error('Erro na resposta');
+                    }
+                } catch (error) {
+                    console.log('Usando horários padrão');
+                    // Criar array padrão se não conseguir carregar
+                    horariosDelivery = [
+                        { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                        { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
+                    ];
+                }
+                
+                exibirFormulario();
+            } catch (error) {
+                console.error('❌ Erro ao carregar:', error);
+                document.getElementById('configContainer').innerHTML = `
+                    <div style="text-align:center; padding:40px; color:red;">
+                        ❌ Erro ao carregar configurações: ${error.message}<br>
+                        <button onclick="carregarConfiguracoes()" style="margin-top:20px; padding:10px 20px; background:#C83232; color:white; border:none; border-radius:5px; cursor:pointer;">
+                            🔄 Tentar novamente
+                        </button>
+                    </div>
+                `;
             }
-        } catch (error) {
-            console.error('Erro ao carregar horários, usando padrão:', error);
-            horariosDelivery = [
-                { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
-            ];
-        }
-        
-        exibirFormulario();
-    } catch (error) {
-        console.error('Erro ao carregar:', error);
-        document.getElementById('configContainer').innerHTML = `
-            <div style="text-align:center; padding:40px; color:red;">
-                ❌ Erro ao carregar configurações: ${error.message}
-            </div>
-        `;
-    }
-}
         }
 
         function exibirFormulario() {
             const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
             
+            // Garantir que horariosDelivery é um array
+            const horariosParaExibir = Array.isArray(horariosDelivery) ? horariosDelivery : [];
+            
             // Gerar HTML dos horários
-            const horariosHtml = horariosDelivery.map(h => `
-                <div class="dia-card">
-                    <h4>
-                        ${dias[h.dia_semana]}
-                        <label class="toggle-switch">
-                            <input type="checkbox" class="horario-checkbox" data-dia="${h.dia_semana}" ${h.aberto ? 'checked' : ''}>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </h4>
-                    <div class="horario-inputs">
-                        <input type="time" class="horario-abertura" data-dia="${h.dia_semana}" value="${h.abertura || '18:00'}" ${!h.aberto ? 'disabled' : ''}>
-                        <span>até</span>
-                        <input type="time" class="horario-fechamento" data-dia="${h.dia_semana}" value="${h.fechamento || '23:00'}" ${!h.aberto ? 'disabled' : ''}>
+            const horariosHtml = horariosParaExibir.map(h => {
+                const diaSemana = h.dia_semana !== undefined ? h.dia_semana : 0;
+                const aberto = h.aberto !== undefined ? h.aberto : true;
+                const abertura = h.abertura || '18:00';
+                const fechamento = h.fechamento || '23:00';
+                
+                return `
+                    <div class="dia-card">
+                        <h4>
+                            ${dias[diaSemana] || 'Dia'}
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="horario-checkbox" data-dia="${diaSemana}" ${aberto ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </h4>
+                        <div class="horario-inputs">
+                            <input type="time" class="horario-abertura" data-dia="${diaSemana}" value="${abertura}" ${!aberto ? 'disabled' : ''}>
+                            <span>até</span>
+                            <input type="time" class="horario-fechamento" data-dia="${diaSemana}" value="${fechamento}" ${!aberto ? 'disabled' : ''}>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
@@ -311,12 +366,12 @@
                         
                         <div class="form-group">
                             <label>Nome da Loja</label>
-                            <input type="text" id="nome_loja" value="${configuracoes.nome_loja || ''}">
+                            <input type="text" id="nome_loja" value="${configuracoes.nome_loja || ''}" placeholder="DL Crepes e Lanches">
                         </div>
                         
                         <div class="form-group">
                             <label>Slogan</label>
-                            <input type="text" id="slogan" value="${configuracoes.slogan || ''}">
+                            <input type="text" id="slogan" value="${configuracoes.slogan || ''}" placeholder="Seu refúgio de sabores">
                         </div>
                         
                         <div class="form-group">
@@ -326,7 +381,7 @@
                         
                         <div class="form-group">
                             <label>Endereço Completo</label>
-                            <textarea id="endereco_completo" rows="2">${configuracoes.endereco_completo || ''}</textarea>
+                            <textarea id="endereco_completo" rows="2" placeholder="Bairro Santa Marta, Santa Maria - RS">${configuracoes.endereco_completo || ''}</textarea>
                         </div>
                         
                         <div class="form-group">
@@ -340,7 +395,7 @@
                         </div>
                     </div>
 
-                    <!-- HORÁRIOS DE FUNCIONAMENTO DA LOJA (para exibição) -->
+                    <!-- HORÁRIO DE FUNCIONAMENTO DA LOJA -->
                     <div class="config-section">
                         <h2>⏰ Horário de Funcionamento da Loja</h2>
                         <div class="info-box">
@@ -356,24 +411,28 @@
                     <div class="config-section">
                         <h2>🚚 Configurações de Entrega</h2>
                         
+                        <div class="info-box">
+                            ℹ️ Configure as taxas de entrega e distância máxima.
+                        </div>
+                        
                         <div class="form-group">
                             <label>Taxa por KM (R$)</label>
-                            <input type="number" id="taxa_por_km" step="0.01" value="${configuracoes.taxa_por_km || 2.00}">
+                            <input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 2.00}">
                         </div>
                         
                         <div class="form-group">
                             <label>Taxa Mínima (R$)</label>
-                            <input type="number" id="taxa_minima" step="0.01" value="${configuracoes.taxa_minima || 5.00}">
+                            <input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}">
                         </div>
                         
                         <div class="form-group">
                             <label>Frete Grátis Acima de (R$)</label>
-                            <input type="number" id="frete_gratis_acima" step="0.01" value="${configuracoes.frete_gratis_acima || 50.00}">
+                            <input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}">
                         </div>
                         
                         <div class="form-group">
                             <label>Distância Máxima para Entrega (KM)</label>
-                            <input type="number" id="km_maximo_entrega" step="0.1" value="${configuracoes.km_maximo_entrega || 30.00}">
+                            <input type="number" id="km_maximo_entrega" step="0.1" min="0" value="${configuracoes.km_maximo_entrega || 30.00}">
                         </div>
                         
                         <div class="form-group">
@@ -391,13 +450,17 @@
                         </div>
                         
                         <div class="horarios-grid">
-                            ${horariosHtml}
+                            ${horariosHtml || '<p>Carregando horários...</p>'}
                         </div>
                     </div>
 
                     <!-- MENSAGEM PERSONALIZADA -->
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
+                        
+                        <div class="info-box">
+                            📢 Esta mensagem aparecerá no topo do cardápio.
+                        </div>
                         
                         <div class="form-group">
                             <label>
@@ -452,18 +515,27 @@
                     const abertura = document.querySelector(`.horario-abertura[data-dia="${dia}"]`);
                     const fechamento = document.querySelector(`.horario-fechamento[data-dia="${dia}"]`);
                     
-                    abertura.disabled = !this.checked;
-                    fechamento.disabled = !this.checked;
+                    if (abertura && fechamento) {
+                        abertura.disabled = !this.checked;
+                        fechamento.disabled = !this.checked;
+                    }
                 });
             });
         }
 
         function atualizarPreview() {
             const preview = document.getElementById('previewMensagem');
-            preview.style.background = document.getElementById('banner_cor_fundo').value;
-            preview.style.color = document.getElementById('banner_cor_texto').value;
-            document.getElementById('previewIcone').textContent = document.getElementById('banner_icone').value || '📢';
-            document.getElementById('previewTexto').textContent = document.getElementById('banner_mensagem').value || 'Preview';
+            const corFundo = document.getElementById('banner_cor_fundo')?.value || '#FFF3E0';
+            const corTexto = document.getElementById('banner_cor_texto')?.value || '#E65100';
+            const icone = document.getElementById('banner_icone')?.value || '📢';
+            const texto = document.getElementById('banner_mensagem')?.value || 'Preview';
+            
+            if (preview) {
+                preview.style.background = corFundo;
+                preview.style.color = corTexto;
+                document.getElementById('previewIcone').textContent = icone;
+                document.getElementById('previewTexto').textContent = texto;
+            }
         }
 
         async function salvarConfiguracoes() {
@@ -476,10 +548,10 @@
                 endereco_completo: document.getElementById('endereco_completo').value,
                 cep_loja: document.getElementById('cep_loja').value,
                 cor_principal: document.getElementById('cor_principal').value,
-                taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value),
-                taxa_minima: parseFloat(document.getElementById('taxa_minima').value),
-                frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value),
-                km_maximo_entrega: parseFloat(document.getElementById('km_maximo_entrega').value),
+                taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 2,
+                taxa_minima: parseFloat(document.getElementById('taxa_minima').value) || 5,
+                frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 50,
+                km_maximo_entrega: parseFloat(document.getElementById('km_maximo_entrega').value) || 30,
                 mensagem_km_excedido: document.getElementById('mensagem_km_excedido').value,
                 mensagem_banner_ativo: document.getElementById('banner_ativo').checked,
                 mensagem_banner: document.getElementById('banner_mensagem').value,
@@ -506,6 +578,9 @@
             }
 
             try {
+                console.log('💾 Salvando configurações...', config);
+                console.log('💾 Salvando horários...', horarios);
+
                 // Salvar configurações
                 const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`, {
                     method: 'PUT',
@@ -523,9 +598,12 @@
                 if (configResponse.ok && horariosResponse.ok) {
                     mostrarMensagem('success', '✅ Configurações e horários salvos com sucesso!');
                 } else {
-                    mostrarMensagem('error', '❌ Erro ao salvar algumas configurações');
+                    const configErro = configResponse.ok ? '' : 'Erro nas configurações. ';
+                    const horariosErro = horariosResponse.ok ? '' : 'Erro nos horários.';
+                    mostrarMensagem('error', '❌ ' + configErro + horariosErro);
                 }
             } catch (error) {
+                console.error('Erro ao salvar:', error);
                 mostrarMensagem('error', '❌ Erro de conexão: ' + error.message);
             }
         }
