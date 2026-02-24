@@ -592,7 +592,7 @@
                 const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horarios })
+                    body: JSON.stringify({ horarios: horarios }) // Enviar como objeto com propriedade horarios
                 });
 
                 if (configResponse.ok && horariosResponse.ok) {
