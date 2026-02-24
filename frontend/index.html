@@ -72,10 +72,10 @@
                 
                 <div class="delivery-options">
                     <input type="radio" name="deliveryType" value="delivery" id="deliveryOption" onchange="toggleDelivery(true)">
-                    <label for="deliveryOption">🚚 Delivery</label>
+                    <label for="deliveryOption" id="deliveryLabel">🚚 Delivery</label>
                     
                     <input type="radio" name="deliveryType" value="pickup" id="pickupOption" onchange="toggleDelivery(false)" checked>
-                    <label for="pickupOption">🏠 Retirada</label>
+                    <label for="pickupOption" id="pickupLabel">🏠 Retirada</label>
                 </div>
 
                 <div id="deliveryFields" style="display: none;">
@@ -134,9 +134,9 @@
                     </div>
                 </div>
 
-                <!-- CAMPOS DE AGENDAMENTO (inicialmente ocultos) -->
+                <!-- CAMPOS DE AGENDAMENTO -->
                 <div id="agendamentoFields" style="display: none;">
-                    <div class="form-section" style="background: #fff3e0;">
+                    <div class="form-section" style="background: #fff3e0; margin-top: 15px;">
                         <h3>📅 Agendar Entrega</h3>
                         <div class="form-row">
                             <label>Data para entrega</label>
@@ -148,8 +148,8 @@
                                 <option value="">Selecione um horário</option>
                             </select>
                         </div>
-                        <div class="info-box">
-                            ⏰ O pedido será processado no horário selecionado.
+                        <div class="info-box" style="margin-top: 10px;">
+                            ⏰ Seu pedido será processado no horário agendado.
                         </div>
                     </div>
                 </div>
@@ -183,6 +183,7 @@
         let modoAgendamento = false;
         let cepValido = false;
         let dentroAreaEntrega = false;
+        let disponibilidadeDelivery = { disponivel: true, mensagem: '' };
 
         console.log('🚀 Frontend iniciado');
         console.log('📡 API_URL:', API_URL);
@@ -232,6 +233,9 @@
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
                 horariosDelivery = await response.json();
                 console.log('📅 Horários carregados:', horariosDelivery);
+                
+                // Verificar disponibilidade inicial
+                verificarDisponibilidadeDelivery();
             } catch (error) {
                 console.error('Erro ao carregar horários:', error);
                 // Horários padrão
@@ -244,6 +248,7 @@
                     { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
                     { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
                 ];
+                verificarDisponibilidadeDelivery();
             }
         }
 
@@ -256,26 +261,31 @@
             const horarioHoje = horariosDelivery.find(h => h.dia_semana === diaSemana);
             
             if (!horarioHoje || !horarioHoje.aberto) {
-                return { 
+                disponibilidadeDelivery = { 
                     disponivel: false, 
-                    mensagem: '🚫 Nosso delivery não está ativo agora' 
+                    mensagem: '🚫 Nosso delivery não está disponível hoje' 
                 };
+                return disponibilidadeDelivery;
             }
             
             const abertura = horaParaMinutos(horarioHoje.abertura);
             const fechamento = horaParaMinutos(horarioHoje.fechamento);
             
             if (horaAtual >= abertura && horaAtual <= fechamento) {
-                return { 
+                disponibilidadeDelivery = { 
                     disponivel: true, 
-                    mensagem: '✅ Delivery disponível agora' 
+                    mensagem: '✅ Delivery disponível agora',
+                    horario: `${horarioHoje.abertura} às ${horarioHoje.fechamento}`
                 };
             } else {
-                return { 
+                disponibilidadeDelivery = { 
                     disponivel: false, 
-                    mensagem: `⏰ Delivery indisponível agora. Horário: ${horarioHoje.abertura} às ${horarioHoje.fechamento}` 
+                    mensagem: `⏰ Delivery indisponível agora. Horário: ${horarioHoje.abertura} às ${horarioHoje.fechamento}`,
+                    horario: `${horarioHoje.abertura} às ${horarioHoje.fechamento}`
                 };
             }
+            
+            return disponibilidadeDelivery;
         }
 
         function horaParaMinutos(hora) {
@@ -287,14 +297,15 @@
         // ===== GERAR OPÇÕES DE HORÁRIOS PARA AGENDAMENTO =====
         function gerarOpcoesHorariosAgendamento() {
             const select = document.getElementById('horarioAgendamento');
+            if (!select) return;
+            
             select.innerHTML = '<option value="">Selecione um horário</option>';
             
             const hoje = new Date();
-            const diaSemanaHoje = hoje.getDay();
             const horaAtual = hoje.getHours() * 60 + hoje.getMinutes();
             
             // Próximos 7 dias
-            for (let i = 0; i < 7; i++) {
+            for (let i = 1; i <= 7; i++) {
                 const data = new Date(hoje);
                 data.setDate(hoje.getDate() + i);
                 const diaSemana = data.getDay();
@@ -303,14 +314,6 @@
                 const horarioDia = horariosDelivery.find(h => h.dia_semana === diaSemana);
                 
                 if (horarioDia && horarioDia.aberto) {
-                    // Se for hoje, verificar se já passou do horário
-                    if (i === 0) {
-                        const abertura = horaParaMinutos(horarioDia.abertura);
-                        if (horaAtual >= abertura) {
-                            continue; // Pular se já passou do horário hoje
-                        }
-                    }
-                    
                     const option = document.createElement('option');
                     option.value = `${dataStr}|${horarioDia.abertura}`;
                     
@@ -325,7 +328,10 @@
             // Definir data mínima no input date
             const dataMin = new Date();
             dataMin.setDate(dataMin.getDate() + 1);
-            document.getElementById('dataAgendamento').min = dataMin.toISOString().split('T')[0];
+            const dataMinInput = document.getElementById('dataAgendamento');
+            if (dataMinInput) {
+                dataMinInput.min = dataMin.toISOString().split('T')[0];
+            }
         }
 
         // ===== CARREGAR PRODUTOS DA API =====
@@ -421,6 +427,8 @@
         function abrirCarrinho() {
             // Resetar estados
             modoAgendamento = false;
+            cepValido = false;
+            dentroAreaEntrega = false;
             document.getElementById('agendamentoFields').style.display = 'none';
             document.getElementById('avisoDelivery').style.display = 'none';
             
@@ -464,10 +472,13 @@
                 
                 if (!status.disponivel) {
                     mostrarAviso(
-                        'delivery', 
+                        'horario', 
                         status.mensagem, 
                         'agendar'
                     );
+                } else {
+                    // Se estiver disponível, mostrar mensagem de confirmação
+                    document.getElementById('freteInfo').innerHTML = `✅ Delivery disponível (${status.horario})`;
                 }
             } else {
                 taxaFrete = 0;
@@ -480,25 +491,26 @@
 
         function mostrarAviso(tipo, mensagem, acao) {
             const avisoDiv = document.getElementById('avisoDelivery');
+            if (!avisoDiv) return;
             
             let botoes = '';
             if (acao === 'agendar') {
                 botoes = `
                     <div class="botoes-aviso">
-                        <button class="btn-aviso agendar" onclick="mostrarAgendamento()">📅 Quero agendar</button>
-                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">🏠 Quero retirar</button>
+                        <button class="btn-aviso agendar" onclick="mostrarAgendamento()">📅 Quero agendar entrega</button>
+                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">🏠 Quero retirar agora</button>
                     </div>
                 `;
             } else if (acao === 'retirar') {
                 botoes = `
                     <div class="botoes-aviso">
-                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">🏠 Quero retirar</button>
+                        <button class="btn-aviso retirar" onclick="selecionarRetirada()">🏠 Quero retirar agora</button>
                     </div>
                 `;
             }
             
             avisoDiv.innerHTML = `
-                <p>${mensagem}</p>
+                <p style="font-weight: bold; margin-bottom: 10px;">${mensagem}</p>
                 ${botoes}
             `;
             avisoDiv.style.display = 'block';
@@ -604,7 +616,12 @@
                 return;
             }
 
-            const tipo = document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
+            const tipo = document.querySelector('input[name="deliveryType"]:checked')?.value;
+            
+            if (!tipo) {
+                alert('Selecione uma opção de entrega');
+                return;
+            }
             
             let nome, tel;
             let dadosPedido = {};
@@ -620,13 +637,13 @@
                 const complemento = document.getElementById('clienteComplemento').value;
                 
                 if (!nome || !tel || !endereco || !numero || !bairro || !cep) {
-                    alert('Preencha todos os campos obrigatórios');
+                    alert('Preencha todos os campos obrigatórios para delivery');
                     return;
                 }
                 
                 // Verificar se está dentro da área
                 if (!dentroAreaEntrega) {
-                    alert('Seu endereço não é atendido pelo delivery');
+                    alert('Seu endereço não é atendido pelo delivery. Escolha a opção Retirada.');
                     return;
                 }
                 
@@ -634,7 +651,7 @@
                 const status = verificarDisponibilidadeDelivery();
                 
                 if (!status.disponivel && !modoAgendamento) {
-                    alert('Delivery indisponível agora. Use a opção de agendamento.');
+                    alert('Delivery indisponível agora. Use a opção "Quero agendar entrega" acima.');
                     return;
                 }
                 
@@ -681,7 +698,7 @@
                 tel = document.getElementById('pickupTelefone').value;
                 
                 if (!nome || !tel) {
-                    alert('Preencha nome e telefone');
+                    alert('Preencha nome e telefone para retirada');
                     return;
                 }
                 
