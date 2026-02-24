@@ -21,29 +21,55 @@
         
         .card {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(200,50,50,0.1);
+            border-color: #C83232;
         }
         
         .card h3 {
             color: #666;
             font-size: 14px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .card .valor {
             color: #C83232;
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .card .subtexto {
+            color: #999;
+            font-size: 12px;
         }
         
         .table-container {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+        
+        .table-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         table {
@@ -53,15 +79,62 @@
         
         th {
             text-align: left;
-            padding: 12px;
-            background: #f5f5f5;
+            padding: 15px;
+            background: #f8f9fa;
             color: #333;
             font-weight: 600;
+            font-size: 14px;
+            border-radius: 8px 8px 0 0;
         }
         
         td {
-            padding: 12px;
+            padding: 15px;
             border-bottom: 1px solid #eee;
+            color: #555;
+        }
+        
+        tr:hover td {
+            background: #f8f9fa;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #C83232;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .atualizacao-info {
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .badge {
+            background: #4CAF50;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
         }
     </style>
 </head>
@@ -90,25 +163,31 @@
             
             <div class="dashboard-cards">
                 <div class="card">
-                    <h3>Pedidos Hoje</h3>
+                    <h3>📦 Pedidos Hoje</h3>
                     <div class="valor" id="pedidosHoje">0</div>
+                    <div class="subtexto">total de pedidos</div>
                 </div>
                 <div class="card">
-                    <h3>Faturamento Hoje</h3>
+                    <h3>💰 Faturamento Hoje</h3>
                     <div class="valor" id="faturamentoHoje">R$ 0,00</div>
+                    <div class="subtexto">em vendas</div>
                 </div>
                 <div class="card">
-                    <h3>Total de Produtos</h3>
+                    <h3>📋 Total de Produtos</h3>
                     <div class="valor" id="totalProdutos">0</div>
+                    <div class="subtexto">no cardápio</div>
                 </div>
                 <div class="card">
-                    <h3>Total de Categorias</h3>
+                    <h3>📁 Total de Categorias</h3>
                     <div class="valor" id="totalCategorias">0</div>
+                    <div class="subtexto">cadastradas</div>
                 </div>
             </div>
             
             <div class="table-container">
-                <h2>📋 Últimos Pedidos</h2>
+                <h2>
+                    <span>📋</span> Últimos Pedidos
+                </h2>
                 <table>
                     <thead>
                         <tr>
@@ -120,13 +199,158 @@
                         </tr>
                     </thead>
                     <tbody id="pedidosTable">
-                        <tr><td colspan="5">Carregando...</td></tr>
+                        <tr><td colspan="5">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                Carregando dados...
+                            </div>
+                        </td></tr>
                     </tbody>
                 </table>
+                
+                <div class="atualizacao-info">
+                    <span class="badge" id="statusAtualizacao">🔄 Atualizando...</span>
+                    <span id="ultimaAtualizacao">-</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const SUBDOMINIO = 'dlcrepes';
+        
+        let intervaloAtualizacao = null;
+        let atualizacaoAtiva = true;
+
+        // Verificar login
+        if (!localStorage.getItem('adminLogado')) {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('adminLogado');
+            window.location.href = 'index.html';
+        }
+
+        function formatarData(data) {
+            return new Date(data).toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function atualizarTimestamp() {
+            const agora = new Date();
+            document.getElementById('ultimaAtualizacao').textContent = 
+                `Última atualização: ${agora.toLocaleTimeString('pt-BR')}`;
+        }
+
+        async function carregarDashboard() {
+            try {
+                document.getElementById('statusAtualizacao').textContent = '🔄 Atualizando...';
+                document.getElementById('statusAtualizacao').style.background = '#ff9800';
+                
+                console.log('🔄 Carregando dashboard...');
+                
+                // Buscar dados em paralelo para otimizar
+                const [dashboardResponse, produtosResponse, categoriasResponse] = await Promise.all([
+                    fetch(`${API_URL}/dashboard/${SUBDOMINIO}`).catch(() => null),
+                    fetch(`${API_URL}/produtos`).catch(() => null),
+                    fetch(`${API_URL}/categorias`).catch(() => null)
+                ]);
+
+                // Processar dashboard
+                if (dashboardResponse && dashboardResponse.ok) {
+                    const data = await dashboardResponse.json();
+                    console.log('✅ Dashboard carregado:', data);
+                    
+                    document.getElementById('pedidosHoje').textContent = data.hoje?.pedidos || 0;
+                    document.getElementById('faturamentoHoje').textContent = 
+                        `R$ ${(data.hoje?.faturamento || 0).toFixed(2)}`;
+                    
+                    // Atualizar tabela de pedidos
+                    const tbody = document.getElementById('pedidosTable');
+                    if (data.ultimos_pedidos && data.ultimos_pedidos.length > 0) {
+                        tbody.innerHTML = data.ultimos_pedidos.map(p => `
+                            <tr>
+                                <td><strong>#${p.id}</strong></td>
+                                <td>${p.cliente_nome}</td>
+                                <td><strong style="color:#C83232">R$ ${parseFloat(p.total).toFixed(2)}</strong></td>
+                                <td><span class="status-${p.status}">${p.status}</span></td>
+                                <td>${formatarData(p.data_pedido)}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">📭 Nenhum pedido recente</td></tr>';
+                    }
+                } else {
+                    console.warn('⚠️ Erro ao carregar dashboard');
+                    document.getElementById('pedidosHoje').textContent = '0';
+                    document.getElementById('faturamentoHoje').textContent = 'R$ 0,00';
+                }
+
+                // Processar produtos
+                if (produtosResponse && produtosResponse.ok) {
+                    const produtos = await produtosResponse.json();
+                    document.getElementById('totalProdutos').textContent = produtos.length || 0;
+                } else {
+                    document.getElementById('totalProdutos').textContent = '0';
+                }
+
+                // Processar categorias
+                if (categoriasResponse && categoriasResponse.ok) {
+                    const categorias = await categoriasResponse.json();
+                    document.getElementById('totalCategorias').textContent = categorias.length || 0;
+                } else {
+                    document.getElementById('totalCategorias').textContent = '0';
+                }
+
+                // Atualizar timestamp
+                atualizarTimestamp();
+                document.getElementById('statusAtualizacao').textContent = '✅ Atualizado';
+                document.getElementById('statusAtualizacao').style.background = '#4CAF50';
+                
+            } catch (error) {
+                console.error('❌ Erro no dashboard:', error);
+                document.getElementById('pedidosHoje').textContent = '0';
+                document.getElementById('faturamentoHoje').textContent = 'R$ 0,00';
+                document.getElementById('statusAtualizacao').textContent = '❌ Erro';
+                document.getElementById('statusAtualizacao').style.background = '#f44336';
+            }
+        }
+
+        function iniciarAtualizacaoAutomatica() {
+            // Carregar imediatamente
+            carregarDashboard();
+            
+            // Configurar atualização a cada 15 segundos
+            if (intervaloAtualizacao) {
+                clearInterval(intervaloAtualizacao);
+            }
+            
+            intervaloAtualizacao = setInterval(() => {
+                if (atualizacaoAtiva) {
+                    carregarDashboard();
+                }
+            }, 15000); // 15 segundos
+            
+            console.log('⏰ Atualização automática iniciada (15s)');
+        }
+
+        // Iniciar quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            iniciarAtualizacaoAutomatica();
+        });
+
+        // Parar atualização quando sair da página
+        window.addEventListener('beforeunload', () => {
+            if (intervaloAtualizacao) {
+                clearInterval(intervaloAtualizacao);
+            }
+        });
+    </script>
 </body>
 </html>
