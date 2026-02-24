@@ -1,14 +1,15 @@
-// admin/script.js - VERSÃO FINAL CORRIGIDA
+// admin/script.js - VERSÃO COMPLETA E FINAL
 const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
-// Cache
+// Cache para otimização
 let cache = {
     produtos: { data: null, timestamp: 0 },
     categorias: { data: null, timestamp: 0 },
-    pedidos: { data: null, timestamp: 0 }
+    pedidos: { data: null, timestamp: 0 },
+    config: { data: null, timestamp: 0 }
 };
-const CACHE_DURATION = 30000;
+const CACHE_DURATION = 30000; // 30 segundos
 
 // Variáveis globais
 let produtoEditando = null;
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
             
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    const paginasProtegidas = ['dashboard.html', 'produtos.html', 'categorias.html', 'pedidos.html', 'config.html'];
+    const paginasProtegidas = ['dashboard.html', 'produtos.html', 'categorias.html', 'pedidos.html', 'config.html', 'pedido-detalhe.html'];
     const paginaAtual = window.location.pathname.split('/').pop();
     
     if (paginasProtegidas.includes(paginaAtual) && !localStorage.getItem('adminLogado')) {
@@ -66,18 +68,30 @@ function logout() {
 // ===== UTILITÁRIOS =====
 async function fetchComCache(url, cacheKey) {
     const agora = Date.now();
+    
     if (cache[cacheKey] && cache[cacheKey].data && (agora - cache[cacheKey].timestamp) < CACHE_DURATION) {
+        console.log(`📦 Usando cache para ${cacheKey}`);
         return cache[cacheKey].data;
     }
     
     try {
+        console.log(`🔄 Buscando ${url}...`);
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
-        cache[cacheKey] = { data, timestamp: agora };
+        
+        cache[cacheKey] = {
+            data: data,
+            timestamp: agora
+        };
+        
         return data;
     } catch (error) {
-        console.error(`Erro ao buscar ${url}:`, error);
+        console.error(`❌ Erro ao buscar ${url}:`, error);
         throw error;
     }
 }
@@ -93,7 +107,8 @@ async function carregarDashboard() {
         
         if (dashboardData) {
             document.getElementById('pedidosHoje').textContent = dashboardData.hoje?.pedidos || 0;
-            document.getElementById('faturamentoHoje').textContent = `R$ ${(dashboardData.hoje?.faturamento || 0).toFixed(2)}`;
+            document.getElementById('faturamentoHoje').textContent = 
+                `R$ ${(dashboardData.hoje?.faturamento || 0).toFixed(2)}`;
         }
         
         document.getElementById('totalProdutos').textContent = produtosData.length || 0;
@@ -120,6 +135,7 @@ async function carregarDashboard() {
 async function carregarProdutos() {
     try {
         const produtos = await fetchComCache(`${API_URL}/produtos`, 'produtos');
+        
         const tbody = document.getElementById('produtosTable');
         if (tbody) {
             if (produtos.length === 0) {
@@ -159,9 +175,8 @@ async function carregarCategoriasSelect() {
     }
 }
 
-// Funções globais para produto
+// Funções de produto (acessíveis globalmente)
 window.abrirModalProduto = function() {
-    console.log('Abrindo modal para novo produto');
     produtoEditando = null;
     document.getElementById('modalTituloProduto').textContent = 'Novo Produto';
     document.getElementById('produtoNome').value = '';
@@ -171,19 +186,16 @@ window.abrirModalProduto = function() {
 };
 
 window.editarProduto = async function(id) {
-    console.log('Editando produto ID:', id);
     try {
         const response = await fetch(`${API_URL}/produtos/${id}`);
         if (!response.ok) throw new Error('Erro ao carregar produto');
         const produto = await response.json();
-        console.log('Produto carregado:', produto);
         
         produtoEditando = produto;
         document.getElementById('modalTituloProduto').textContent = 'Editar Produto';
         document.getElementById('produtoNome').value = produto.nome;
         document.getElementById('produtoPreco').value = produto.preco;
         
-        // Garantir que as categorias estejam carregadas
         if (categoriasCache.length === 0) {
             await carregarCategoriasSelect();
         }
@@ -199,14 +211,17 @@ window.excluirProduto = async function(id) {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
     
     try {
-        const response = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
+        const response = await fetch(`${API_URL}/produtos/${id}`, { 
+            method: 'DELETE' 
+        });
+        
         if (response.ok) {
             cache.produtos.timestamp = 0;
             await carregarProdutos();
             alert('✅ Produto excluído!');
         } else {
             const erro = await response.json();
-            alert('Erro ao excluir: ' + (erro.erro || 'Erro desconhecido'));
+            alert('Erro: ' + (erro.erro || 'Erro ao excluir'));
         }
     } catch (error) {
         alert('Erro de conexão: ' + error.message);
@@ -214,7 +229,6 @@ window.excluirProduto = async function(id) {
 };
 
 window.salvarProduto = async function() {
-    console.log('Salvando produto...');
     const nome = document.getElementById('produtoNome').value;
     const preco = document.getElementById('produtoPreco').value;
     const categoriaId = document.getElementById('produtoCategoria').value;
@@ -232,28 +246,21 @@ window.salvarProduto = async function() {
         disponivel: true
     };
     
-    console.log('Dados do produto:', produto);
-    console.log('Editando?', produtoEditando ? 'Sim' : 'Não');
-    
     try {
         let response;
         if (produtoEditando) {
-            console.log('Enviando PUT para:', `${API_URL}/produtos/${produtoEditando.id}`);
             response = await fetch(`${API_URL}/produtos/${produtoEditando.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produto)
             });
         } else {
-            console.log('Enviando POST para:', `${API_URL}/produtos`);
             response = await fetch(`${API_URL}/produtos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produto)
             });
         }
-        
-        console.log('Status da resposta:', response.status);
         
         if (response.ok) {
             document.getElementById('produtoModal').style.display = 'none';
@@ -262,11 +269,9 @@ window.salvarProduto = async function() {
             alert('✅ Produto salvo com sucesso!');
         } else {
             const erro = await response.json();
-            console.error('Erro da API:', erro);
             alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
         }
     } catch (error) {
-        console.error('Erro de conexão:', error);
         alert('Erro de conexão: ' + error.message);
     }
 };
@@ -275,6 +280,7 @@ window.salvarProduto = async function() {
 async function carregarCategorias() {
     try {
         const categorias = await fetchComCache(`${API_URL}/categorias`, 'categorias');
+        
         const tbody = document.getElementById('categoriasTable');
         if (tbody) {
             if (categorias.length === 0) {
@@ -299,27 +305,107 @@ async function carregarCategorias() {
     }
 }
 
-async function excluirCategoria(id) {
-    if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
+// Funções de categoria
+window.abrirModalCategoria = function() {
+    categoriaEditando = null;
+    document.getElementById('modalTituloCategoria').textContent = 'Nova Categoria';
+    document.getElementById('categoriaNome').value = '';
+    document.getElementById('categoriaOrdem').value = '0';
+    document.getElementById('categoriaModal').style.display = 'block';
+};
+
+window.editarCategoria = async function(id) {
+    try {
+        const response = await fetch(`${API_URL}/categorias/${id}`);
+        if (!response.ok) throw new Error('Erro ao carregar categoria');
+        const categoria = await response.json();
+        
+        categoriaEditando = categoria;
+        document.getElementById('modalTituloCategoria').textContent = 'Editar Categoria';
+        document.getElementById('categoriaNome').value = categoria.nome;
+        document.getElementById('categoriaOrdem').value = categoria.ordem || 0;
+        document.getElementById('categoriaModal').style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar categoria:', error);
+        alert('Erro ao carregar categoria: ' + error.message);
+    }
+};
+
+window.salvarCategoria = async function() {
+    const nome = document.getElementById('categoriaNome').value;
+    const ordem = document.getElementById('categoriaOrdem').value;
+    
+    if (!nome) {
+        alert('Digite o nome da categoria');
+        return;
+    }
+    
+    const categoria = { 
+        nome, 
+        ordem: parseInt(ordem) || 0,
+        tenant_id: 1 
+    };
     
     try {
-        const response = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
+        let response;
+        if (categoriaEditando) {
+            response = await fetch(`${API_URL}/categorias/${categoriaEditando.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(categoria)
+            });
+        } else {
+            response = await fetch(`${API_URL}/categorias`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(categoria)
+            });
+        }
+        
+        if (response.ok) {
+            document.getElementById('categoriaModal').style.display = 'none';
+            cache.categorias.timestamp = 0;
+            await carregarCategorias();
+            alert('✅ Categoria salva com sucesso!');
+        } else {
+            const erro = await response.json();
+            alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        alert('Erro de conexão: ' + error.message);
+    }
+};
+
+window.excluirCategoria = async function(id) {
+    if (!confirm('Tem certeza que deseja excluir esta categoria? (Produtos vinculados serão afetados)')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/categorias/${id}`, { 
+            method: 'DELETE' 
+        });
+        
         if (response.ok) {
             cache.categorias.timestamp = 0;
             await carregarCategorias();
             alert('✅ Categoria excluída!');
         } else {
-            alert('Erro ao excluir categoria');
+            const erro = await response.json();
+            alert('Erro: ' + (erro.erro || 'Erro ao excluir'));
         }
     } catch (error) {
-        alert('Erro de conexão');
+        alert('Erro de conexão: ' + error.message);
     }
+};
+
+function fecharModalCategoria() {
+    document.getElementById('categoriaModal').style.display = 'none';
 }
 
 // ===== PEDIDOS =====
 async function carregarPedidos() {
     try {
         const pedidos = await fetchComCache(`${API_URL}/pedidos/${SUBDOMINIO}`, 'pedidos');
+        
         const tbody = document.getElementById('pedidosTable');
         if (!tbody) return;
         
@@ -369,10 +455,12 @@ async function atualizarStatus(pedidoId, novoStatus) {
         if (response.ok) {
             cache.pedidos.timestamp = 0;
             await carregarPedidos();
+            alert('✅ Status atualizado!');
         } else {
-            alert('Erro ao atualizar status');
+            const erro = await response.json();
+            alert('Erro: ' + (erro.erro || 'Erro ao atualizar'));
         }
     } catch (error) {
-        alert('Erro de conexão');
+        alert('Erro de conexão: ' + error.message);
     }
 }
