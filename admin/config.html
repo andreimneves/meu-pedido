@@ -187,6 +187,15 @@
             display: none;
         }
         
+        .warning-message {
+            background: #ff9800;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
         .loading {
             text-align: center;
             padding: 40px;
@@ -234,6 +243,7 @@
             <h1>⚙️ Configurações da Loja</h1>
             
             <div id="successMessage" class="success-message"></div>
+            <div id="warningMessage" class="warning-message"></div>
             <div id="errorMessage" class="error-message"></div>
             
             <div id="configContainer">
@@ -264,17 +274,26 @@
 
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage');
+            const warning = document.getElementById('warningMessage');
             const error = document.getElementById('errorMessage');
+            
+            // Esconder todos
+            success.style.display = 'none';
+            warning.style.display = 'none';
+            error.style.display = 'none';
             
             if (tipo === 'success') {
                 success.textContent = texto;
                 success.style.display = 'block';
-                error.style.display = 'none';
-                setTimeout(() => { success.style.display = 'none'; }, 3000);
+                setTimeout(() => { success.style.display = 'none'; }, 5000);
+            } else if (tipo === 'warning') {
+                warning.textContent = texto;
+                warning.style.display = 'block';
+                setTimeout(() => { warning.style.display = 'none'; }, 5000);
             } else {
                 error.textContent = texto;
                 error.style.display = 'block';
-                success.style.display = 'none';
+                setTimeout(() => { error.style.display = 'none'; }, 5000);
             }
         }
 
@@ -293,15 +312,22 @@
                     const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
                     if (horariosResponse.ok) {
                         const data = await horariosResponse.json();
-                        // Garantir que é um array
                         horariosDelivery = Array.isArray(data) ? data : [];
                         console.log('✅ Horários carregados:', horariosDelivery);
                     } else {
-                        throw new Error('Erro na resposta');
+                        console.log('⚠️ Usando horários padrão (API não respondeu)');
+                        horariosDelivery = [
+                            { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                            { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
+                        ];
                     }
                 } catch (error) {
-                    console.log('Usando horários padrão');
-                    // Criar array padrão se não conseguir carregar
+                    console.log('⚠️ Erro ao carregar horários, usando padrão:', error.message);
                     horariosDelivery = [
                         { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
                         { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
@@ -315,7 +341,7 @@
                 
                 exibirFormulario();
             } catch (error) {
-                console.error('❌ Erro ao carregar:', error);
+                console.error('❌ Erro fatal:', error);
                 document.getElementById('configContainer').innerHTML = `
                     <div style="text-align:center; padding:40px; color:red;">
                         ❌ Erro ao carregar configurações: ${error.message}<br>
@@ -331,7 +357,17 @@
             const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
             
             // Garantir que horariosDelivery é um array
-            const horariosParaExibir = Array.isArray(horariosDelivery) ? horariosDelivery : [];
+            const horariosParaExibir = Array.isArray(horariosDelivery) && horariosDelivery.length > 0 
+                ? horariosDelivery 
+                : [
+                    { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
+                ];
             
             // Gerar HTML dos horários
             const horariosHtml = horariosParaExibir.map(h => {
@@ -450,7 +486,7 @@
                         </div>
                         
                         <div class="horarios-grid">
-                            ${horariosHtml || '<p>Carregando horários...</p>'}
+                            ${horariosHtml}
                         </div>
                     </div>
 
@@ -539,6 +575,12 @@
         }
 
         async function salvarConfiguracoes() {
+            // Mostrar loading
+            const btn = document.querySelector('.btn-save');
+            const textoOriginal = btn.textContent;
+            btn.textContent = '💾 Salvando...';
+            btn.disabled = true;
+            
             // Dados da loja
             const config = {
                 nome_loja: document.getElementById('nome_loja').value,
@@ -579,32 +621,54 @@
 
             try {
                 console.log('💾 Salvando configurações...', config);
-                console.log('💾 Salvando horários...', horarios);
-
-                // Salvar configurações
+                
+                // 1. Salvar configurações
                 const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
 
-                // Salvar horários
-                const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horarios: horarios }) // Enviar como objeto com propriedade horarios
-                });
-
-                if (configResponse.ok && horariosResponse.ok) {
-                    mostrarMensagem('success', '✅ Configurações e horários salvos com sucesso!');
+                let mensagem = '';
+                let tipo = 'success';
+                
+                if (configResponse.ok) {
+                    mensagem = '✅ Configurações salvas com sucesso!';
                 } else {
-                    const configErro = configResponse.ok ? '' : 'Erro nas configurações. ';
-                    const horariosErro = horariosResponse.ok ? '' : 'Erro nos horários.';
-                    mostrarMensagem('error', '❌ ' + configErro + horariosErro);
+                    const erro = await configResponse.json().catch(() => ({}));
+                    mensagem = '❌ Erro ao salvar configurações: ' + (erro.erro || 'Erro desconhecido');
+                    tipo = 'error';
                 }
+
+                // 2. Tentar salvar horários (não crítico)
+                try {
+                    const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ horarios })
+                    });
+                    
+                    if (!horariosResponse.ok && configResponse.ok) {
+                        mensagem += ' ⚠️ Horários não foram salvos (não crítico)';
+                        tipo = 'warning';
+                    }
+                } catch (horarioError) {
+                    console.warn('Erro ao salvar horários:', horarioError);
+                    if (configResponse.ok) {
+                        mensagem += ' ⚠️ Horários não foram salvos (não crítico)';
+                        tipo = 'warning';
+                    }
+                }
+
+                mostrarMensagem(tipo, mensagem);
+                
             } catch (error) {
-                console.error('Erro ao salvar:', error);
+                console.error('❌ Erro ao salvar:', error);
                 mostrarMensagem('error', '❌ Erro de conexão: ' + error.message);
+            } finally {
+                // Restaurar botão
+                btn.textContent = textoOriginal;
+                btn.disabled = false;
             }
         }
 
