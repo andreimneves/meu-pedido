@@ -140,16 +140,16 @@
                         <h3>📅 Agendar Entrega</h3>
                         <div class="form-row">
                             <label>Data para entrega</label>
-                            <input type="date" id="dataAgendamento" min="">
+                            <input type="date" id="dataAgendamento" min="" onchange="carregarHorariosPorData()">
                         </div>
                         <div class="form-row">
                             <label>Horário</label>
                             <select id="horarioAgendamento">
-                                <option value="">Selecione um horário</option>
+                                <option value="">Primeiro selecione uma data</option>
                             </select>
                         </div>
                         <div class="info-box" style="margin-top: 10px;">
-                            ⏰ Seu pedido será processado no horário agendado.
+                            ⏰ Seu pedido será entregue no período agendado. Qualquer alteração nossa equipe entra em contato com você!
                         </div>
                     </div>
                 </div>
@@ -294,44 +294,61 @@
             return h * 60 + (m || 0);
         }
 
-        // ===== GERAR OPÇÕES DE HORÁRIOS PARA AGENDAMENTO =====
-        function gerarOpcoesHorariosAgendamento() {
+        // ===== CARREGAR HORÁRIOS POR DATA =====
+        function carregarHorariosPorData() {
+            const dataSelecionada = document.getElementById('dataAgendamento').value;
             const select = document.getElementById('horarioAgendamento');
-            if (!select) return;
+            
+            if (!dataSelecionada) {
+                select.innerHTML = '<option value="">Selecione uma data primeiro</option>';
+                return;
+            }
+            
+            const data = new Date(dataSelecionada + 'T12:00:00');
+            const diaSemana = data.getDay();
+            
+            const horarioDia = horariosDelivery.find(h => h.dia_semana === diaSemana);
+            
+            if (!horarioDia || !horarioDia.aberto) {
+                select.innerHTML = '<option value="">Não há entregas neste dia</option>';
+                return;
+            }
+            
+            const [horaAbertura, minAbertura] = horarioDia.abertura.split(':').map(Number);
+            const [horaFechamento, minFechamento] = horarioDia.fechamento.split(':').map(Number);
+            
+            const aberturaTotal = horaAbertura * 60 + (minAbertura || 0);
+            const fechamentoTotal = horaFechamento * 60 + (minFechamento || 0);
+            
+            const periodos = [];
+            for (let minutos = aberturaTotal; minutos < fechamentoTotal; minutos += 60) {
+                const horaInicio = Math.floor(minutos / 60);
+                const minInicio = minutos % 60;
+                const horaFim = Math.floor((minutos + 60) / 60);
+                const minFim = (minutos + 60) % 60;
+                
+                const inicioFormatado = `${horaInicio.toString().padStart(2, '0')}:${minInicio.toString().padStart(2, '0')}`;
+                const fimFormatado = `${horaFim.toString().padStart(2, '0')}:${minFim.toString().padStart(2, '0')}`;
+                
+                periodos.push({
+                    inicio: inicioFormatado,
+                    fim: fimFormatado,
+                    label: `${inicioFormatado} - ${fimFormatado}`
+                });
+            }
             
             select.innerHTML = '<option value="">Selecione um horário</option>';
             
-            const hoje = new Date();
-            const horaAtual = hoje.getHours() * 60 + hoje.getMinutes();
+            const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const nomeDia = diasSemana[diaSemana];
+            const dataFormatada = data.toLocaleDateString('pt-BR');
             
-            // Próximos 7 dias
-            for (let i = 1; i <= 7; i++) {
-                const data = new Date(hoje);
-                data.setDate(hoje.getDate() + i);
-                const diaSemana = data.getDay();
-                const dataStr = data.toISOString().split('T')[0];
-                
-                const horarioDia = horariosDelivery.find(h => h.dia_semana === diaSemana);
-                
-                if (horarioDia && horarioDia.aberto) {
-                    const option = document.createElement('option');
-                    option.value = `${dataStr}|${horarioDia.abertura}`;
-                    
-                    const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-                    const nomeDia = diasSemana[diaSemana];
-                    
-                    option.textContent = `${nomeDia}, ${data.toLocaleDateString('pt-BR')} às ${horarioDia.abertura}`;
-                    select.appendChild(option);
-                }
-            }
-            
-            // Definir data mínima no input date
-            const dataMin = new Date();
-            dataMin.setDate(dataMin.getDate() + 1);
-            const dataMinInput = document.getElementById('dataAgendamento');
-            if (dataMinInput) {
-                dataMinInput.min = dataMin.toISOString().split('T')[0];
-            }
+            periodos.forEach(periodo => {
+                const option = document.createElement('option');
+                option.value = `${dataSelecionada}|${periodo.inicio}|${periodo.fim}`;
+                option.textContent = `${nomeDia}, ${dataFormatada}, entre ${periodo.label}`;
+                select.appendChild(option);
+            });
         }
 
         // ===== CARREGAR PRODUTOS DA API =====
@@ -425,14 +442,12 @@
 
         // ===== MODAL DO CARRINHO =====
         function abrirCarrinho() {
-            // Resetar estados
             modoAgendamento = false;
             cepValido = false;
             dentroAreaEntrega = false;
             document.getElementById('agendamentoFields').style.display = 'none';
             document.getElementById('avisoDelivery').style.display = 'none';
             
-            // Sempre começar com retirada selecionada
             document.getElementById('deliveryOption').checked = false;
             document.getElementById('pickupOption').checked = true;
             toggleDelivery(false);
@@ -467,7 +482,6 @@
             document.getElementById('avisoDelivery').style.display = 'none';
             
             if (isDelivery) {
-                // Verificar disponibilidade do delivery
                 const status = verificarDisponibilidadeDelivery();
                 
                 if (!status.disponivel) {
@@ -477,7 +491,6 @@
                         'agendar'
                     );
                 } else {
-                    // Se estiver disponível, mostrar mensagem de confirmação
                     document.getElementById('freteInfo').innerHTML = `✅ Delivery disponível (${status.horario})`;
                 }
             } else {
@@ -520,7 +533,15 @@
             document.getElementById('avisoDelivery').style.display = 'none';
             document.getElementById('agendamentoFields').style.display = 'block';
             modoAgendamento = true;
-            gerarOpcoesHorariosAgendamento();
+            
+            document.getElementById('dataAgendamento').value = '';
+            document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data primeiro</option>';
+            
+            const hoje = new Date();
+            const amanha = new Date(hoje);
+            amanha.setDate(hoje.getDate() + 1);
+            const dataMin = amanha.toISOString().split('T')[0];
+            document.getElementById('dataAgendamento').min = dataMin;
         }
 
         function selecionarRetirada() {
@@ -551,7 +572,6 @@
                 document.getElementById('cepInfo').innerHTML = '✅ CEP válido';
                 cepValido = true;
                 
-                // Calcular distância aproximada
                 const cepLoja = configuracoesLoja.cep_loja?.replace(/\D/g, '') || '97000000';
                 const diferenca = Math.abs(parseInt(cep.substring(0, 5)) - parseInt(cepLoja.substring(0, 5)));
                 distanciaKm = diferenca / 100;
@@ -641,13 +661,11 @@
                     return;
                 }
                 
-                // Verificar se está dentro da área
                 if (!dentroAreaEntrega) {
                     alert('Seu endereço não é atendido pelo delivery. Escolha a opção Retirada.');
                     return;
                 }
                 
-                // Verificar disponibilidade
                 const status = verificarDisponibilidadeDelivery();
                 
                 if (!status.disponivel && !modoAgendamento) {
@@ -655,7 +673,6 @@
                     return;
                 }
                 
-                // Montar endereço completo com CEP
                 const enderecoCompleto = `${endereco}, ${numero}`;
                 const enderecoComCep = `${enderecoCompleto}${complemento ? ' - ' + complemento : ''} - CEP: ${cep}`;
                 
@@ -688,10 +705,10 @@
                         return;
                     }
                     
-                    const [dataStr, horaStr] = horarioAgendamento.split('|');
+                    const [dataStr, horaInicio, horaFim] = horarioAgendamento.split('|');
                     const dataFormatada = new Date(dataStr).toLocaleDateString('pt-BR');
-                    infoAgendamento = `\n📅 Entrega agendada: ${dataFormatada} às ${horaStr}`;
-                    dadosPedido.observacoes += `\n[AGENDADO] ${dataFormatada} ${horaStr}`;
+                    infoAgendamento = `\n📅 Entrega agendada: ${dataFormatada}, entre ${horaInicio} e ${horaFim}`;
+                    dadosPedido.observacoes += `\n[AGENDADO] ${dataFormatada} - Período: ${horaInicio} às ${horaFim}`;
                 }
             } else {
                 nome = document.getElementById('pickupNome').value;
@@ -720,7 +737,6 @@
                 };
             }
 
-            // 1. SALVAR NO BANCO
             try {
                 console.log('💾 Salvando pedido...', dadosPedido);
                 
@@ -739,7 +755,6 @@
                 console.error('Erro ao salvar:', error);
             }
 
-            // 2. MONTAR MENSAGEM PARA WHATSAPP
             let msg = `*NOVO PEDIDO*\n----------------\n`;
             msg += `Cliente: ${nome}\n`;
             msg += `Contato: ${tel}\n`;
@@ -777,10 +792,8 @@
                 msg += `\n\nObs: ${dadosPedido.observacoes}`;
             }
 
-            // 3. ABRIR WHATSAPP
             window.open(`https://wa.me/${configuracoesLoja.whatsapp || '5551999999999'}?text=${encodeURIComponent(msg)}`, '_blank');
             
-            // 4. LIMPAR CARRINHO
             carrinho = [];
             document.getElementById('cartCount').textContent = '0';
             fecharCarrinho();

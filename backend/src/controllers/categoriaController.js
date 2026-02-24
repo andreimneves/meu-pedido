@@ -71,7 +71,6 @@ const categoriaController = {
                 return res.status(400).json({ erro: 'Nome da categoria é obrigatório' });
             }
             
-            // Verificar se a categoria existe
             const existe = await pool.query(
                 'SELECT id FROM categorias WHERE id = $1',
                 [id]
@@ -81,7 +80,6 @@ const categoriaController = {
                 return res.status(404).json({ erro: 'Categoria não encontrada' });
             }
             
-            // Atualizar a categoria - SEM data_atualizacao ou updated_at
             const result = await pool.query(
                 `UPDATE categorias 
                  SET nome = $1, descricao = $2, ordem = $3
@@ -107,7 +105,6 @@ const categoriaController = {
         try {
             const { id } = req.params;
             
-            // Verificar se existem produtos usando esta categoria
             const produtosVinculados = await pool.query(
                 'SELECT COUNT(*) as total FROM produtos WHERE categoria_id = $1',
                 [id]
