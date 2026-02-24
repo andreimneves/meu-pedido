@@ -1,4 +1,4 @@
-// admin/script.js - VERSÃO COMPLETA
+// admin/script.js - VERSÃO FINAL CORRIGIDA
 const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
@@ -131,8 +131,8 @@ async function carregarProdutos() {
                         <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
                         <td>${p.categoria_nome || '-'}</td>
                         <td>
-                            <button class="btn-edit" onclick="editarProdutoGlobal(${p.id})">Editar</button>
-                            <button class="btn-delete" onclick="excluirProdutoGlobal(${p.id})">Excluir</button>
+                            <button class="btn-edit" onclick="editarProduto(${p.id})">Editar</button>
+                            <button class="btn-delete" onclick="excluirProduto(${p.id})">Excluir</button>
                         </td>
                     </tr>
                 `).join('');
@@ -159,8 +159,9 @@ async function carregarCategoriasSelect() {
     }
 }
 
-// Funções globais para produto (acessíveis pelo HTML)
-window.abrirModalProdutoGlobal = function() {
+// Funções globais para produto
+window.abrirModalProduto = function() {
+    console.log('Abrindo modal para novo produto');
     produtoEditando = null;
     document.getElementById('modalTituloProduto').textContent = 'Novo Produto';
     document.getElementById('produtoNome').value = '';
@@ -169,11 +170,13 @@ window.abrirModalProdutoGlobal = function() {
     document.getElementById('produtoModal').style.display = 'block';
 };
 
-window.editarProdutoGlobal = async function(id) {
+window.editarProduto = async function(id) {
+    console.log('Editando produto ID:', id);
     try {
         const response = await fetch(`${API_URL}/produtos/${id}`);
         if (!response.ok) throw new Error('Erro ao carregar produto');
         const produto = await response.json();
+        console.log('Produto carregado:', produto);
         
         produtoEditando = produto;
         document.getElementById('modalTituloProduto').textContent = 'Editar Produto';
@@ -188,11 +191,11 @@ window.editarProdutoGlobal = async function(id) {
         document.getElementById('produtoModal').style.display = 'block';
     } catch (error) {
         console.error('Erro ao carregar produto:', error);
-        alert('Erro ao carregar produto para edição');
+        alert('Erro ao carregar produto para edição: ' + error.message);
     }
 };
 
-window.excluirProdutoGlobal = async function(id) {
+window.excluirProduto = async function(id) {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
     
     try {
@@ -202,14 +205,16 @@ window.excluirProdutoGlobal = async function(id) {
             await carregarProdutos();
             alert('✅ Produto excluído!');
         } else {
-            alert('Erro ao excluir produto');
+            const erro = await response.json();
+            alert('Erro ao excluir: ' + (erro.erro || 'Erro desconhecido'));
         }
     } catch (error) {
-        alert('Erro de conexão');
+        alert('Erro de conexão: ' + error.message);
     }
 };
 
-window.salvarProdutoGlobal = async function() {
+window.salvarProduto = async function() {
+    console.log('Salvando produto...');
     const nome = document.getElementById('produtoNome').value;
     const preco = document.getElementById('produtoPreco').value;
     const categoriaId = document.getElementById('produtoCategoria').value;
@@ -227,21 +232,28 @@ window.salvarProdutoGlobal = async function() {
         disponivel: true
     };
     
+    console.log('Dados do produto:', produto);
+    console.log('Editando?', produtoEditando ? 'Sim' : 'Não');
+    
     try {
         let response;
         if (produtoEditando) {
+            console.log('Enviando PUT para:', `${API_URL}/produtos/${produtoEditando.id}`);
             response = await fetch(`${API_URL}/produtos/${produtoEditando.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produto)
             });
         } else {
+            console.log('Enviando POST para:', `${API_URL}/produtos`);
             response = await fetch(`${API_URL}/produtos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produto)
             });
         }
+        
+        console.log('Status da resposta:', response.status);
         
         if (response.ok) {
             document.getElementById('produtoModal').style.display = 'none';
@@ -250,9 +262,11 @@ window.salvarProdutoGlobal = async function() {
             alert('✅ Produto salvo com sucesso!');
         } else {
             const erro = await response.json();
+            console.error('Erro da API:', erro);
             alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
         }
     } catch (error) {
+        console.error('Erro de conexão:', error);
         alert('Erro de conexão: ' + error.message);
     }
 };
@@ -325,6 +339,7 @@ async function carregarPedidos() {
                     <td><span class="status-${p.status}">${p.status}</span></td>
                     <td>${data}</td>
                     <td>
+                        <a href="pedido-detalhe.html?id=${p.id}" class="btn-view">👁️ Detalhes</a>
                         <select class="status-select" onchange="atualizarStatus(${p.id}, this.value)">
                             <option value="novo" ${p.status === 'novo' ? 'selected' : ''}>Novo</option>
                             <option value="preparando" ${p.status === 'preparando' ? 'selected' : ''}>Preparando</option>

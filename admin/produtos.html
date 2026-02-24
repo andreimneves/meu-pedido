@@ -52,7 +52,7 @@
     <!-- Modal de Produto -->
     <div id="produtoModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="fecharModalProduto()">&times;</span>
+            <span class="close" onclick="document.getElementById('produtoModal').style.display='none'">&times;</span>
             <h2 id="modalTituloProduto">Novo Produto</h2>
             
             <form onsubmit="event.preventDefault(); salvarProduto();">
@@ -79,34 +79,5 @@
     </div>
     
     <script src="script.js"></script>
-    <script>
-        function abrirModalProduto() {
-            if (typeof window.abrirModalProdutoGlobal === 'function') {
-                window.abrirModalProdutoGlobal();
-            }
-        }
-        
-        function fecharModalProduto() {
-            document.getElementById('produtoModal').style.display = 'none';
-        }
-        
-        function editarProduto(id) {
-            if (typeof window.editarProdutoGlobal === 'function') {
-                window.editarProdutoGlobal(id);
-            }
-        }
-        
-        function excluirProduto(id) {
-            if (typeof window.excluirProdutoGlobal === 'function') {
-                window.excluirProdutoGlobal(id);
-            }
-        }
-        
-        function salvarProduto() {
-            if (typeof window.salvarProdutoGlobal === 'function') {
-                window.salvarProdutoGlobal();
-            }
-        }
-    </script>
 </body>
 </html>
