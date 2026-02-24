@@ -3,10 +3,11 @@ const express = require('express');
 const categoriaController = require('../controllers/categoriaController');
 const router = express.Router();
 
-// ===== ROTAS DE CATEGORIAS =====
-
 // GET /api/categorias - Listar todas as categorias
 router.get('/categorias', categoriaController.listar);
+
+// GET /api/categorias/com-totais - Listar categorias com total de produtos
+router.get('/categorias/com-totais', categoriaController.listarComTotais);
 
 // GET /api/categorias/:id - Buscar categoria por ID
 router.get('/categorias/:id', categoriaController.buscarPorId);
