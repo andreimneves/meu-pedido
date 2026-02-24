@@ -5,62 +5,62 @@ const path = require('path');
 
 const app = express();
 
-// Middlewares básicos (sempre no topo)
+// Middlewares básicos
 app.use(cors());
 app.use(express.json());
 
-// ===== ROTA DE TESTE DO BANCO (PRIMEIRA, ANTES DE QUALQUER OUTRA) =====
+// ===== ROTAS DE TESTE E DEBUG (PRIMEIRAS) =====
+app.get('/ping', (req, res) => {
+    res.send('pong');
+});
+
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+app.get('/', (req, res) => {
+    res.json({ 
+        mensagem: '🚀 API Meu Pedido funcionando!',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ===== ROTA DE TESTE DO BANCO (COPIADA DO SEU TESTE) =====
 app.get('/api/teste-banco', async (req, res) => {
     try {
         const { Pool } = require('pg');
         
         console.log('🔍 Testando conexão com o banco...');
-        console.log('   DB_USER:', process.env.DB_USER);
-        console.log('   DB_HOST:', process.env.DB_HOST);
-        console.log('   DB_NAME:', process.env.DB_NAME);
         
         const pool = new Pool({
-            user: process.env.DB_USER,
-            host: process.env.DB_HOST,
-            database: process.env.DB_NAME,
+            user: process.env.DB_USER || 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            database: process.env.DB_NAME || 'meu_pedido_db',
             password: process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD) : '',
             port: process.env.DB_PORT || 5432,
-            ssl: { rejectUnauthorized: false },
-            connectionTimeoutMillis: 5000
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
         });
         
-        const result = await pool.query('SELECT NOW() as hora_atual, current_database() as banco');
+        const result = await pool.query('SELECT NOW() as hora');
         await pool.end();
         
         res.json({ 
             sucesso: true, 
-            mensagem: '✅ Conectado ao banco!',
-            dados: result.rows[0],
-            ambiente: process.env.NODE_ENV || 'development'
+            mensagem: 'Conectado ao banco!',
+            hora: result.rows[0].hora,
+            ambiente: process.env.NODE_ENV
         });
         
     } catch (error) {
-        console.error('❌ Erro no teste do banco:', error);
+        console.error('❌ Erro no banco:', error);
         res.json({ 
             sucesso: false, 
-            mensagem: '❌ Falha na conexão',
-            erro: error.message,
-            ambiente: process.env.NODE_ENV || 'development'
+            erro: error.message 
         });
     }
 });
 
-// ===== ROTA PRINCIPAL =====
-app.get('/', (req, res) => {
-    res.json({ mensagem: '🚀 API Meu Pedido funcionando!' });
-});
-
-// ===== ROTA DE SAÚDE =====
-app.get('/health', (req, res) => {
-    res.status(200).send('OK');
-});
-
-// ===== AGORA SIM, AS ROTAS DOS MÓDULOS =====
+// ===== ROTAS DOS MÓDULOS (DEPOIS DAS ROTAS DE TESTE) =====
 // Função auxiliar para importar
 function importar(relativePath) {
     return require(path.join(__dirname, relativePath));
@@ -76,8 +76,17 @@ app.use('/api', produtoRoutes);
 app.use('/api', categoriaRoutes);
 app.use('/api', configRoutes);
 
-// Iniciar servidor
+// ===== INICIAR SERVIDOR =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Servidor rodando na porta ${PORT}`);
+    console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📌 Rotas disponíveis:`);
+    console.log(`   - GET /ping`);
+    console.log(`   - GET /health`);
+    console.log(`   - GET /`);
+    console.log(`   - GET /api/teste-banco`);
+    console.log(`   - GET /api/produtos`);
+    console.log(`   - GET /api/categorias`);
+    console.log(`   - GET /api/config/:subdominio`);
 });
