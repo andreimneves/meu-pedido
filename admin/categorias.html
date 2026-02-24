@@ -32,9 +32,6 @@
             cursor: pointer;
             color: #999;
         }
-        .close:hover {
-            color: #333;
-        }
         .btn-save {
             background: #4CAF50;
             color: white;
@@ -45,17 +42,14 @@
             font-size: 16px;
             margin-top: 20px;
         }
-        .btn-save:hover {
-            background: #388E3C;
-        }
     </style>
 </head>
 <body>
     <div class="admin-header">
-        <h1>Meu Pedido - Painel Administrativo</h1>
+        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
         <div class="user-info">
-            <span>DL Crepes e Lanches</span>
-            <button class="logout" onclick="logout()">Sair</button>
+            <span>👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
         </div>
     </div>
     
@@ -114,14 +108,22 @@
         </div>
     </div>
     
-    <script src="script.js"></script>
     <script>
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const SUBDOMINIO = 'dlcrepes';
+        
         let categorias = [];
         let categoriaEditando = null;
+        
+        // Verificar login
+        if (!localStorage.getItem('adminLogado')) {
+            window.location.href = 'index.html';
+        }
         
         async function carregarCategorias() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
+                if (!response.ok) throw new Error('Erro na API');
                 categorias = await response.json();
                 exibirCategorias();
             } catch (error) {
@@ -133,6 +135,11 @@
         
         function exibirCategorias() {
             const tbody = document.getElementById('categoriasTable');
+            if (categorias.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">Nenhuma categoria cadastrada</td></tr>';
+                return;
+            }
+            
             tbody.innerHTML = categorias.map(c => `
                 <tr>
                     <td>${c.nome}</td>
@@ -155,6 +162,8 @@
         
         function editarCategoria(id) {
             categoriaEditando = categorias.find(c => c.id === id);
+            if (!categoriaEditando) return;
+            
             document.getElementById('modalTituloCategoria').textContent = 'Editar Categoria';
             document.getElementById('categoriaNome').value = categoriaEditando.nome;
             document.getElementById('categoriaOrdem').value = categoriaEditando.ordem || 0;
@@ -165,19 +174,30 @@
             const nome = document.getElementById('categoriaNome').value;
             const ordem = document.getElementById('categoriaOrdem').value;
             
-            const categoria = { nome, ordem: parseInt(ordem), tenant_id: 1 };
+            if (!nome) {
+                alert('Digite o nome da categoria');
+                return;
+            }
+            
+            const categoria = { 
+                nome, 
+                ordem: parseInt(ordem) || 0,
+                tenant_id: 1 
+            };
             
             try {
                 let response;
+                let url = `${API_URL}/categorias`;
                 
                 if (categoriaEditando) {
-                    response = await fetch(`${API_URL}/categorias/${categoriaEditando.id}`, {
+                    url = `${API_URL}/categorias/${categoriaEditando.id}`;
+                    response = await fetch(url, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(categoria)
                     });
                 } else {
-                    response = await fetch(`${API_URL}/categorias`, {
+                    response = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(categoria)
@@ -209,7 +229,7 @@
                     await carregarCategorias();
                     alert('✅ Categoria excluída!');
                 } else {
-                    alert('Erro ao excluir');
+                    alert('Erro ao excluir categoria');
                 }
             } catch (error) {
                 alert('Erro de conexão');
@@ -220,6 +240,13 @@
             document.getElementById('categoriaModal').style.display = 'none';
         }
         
+        // Logout
+        function logout() {
+            localStorage.removeItem('adminLogado');
+            window.location.href = 'index.html';
+        }
+        
+        // Iniciar
         carregarCategorias();
     </script>
 </body>

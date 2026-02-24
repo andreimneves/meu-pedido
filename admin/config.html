@@ -231,25 +231,55 @@
             }
         }
 
-        async function carregarConfiguracoes() {
-            try {
-                // Carregar configurações da loja
-                const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
-                configuracoes = await configResponse.json();
-                
-                // Carregar horários do delivery
-                const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
-                horariosDelivery = await horariosResponse.json();
-                
-                exibirFormulario();
-            } catch (error) {
-                console.error('Erro ao carregar:', error);
-                document.getElementById('configContainer').innerHTML = `
-                    <div style="text-align:center; padding:40px; color:red;">
-                        ❌ Erro ao carregar configurações: ${error.message}
-                    </div>
-                `;
+        aasync function carregarConfiguracoes() {
+    try {
+        // Carregar configurações da loja
+        const configResponse = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
+        configuracoes = await configResponse.json();
+        
+        // Carregar horários do delivery - COM TRATAMENTO DE ERRO
+        try {
+            const horariosResponse = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
+            const data = await horariosResponse.json();
+            
+            // Garantir que é um array
+            horariosDelivery = Array.isArray(data) ? data : [];
+            
+            // Se veio vazio, criar array padrão
+            if (horariosDelivery.length === 0) {
+                horariosDelivery = [
+                    { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                    { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
+                ];
             }
+        } catch (error) {
+            console.error('Erro ao carregar horários, usando padrão:', error);
+            horariosDelivery = [
+                { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
+                { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
+            ];
+        }
+        
+        exibirFormulario();
+    } catch (error) {
+        console.error('Erro ao carregar:', error);
+        document.getElementById('configContainer').innerHTML = `
+            <div style="text-align:center; padding:40px; color:red;">
+                ❌ Erro ao carregar configurações: ${error.message}
+            </div>
+        `;
+    }
+}
         }
 
         function exibirFormulario() {
