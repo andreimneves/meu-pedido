@@ -1,16 +1,19 @@
-// admin/script.js - VERSÃO PRODUÇÃO OTIMIZADA
+// admin/script.js - VERSÃO COMPLETA
 const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
-// Cache para evitar requisições desnecessárias
+// Cache
 let cache = {
     produtos: { data: null, timestamp: 0 },
     categorias: { data: null, timestamp: 0 },
-    pedidos: { data: null, timestamp: 0 },
-    config: { data: null, timestamp: 0 }
+    pedidos: { data: null, timestamp: 0 }
 };
+const CACHE_DURATION = 30000;
 
-const CACHE_DURATION = 30000; // 30 segundos
+// Variáveis globais
+let produtoEditando = null;
+let categoriaEditando = null;
+let categoriasCache = [];
 
 console.log('🚀 Admin iniciado');
 console.log('📡 API_URL:', API_URL);
@@ -21,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginForm) {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
             
@@ -44,16 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Carregar dados específicos da página
     if (paginaAtual === 'dashboard.html') {
         carregarDashboard();
-        setInterval(carregarDashboard, 30000); // Atualizar a cada 30s
+        setInterval(carregarDashboard, 30000);
     } else if (paginaAtual === 'produtos.html') {
         carregarProdutos();
+        carregarCategoriasSelect();
     } else if (paginaAtual === 'categorias.html') {
         carregarCategorias();
     } else if (paginaAtual === 'pedidos.html') {
         carregarPedidos();
         setInterval(carregarPedidos, 30000);
-    } else if (paginaAtual === 'config.html') {
-        carregarConfiguracoes();
     }
 });
 
@@ -62,35 +63,21 @@ function logout() {
     window.location.href = 'index.html';
 }
 
-// ===== FUNÇÃO PARA CARREGAR COM CACHE =====
+// ===== UTILITÁRIOS =====
 async function fetchComCache(url, cacheKey) {
     const agora = Date.now();
-    
-    // Verificar se tem no cache e ainda é válido
     if (cache[cacheKey] && cache[cacheKey].data && (agora - cache[cacheKey].timestamp) < CACHE_DURATION) {
-        console.log(`📦 Usando cache para ${cacheKey}`);
         return cache[cacheKey].data;
     }
     
     try {
-        console.log(`🔄 Buscando ${url}...`);
         const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        
-        // Atualizar cache
-        cache[cacheKey] = {
-            data: data,
-            timestamp: agora
-        };
-        
+        cache[cacheKey] = { data, timestamp: agora };
         return data;
     } catch (error) {
-        console.error(`❌ Erro ao buscar ${url}:`, error);
+        console.error(`Erro ao buscar ${url}:`, error);
         throw error;
     }
 }
@@ -98,24 +85,20 @@ async function fetchComCache(url, cacheKey) {
 // ===== DASHBOARD =====
 async function carregarDashboard() {
     try {
-        // Buscar dados em paralelo para otimizar
         const [dashboardData, produtosData, categoriasData] = await Promise.all([
             fetchComCache(`${API_URL}/dashboard/${SUBDOMINIO}`, 'dashboard').catch(() => null),
             fetchComCache(`${API_URL}/produtos`, 'produtos').catch(() => ({ length: 0 })),
             fetchComCache(`${API_URL}/categorias`, 'categorias').catch(() => ({ length: 0 }))
         ]);
         
-        // Atualizar cards
         if (dashboardData) {
-            document.getElementById('pedidosHoje').textContent = dashboardData.hoje.pedidos || 0;
-            document.getElementById('faturamentoHoje').textContent = 
-                `R$ ${(dashboardData.hoje.faturamento || 0).toFixed(2)}`;
+            document.getElementById('pedidosHoje').textContent = dashboardData.hoje?.pedidos || 0;
+            document.getElementById('faturamentoHoje').textContent = `R$ ${(dashboardData.hoje?.faturamento || 0).toFixed(2)}`;
         }
         
         document.getElementById('totalProdutos').textContent = produtosData.length || 0;
         document.getElementById('totalCategorias').textContent = categoriasData.length || 0;
         
-        // Atualizar tabela de últimos pedidos
         const tbody = document.getElementById('pedidosTable');
         if (tbody && dashboardData && dashboardData.ultimos_pedidos) {
             tbody.innerHTML = dashboardData.ultimos_pedidos.map(p => `
@@ -127,14 +110,9 @@ async function carregarDashboard() {
                     <td>${new Date(p.data_pedido).toLocaleString('pt-BR')}</td>
                 </tr>
             `).join('');
-        } else if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5">Nenhum pedido recente</td></tr>';
         }
-        
     } catch (error) {
         console.error('Erro no dashboard:', error);
-        document.getElementById('pedidosHoje').textContent = '0';
-        document.getElementById('faturamentoHoje').textContent = 'R$ 0,00';
     }
 }
 
@@ -142,7 +120,6 @@ async function carregarDashboard() {
 async function carregarProdutos() {
     try {
         const produtos = await fetchComCache(`${API_URL}/produtos`, 'produtos');
-        
         const tbody = document.getElementById('produtosTable');
         if (tbody) {
             if (produtos.length === 0) {
@@ -154,8 +131,8 @@ async function carregarProdutos() {
                         <td>R$ ${parseFloat(p.preco).toFixed(2)}</td>
                         <td>${p.categoria_nome || '-'}</td>
                         <td>
-                            <button class="btn-edit" onclick="editarProduto(${p.id})">Editar</button>
-                            <button class="btn-delete" onclick="excluirProduto(${p.id})">Excluir</button>
+                            <button class="btn-edit" onclick="editarProdutoGlobal(${p.id})">Editar</button>
+                            <button class="btn-delete" onclick="excluirProdutoGlobal(${p.id})">Excluir</button>
                         </td>
                     </tr>
                 `).join('');
@@ -168,16 +145,59 @@ async function carregarProdutos() {
     }
 }
 
-async function excluirProduto(id) {
+async function carregarCategoriasSelect() {
+    try {
+        const categorias = await fetchComCache(`${API_URL}/categorias`, 'categorias');
+        categoriasCache = categorias;
+        const select = document.getElementById('produtoCategoria');
+        if (select) {
+            select.innerHTML = '<option value="">Selecione...</option>' + 
+                categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar categorias:', error);
+    }
+}
+
+// Funções globais para produto (acessíveis pelo HTML)
+window.abrirModalProdutoGlobal = function() {
+    produtoEditando = null;
+    document.getElementById('modalTituloProduto').textContent = 'Novo Produto';
+    document.getElementById('produtoNome').value = '';
+    document.getElementById('produtoPreco').value = '';
+    document.getElementById('produtoCategoria').value = '';
+    document.getElementById('produtoModal').style.display = 'block';
+};
+
+window.editarProdutoGlobal = async function(id) {
+    try {
+        const response = await fetch(`${API_URL}/produtos/${id}`);
+        if (!response.ok) throw new Error('Erro ao carregar produto');
+        const produto = await response.json();
+        
+        produtoEditando = produto;
+        document.getElementById('modalTituloProduto').textContent = 'Editar Produto';
+        document.getElementById('produtoNome').value = produto.nome;
+        document.getElementById('produtoPreco').value = produto.preco;
+        
+        // Garantir que as categorias estejam carregadas
+        if (categoriasCache.length === 0) {
+            await carregarCategoriasSelect();
+        }
+        document.getElementById('produtoCategoria').value = produto.categoria_id || '';
+        document.getElementById('produtoModal').style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar produto:', error);
+        alert('Erro ao carregar produto para edição');
+    }
+};
+
+window.excluirProdutoGlobal = async function(id) {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return;
     
     try {
-        const response = await fetch(`${API_URL}/produtos/${id}`, { 
-            method: 'DELETE' 
-        });
-        
+        const response = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
         if (response.ok) {
-            // Invalidar cache
             cache.produtos.timestamp = 0;
             await carregarProdutos();
             alert('✅ Produto excluído!');
@@ -187,13 +207,60 @@ async function excluirProduto(id) {
     } catch (error) {
         alert('Erro de conexão');
     }
-}
+};
+
+window.salvarProdutoGlobal = async function() {
+    const nome = document.getElementById('produtoNome').value;
+    const preco = document.getElementById('produtoPreco').value;
+    const categoriaId = document.getElementById('produtoCategoria').value;
+    
+    if (!nome || !preco) {
+        alert('Preencha nome e preço do produto');
+        return;
+    }
+    
+    const produto = {
+        nome,
+        preco: parseFloat(preco),
+        categoria_id: categoriaId || null,
+        tenant_id: 1,
+        disponivel: true
+    };
+    
+    try {
+        let response;
+        if (produtoEditando) {
+            response = await fetch(`${API_URL}/produtos/${produtoEditando.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(produto)
+            });
+        } else {
+            response = await fetch(`${API_URL}/produtos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(produto)
+            });
+        }
+        
+        if (response.ok) {
+            document.getElementById('produtoModal').style.display = 'none';
+            cache.produtos.timestamp = 0;
+            await carregarProdutos();
+            alert('✅ Produto salvo com sucesso!');
+        } else {
+            const erro = await response.json();
+            alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        alert('Erro de conexão: ' + error.message);
+    }
+};
 
 // ===== CATEGORIAS =====
 async function carregarCategorias() {
     try {
         const categorias = await fetchComCache(`${API_URL}/categorias`, 'categorias');
-        
         const tbody = document.getElementById('categoriasTable');
         if (tbody) {
             if (categorias.length === 0) {
@@ -222,10 +289,7 @@ async function excluirCategoria(id) {
     if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
     
     try {
-        const response = await fetch(`${API_URL}/categorias/${id}`, { 
-            method: 'DELETE' 
-        });
-        
+        const response = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
         if (response.ok) {
             cache.categorias.timestamp = 0;
             await carregarCategorias();
@@ -242,7 +306,6 @@ async function excluirCategoria(id) {
 async function carregarPedidos() {
     try {
         const pedidos = await fetchComCache(`${API_URL}/pedidos/${SUBDOMINIO}`, 'pedidos');
-        
         const tbody = document.getElementById('pedidosTable');
         if (!tbody) return;
         
@@ -273,13 +336,10 @@ async function carregarPedidos() {
                 </tr>
             `;
         }).join('');
-        
     } catch (error) {
         console.error('Erro pedidos:', error);
         const tbody = document.getElementById('pedidosTable');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="color:red">Erro ao carregar pedidos</td></tr>';
-        }
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="color:red">Erro ao carregar pedidos</td></tr>';
     }
 }
 

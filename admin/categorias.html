@@ -36,11 +36,12 @@
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
             margin-top: 20px;
+            width: 100%;
         }
     </style>
 </head>
@@ -95,12 +96,12 @@
             <form onsubmit="event.preventDefault(); salvarCategoria();">
                 <div class="form-group">
                     <label>Nome da Categoria</label>
-                    <input type="text" id="categoriaNome" required>
+                    <input type="text" id="categoriaNome" required style="width:100%; padding:8px; margin-top:5px;">
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" style="margin-top:15px;">
                     <label>Ordem (1, 2, 3...)</label>
-                    <input type="number" id="categoriaOrdem" value="0">
+                    <input type="number" id="categoriaOrdem" value="0" style="width:100%; padding:8px; margin-top:5px;">
                 </div>
                 
                 <button type="submit" class="btn-save">Salvar Categoria</button>
@@ -109,5 +110,80 @@
     </div>
     
     <script src="script.js"></script>
+    <script>
+        let categoriaEditando = null;
+        
+        function abrirModalCategoria() {
+            categoriaEditando = null;
+            document.getElementById('modalTituloCategoria').textContent = 'Nova Categoria';
+            document.getElementById('categoriaNome').value = '';
+            document.getElementById('categoriaOrdem').value = '0';
+            document.getElementById('categoriaModal').style.display = 'block';
+        }
+        
+        function editarCategoria(id) {
+            fetch(`${API_URL}/categorias/${id}`)
+                .then(response => response.json())
+                .then(categoria => {
+                    categoriaEditando = categoria;
+                    document.getElementById('modalTituloCategoria').textContent = 'Editar Categoria';
+                    document.getElementById('categoriaNome').value = categoria.nome;
+                    document.getElementById('categoriaOrdem').value = categoria.ordem || 0;
+                    document.getElementById('categoriaModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar categoria:', error);
+                    alert('Erro ao carregar categoria');
+                });
+        }
+        
+        async function salvarCategoria() {
+            const nome = document.getElementById('categoriaNome').value;
+            const ordem = document.getElementById('categoriaOrdem').value;
+            
+            if (!nome) {
+                alert('Digite o nome da categoria');
+                return;
+            }
+            
+            const categoria = { 
+                nome, 
+                ordem: parseInt(ordem) || 0,
+                tenant_id: 1 
+            };
+            
+            try {
+                let response;
+                if (categoriaEditando) {
+                    response = await fetch(`${API_URL}/categorias/${categoriaEditando.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(categoria)
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/categorias`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(categoria)
+                    });
+                }
+                
+                if (response.ok) {
+                    fecharModalCategoria();
+                    await carregarCategorias();
+                    alert('✅ Categoria salva!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
+        }
+        
+        function fecharModalCategoria() {
+            document.getElementById('categoriaModal').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

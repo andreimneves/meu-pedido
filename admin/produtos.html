@@ -39,14 +39,54 @@
             background: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
             margin-top: 20px;
+            width: 100%;
         }
         .btn-save:hover {
             background: #388E3C;
+        }
+        .btn-edit {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .btn-delete {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-add {
+            background: #C83232;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
         }
     </style>
 </head>
@@ -102,17 +142,17 @@
             <form onsubmit="event.preventDefault(); salvarProduto();">
                 <div class="form-group">
                     <label>Nome do Produto</label>
-                    <input type="text" id="produtoNome" required>
+                    <input type="text" id="produtoNome" required style="width:100%; padding:8px; margin-top:5px;">
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" style="margin-top:15px;">
                     <label>Preço (R$)</label>
-                    <input type="number" id="produtoPreco" step="0.01" min="0" required>
+                    <input type="number" id="produtoPreco" step="0.01" min="0" required style="width:100%; padding:8px; margin-top:5px;">
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" style="margin-top:15px;">
                     <label>Categoria</label>
-                    <select id="produtoCategoria" required>
+                    <select id="produtoCategoria" required style="width:100%; padding:8px; margin-top:5px;">
                         <option value="">Selecione...</option>
                     </select>
                 </div>
@@ -123,5 +163,47 @@
     </div>
     
     <script src="script.js"></script>
+    <script>
+        // Funções específicas de produto (garantindo que existam)
+        function abrirModalProduto() {
+            if (typeof window.abrirModalProdutoGlobal === 'function') {
+                window.abrirModalProdutoGlobal();
+            } else {
+                console.error('Função abrirModalProdutoGlobal não encontrada');
+                alert('Erro ao abrir modal. Recarregue a página.');
+            }
+        }
+        
+        function fecharModalProduto() {
+            document.getElementById('produtoModal').style.display = 'none';
+        }
+        
+        function editarProduto(id) {
+            if (typeof window.editarProdutoGlobal === 'function') {
+                window.editarProdutoGlobal(id);
+            } else {
+                console.error('Função editarProdutoGlobal não encontrada');
+                alert('Erro ao editar produto');
+            }
+        }
+        
+        function excluirProduto(id) {
+            if (typeof window.excluirProdutoGlobal === 'function') {
+                window.excluirProdutoGlobal(id);
+            } else {
+                console.error('Função excluirProdutoGlobal não encontrada');
+                alert('Erro ao excluir produto');
+            }
+        }
+        
+        function salvarProduto() {
+            if (typeof window.salvarProdutoGlobal === 'function') {
+                window.salvarProdutoGlobal();
+            } else {
+                console.error('Função salvarProdutoGlobal não encontrada');
+                alert('Erro ao salvar produto');
+            }
+        }
+    </script>
 </body>
 </html>
