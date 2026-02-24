@@ -1,5 +1,5 @@
 // admin/script.js
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
 console.log('🚀 Admin iniciado');
