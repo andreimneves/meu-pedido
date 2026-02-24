@@ -45,8 +45,8 @@ const categoriaController = {
             }
             
             const result = await pool.query(
-                `INSERT INTO categorias (tenant_id, nome, descricao, ordem)
-                 VALUES ($1, $2, $3, $4)
+                `INSERT INTO categorias (tenant_id, nome, descricao, ordem, updated_at)
+                 VALUES ($1, $2, $3, $4, NOW())
                  RETURNING *`,
                 [tenant_id || 1, nome, descricao || '', ordem || 0]
             );
@@ -81,10 +81,10 @@ const categoriaController = {
                 return res.status(404).json({ erro: 'Categoria não encontrada' });
             }
             
-            // Atualizar a categoria
+            // Atualizar a categoria - usando updated_at (que já existe)
             const result = await pool.query(
                 `UPDATE categorias 
-                 SET nome = $1, descricao = $2, ordem = $3
+                 SET nome = $1, descricao = $2, ordem = $3, updated_at = NOW()
                  WHERE id = $4
                  RETURNING *`,
                 [nome, descricao || '', ordem || 0, id]
