@@ -92,7 +92,7 @@
                     <div class="form-row">
                         <label>📍 CEP *</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;">
+                            <input type="text" id="cepInput" placeholder="00000-000" style="flex: 2;" oninput="mascaraCEP(this)" onblur="calcularFretePorCEP()">
                             <button type="button" onclick="calcularFretePorCEP()" style="flex: 1; background: #C83232; color: white; border: none; border-radius: 8px; cursor: pointer; padding: 12px;">Calcular</button>
                         </div>
                         <div class="cep-info" id="cepInfo"></div>
@@ -234,11 +234,9 @@
                 horariosDelivery = await response.json();
                 console.log('📅 Horários carregados:', horariosDelivery);
                 
-                // Verificar disponibilidade inicial
                 verificarDisponibilidadeDelivery();
             } catch (error) {
                 console.error('Erro ao carregar horários:', error);
-                // Horários padrão
                 horariosDelivery = [
                     { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
                     { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
@@ -351,7 +349,112 @@
             });
         }
 
-        // ===== CARREGAR PRODUTOS DA API =====
+        // ===== MÁSCARA PARA CEP =====
+        function mascaraCEP(input) {
+            let valor = input.value.replace(/\D/g, '');
+            if (valor.length > 5) {
+                valor = valor.substring(0,5) + '-' + valor.substring(5,8);
+            }
+            input.value = valor;
+            
+            const cepNumerico = valor.replace(/\D/g, '');
+            if (cepNumerico.length === 8) {
+                clearTimeout(window.timerCEP);
+                window.timerCEP = setTimeout(() => {
+                    calcularFretePorCEP();
+                }, 500);
+            }
+        }
+
+        // ===== RESETAR ESTADOS DO CEP =====
+        function resetarEstadosCEP() {
+            cepValido = false;
+            dentroAreaEntrega = false;
+            
+            document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP';
+            document.getElementById('freteInfo').className = 'frete-info';
+            document.getElementById('avisoDelivery').style.display = 'none';
+            
+            calcularTotal();
+        }
+
+        // ===== CALCULAR FRETE POR CEP =====
+        async function calcularFretePorCEP() {
+            const cepInput = document.getElementById('cepInput');
+            const cep = cepInput.value.replace(/\D/g, '');
+            
+            resetarEstadosCEP();
+            
+            if (cep.length !== 8) {
+                document.getElementById('cepInfo').innerHTML = '❌ CEP inválido (8 números)';
+                return;
+            }
+
+            document.getElementById('cepInfo').innerHTML = '🔄 Buscando CEP...';
+            
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const dados = await res.json();
+                
+                if (dados.erro) {
+                    document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado';
+                    return;
+                }
+                
+                document.getElementById('clienteEndereco').value = dados.logradouro || '';
+                document.getElementById('clienteBairro').value = dados.bairro || '';
+                document.getElementById('cepInfo').innerHTML = '✅ CEP válido';
+                
+                cepValido = true;
+                
+                const cepLoja = configuracoesLoja.cep_loja?.replace(/\D/g, '') || '97000000';
+                const diferenca = Math.abs(parseInt(cep.substring(0, 5)) - parseInt(cepLoja.substring(0, 5)));
+                distanciaKm = diferenca / 100;
+                if (distanciaKm < 3) distanciaKm = 3;
+                
+                const kmMax = configuracoesLoja.km_maximo_entrega || 30;
+                
+                if (distanciaKm > kmMax) {
+                    dentroAreaEntrega = false;
+                    document.getElementById('freteInfo').innerHTML = `❌ Fora da área de entrega (${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').className = 'frete-info erro';
+                    
+                    mostrarAviso(
+                        'endereco', 
+                        '🚫 Nosso delivery não atende seu endereço', 
+                        'retirar'
+                    );
+                    return;
+                }
+                
+                dentroAreaEntrega = true;
+                
+                const taxaKm = configuracoesLoja.taxa_por_km || 2;
+                const taxaMin = configuracoesLoja.taxa_minima || 5;
+                let frete = distanciaKm * taxaKm;
+                if (frete < taxaMin) frete = taxaMin;
+                
+                taxaFrete = frete;
+                
+                const subtotal = carrinho.reduce((s, i) => s + i.preco, 0);
+                if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50)) {
+                    taxaFrete = 0;
+                    document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
+                    document.getElementById('freteInfo').className = 'frete-info';
+                } else {
+                    document.getElementById('freteInfo').innerHTML = `🚚 R$ ${taxaFrete.toFixed(2)} (${distanciaKm.toFixed(1)} km)`;
+                    document.getElementById('freteInfo').className = 'frete-info';
+                }
+                
+                calcularTotal();
+                
+            } catch (error) {
+                console.error('Erro ao buscar CEP:', error);
+                document.getElementById('cepInfo').innerHTML = '❌ Erro ao buscar CEP';
+            }
+        }
+
+        // ===== CARREGAR PRODUTOS =====
         async function carregarProdutos() {
             try {
                 const response = await fetch(`${API_URL}/cardapio/${SUBDOMINIO}`, {
@@ -549,74 +652,6 @@
             document.getElementById('deliveryOption').checked = false;
             document.getElementById('pickupOption').checked = true;
             toggleDelivery(false);
-        }
-
-        // ===== CALCULAR FRETE POR CEP =====
-        async function calcularFretePorCEP() {
-            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
-            if (cep.length !== 8) {
-                document.getElementById('cepInfo').innerHTML = '❌ CEP inválido';
-                return;
-            }
-
-            document.getElementById('cepInfo').innerHTML = '🔄 Calculando...';
-            
-            try {
-                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const dados = await res.json();
-                
-                if (dados.erro) throw new Error('CEP não encontrado');
-                
-                document.getElementById('clienteEndereco').value = dados.logradouro || '';
-                document.getElementById('clienteBairro').value = dados.bairro || '';
-                document.getElementById('cepInfo').innerHTML = '✅ CEP válido';
-                cepValido = true;
-                
-                const cepLoja = configuracoesLoja.cep_loja?.replace(/\D/g, '') || '97000000';
-                const diferenca = Math.abs(parseInt(cep.substring(0, 5)) - parseInt(cepLoja.substring(0, 5)));
-                distanciaKm = diferenca / 100;
-                if (distanciaKm < 3) distanciaKm = 3;
-                
-                const kmMax = configuracoesLoja.km_maximo_entrega || 30;
-                
-                if (distanciaKm > kmMax) {
-                    dentroAreaEntrega = false;
-                    document.getElementById('freteInfo').innerHTML = `❌ Fora da área de entrega (${distanciaKm.toFixed(1)} km)`;
-                    document.getElementById('freteInfo').className = 'frete-info erro';
-                    
-                    mostrarAviso(
-                        'endereco', 
-                        '🚫 Nosso delivery não atende seu endereço', 
-                        'retirar'
-                    );
-                    return;
-                }
-                
-                dentroAreaEntrega = true;
-                
-                const taxaKm = configuracoesLoja.taxa_por_km || 2;
-                const taxaMin = configuracoesLoja.taxa_minima || 5;
-                let frete = distanciaKm * taxaKm;
-                if (frete < taxaMin) frete = taxaMin;
-                
-                taxaFrete = frete;
-                
-                const subtotal = carrinho.reduce((s, i) => s + i.preco, 0);
-                if (subtotal >= (configuracoesLoja.frete_gratis_acima || 50)) {
-                    taxaFrete = 0;
-                    document.getElementById('freteInfo').innerHTML = '🎉 Frete grátis!';
-                    document.getElementById('freteInfo').className = 'frete-info';
-                } else {
-                    document.getElementById('freteInfo').innerHTML = `🚚 R$ ${taxaFrete.toFixed(2)} (${distanciaKm.toFixed(1)} km)`;
-                    document.getElementById('freteInfo').className = 'frete-info';
-                }
-                
-                calcularTotal();
-                
-            } catch (error) {
-                document.getElementById('cepInfo').innerHTML = '❌ Erro';
-                console.error(error);
-            }
         }
 
         function calcularTotal() {
