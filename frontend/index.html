@@ -166,6 +166,31 @@
         </div>
     </div>
 
+    <!-- MODAL DE PERSONALIZAÇÃO DE PRODUTO -->
+    <div id="personalizacaoModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="fecharPersonalizacao()">&times;</span>
+            <h2 id="personalizacaoTitulo">Personalizar Produto</h2>
+            
+            <div id="personalizacaoConteudo" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
+                <!-- Conteúdo carregado dinamicamente -->
+            </div>
+            
+            <div class="cart-total" style="margin-top: 20px;">
+                <span>Total do item:</span> <strong>R$ <span id="personalizacaoTotal">0,00</span></strong>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn-add" onclick="adicionarAoCarrinhoPersonalizado()" style="flex: 2; background: #4CAF50;">
+                    ✅ Adicionar ao Carrinho
+                </button>
+                <button class="btn-add" onclick="fecharPersonalizacao()" style="flex: 1; background: #999;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== CONFIGURAÇÕES =====
         const API_URL = 'https://meu-pedido-backend.onrender.com/api';
@@ -184,6 +209,11 @@
         let cepValido = false;
         let dentroAreaEntrega = false;
         let disponibilidadeDelivery = { disponivel: true, mensagem: '' };
+        
+        // ===== VARIÁVEIS DE PERSONALIZAÇÃO =====
+        let produtoPersonalizando = null;
+        let selecoesPersonalizacao = {};
+        let complementosData = [];
 
         console.log('🚀 Frontend iniciado');
         console.log('📡 API_URL:', API_URL);
@@ -515,15 +545,208 @@
                 return;
             }
             
-            document.getElementById('produtos').innerHTML = produtosFiltrados.map(p => `
-                <div class="produto-card">
-                    <div>
-                        <h3>${p.nome}</h3>
-                        <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
+            document.getElementById('produtos').innerHTML = produtosFiltrados.map(p => {
+                // Verificar se o produto tem complementos (pode ser configurado depois)
+                const temComplementos = p.categoria_nome === 'Pizzas' || p.categoria_nome === 'Açaí';
+                const botaoTexto = temComplementos ? 'Personalizar' : '+';
+                const funcaoClique = temComplementos 
+                    ? `verificarPersonalizacao(${JSON.stringify(p).replace(/'/g, "\\'")})`
+                    : `adicionarAoCarrinho(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${p.preco})`;
+                
+                return `
+                    <div class="produto-card">
+                        <div>
+                            <h3>${p.nome}</h3>
+                            <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
+                        </div>
+                        <button class="btn-adicionar" onclick="${funcaoClique}">${botaoTexto}</button>
                     </div>
-                    <button class="btn-adicionar" onclick="adicionarAoCarrinho(${p.id}, '${p.nome.replace(/'/g, "\\'")}', ${p.preco})">+</button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        // ===== VERIFICAR PERSONALIZAÇÃO =====
+        function verificarPersonalizacao(produto) {
+            // Produtos que devem abrir personalização
+            abrirPersonalizacao(produto);
+        }
+
+        // ===== ABRIR PERSONALIZAÇÃO =====
+        async function abrirPersonalizacao(produto) {
+            produtoPersonalizando = produto;
+            selecoesPersonalizacao = {};
+            
+            document.getElementById('personalizacaoTitulo').textContent = `Personalizar ${produto.nome}`;
+            document.getElementById('personalizacaoModal').style.display = 'block';
+            
+            await carregarComplementos(produto.id);
+        }
+
+        // ===== CARREGAR COMPLEMENTOS =====
+        async function carregarComplementos(produtoId) {
+            try {
+                const response = await fetch(`${API_URL}/complementos/produto/${produtoId}`);
+                const grupos = await response.json();
+                complementosData = grupos;
+                
+                let html = '';
+                
+                grupos.forEach(grupo => {
+                    html += `<div class="form-section" style="margin-bottom: 15px;">`;
+                    html += `<h3>${grupo.nome} ${grupo.obrigatorio ? '<span style="color:#C83232;">*</span>' : ''}</h3>`;
+                    if (grupo.descricao) {
+                        html += `<p style="color:#666; font-size:13px; margin-bottom:10px;">${grupo.descricao}</p>`;
+                    }
+                    if (grupo.limite_selecao > 0) {
+                        html += `<p style="font-size:12px; color:#C83232; margin-bottom:10px;">
+                            Selecione até ${grupo.limite_selecao} ${grupo.limite_selecao > 1 ? 'opções' : 'opção'}
+                        </p>`;
+                    }
+                    
+                    html += `<div id="grupo-${grupo.id}" class="complementos-grupo" data-limite="${grupo.limite_selecao}">`;
+                    
+                    if (grupo.complementos && grupo.complementos.length > 0) {
+                        grupo.complementos.forEach(comp => {
+                            const isSelected = selecoesPersonalizacao[grupo.id]?.includes(comp.id) || false;
+                            const preco = comp.preco > 0 ? `+ R$ ${comp.preco.toFixed(2)}` : '';
+                            
+                            html += `
+                                <div class="complemento-item" style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    padding: 10px;
+                                    border: 1px solid ${isSelected ? '#C83232' : '#ddd'};
+                                    border-radius: 5px;
+                                    margin-bottom: 5px;
+                                    cursor: pointer;
+                                    background: ${isSelected ? '#fff5f5' : 'white'};
+                                " onclick="toggleComplemento(${grupo.id}, ${comp.id}, ${grupo.limite_selecao})">
+                                    <div>
+                                        <strong>${comp.nome}</strong>
+                                        ${comp.descricao ? `<br><small style="color:#666;">${comp.descricao}</small>` : ''}
+                                    </div>
+                                    <span style="color:#C83232; font-weight:bold;">${preco}</span>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += `<p style="color:#999; padding:10px;">Nenhuma opção disponível</p>`;
+                    }
+                    
+                    html += `</div></div>`;
+                });
+                
+                document.getElementById('personalizacaoConteudo').innerHTML = html || '<p>Carregando opções...</p>';
+                calcularTotalPersonalizado();
+                
+            } catch (error) {
+                console.error('Erro ao carregar complementos:', error);
+                document.getElementById('personalizacaoConteudo').innerHTML = `
+                    <p style="color:red; text-align:center;">Erro ao carregar opções do produto</p>
+                `;
+            }
+        }
+
+        // ===== TOGGLE COMPLEMENTO =====
+        function toggleComplemento(grupoId, complementoId, limite) {
+            if (!selecoesPersonalizacao[grupoId]) {
+                selecoesPersonalizacao[grupoId] = [];
+            }
+            
+            const index = selecoesPersonalizacao[grupoId].indexOf(complementoId);
+            
+            if (index > -1) {
+                // Remover
+                selecoesPersonalizacao[grupoId].splice(index, 1);
+            } else {
+                // Adicionar se não atingiu o limite
+                if (selecoesPersonalizacao[grupoId].length < limite) {
+                    selecoesPersonalizacao[grupoId].push(complementoId);
+                } else {
+                    alert(`Você pode selecionar no máximo ${limite} opções neste grupo`);
+                    return;
+                }
+            }
+            
+            // Recarregar visualização
+            carregarComplementos(produtoPersonalizando.id);
+        }
+
+        // ===== CALCULAR TOTAL PERSONALIZADO =====
+        function calcularTotalPersonalizado() {
+            let total = produtoPersonalizando ? parseFloat(produtoPersonalizando.preco) : 0;
+            
+            // Somar preços dos complementos selecionados
+            complementosData.forEach(grupo => {
+                if (selecoesPersonalizacao[grupo.id]) {
+                    if (grupo.complementos) {
+                        grupo.complementos.forEach(comp => {
+                            if (selecoesPersonalizacao[grupo.id].includes(comp.id)) {
+                                total += parseFloat(comp.preco || 0);
+                            }
+                        });
+                    }
+                }
+            });
+            
+            document.getElementById('personalizacaoTotal').textContent = total.toFixed(2);
+        }
+
+        // ===== ADICIONAR AO CARRINHO PERSONALIZADO =====
+        function adicionarAoCarrinhoPersonalizado() {
+            // Validar grupos obrigatórios
+            for (let grupo of complementosData) {
+                if (grupo.obrigatorio && (!selecoesPersonalizacao[grupo.id] || selecoesPersonalizacao[grupo.id].length === 0)) {
+                    alert(`Selecione ${grupo.nome} (obrigatório)`);
+                    return;
+                }
+            }
+            
+            // Criar descrição dos complementos
+            let complementosTexto = [];
+            complementosData.forEach(grupo => {
+                if (selecoesPersonalizacao[grupo.id] && grupo.complementos) {
+                    grupo.complementos.forEach(comp => {
+                        if (selecoesPersonalizacao[grupo.id].includes(comp.id)) {
+                            complementosTexto.push(comp.nome);
+                        }
+                    });
+                }
+            });
+            
+            const nomeCompleto = complementosTexto.length > 0 
+                ? `${produtoPersonalizando.nome} (${complementosTexto.join(', ')})`
+                : produtoPersonalizando.nome;
+            
+            // Calcular total
+            let total = parseFloat(produtoPersonalizando.preco);
+            complementosData.forEach(grupo => {
+                if (selecoesPersonalizacao[grupo.id] && grupo.complementos) {
+                    grupo.complementos.forEach(comp => {
+                        if (selecoesPersonalizacao[grupo.id].includes(comp.id)) {
+                            total += parseFloat(comp.preco || 0);
+                        }
+                    });
+                }
+            });
+            
+            // Adicionar ao carrinho
+            carrinho.push({
+                id: produtoPersonalizando.id,
+                nome: nomeCompleto,
+                preco: total,
+                personalizacao: JSON.parse(JSON.stringify(selecoesPersonalizacao))
+            });
+            
+            document.getElementById('cartCount').textContent = carrinho.length;
+            fecharPersonalizacao();
+            alert('✅ Produto personalizado adicionado ao carrinho!');
+        }
+
+        function fecharPersonalizacao() {
+            document.getElementById('personalizacaoModal').style.display = 'none';
+            produtoPersonalizando = null;
         }
 
         // ===== CARRINHO =====

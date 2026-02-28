@@ -22,7 +22,7 @@ console.log('🚀 Iniciando servidor...');
 console.log(`📂 Diretório atual: ${__dirname}`);
 console.log(`🌐 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 
-// ===== ROTAS DE TESTE E SAÚDE (PRIMEIRAS) =====
+// ===== ROTAS DE TESTE E SAÚDE =====
 app.get('/ping', (req, res) => res.send('pong'));
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
@@ -98,6 +98,8 @@ app.get('/api/debug', (req, res) => {
             'GET /api/horarios/:subdominio',
             'PUT /api/horarios/:subdominio',
             'GET /api/horarios/disponibilidade/:subdominio',
+            'GET /api/complementos',
+            'GET /api/complementos/produto/:produtoId',
             'POST /api/pedidos',
             'GET /api/pedidos/:subdominio',
             'GET /api/pedidos/:subdominio/:id',
@@ -113,14 +115,15 @@ const categoriaRoutes = require('./src/routes/categorias');
 const configRoutes = require('./src/routes/config');
 const horarioRoutes = require('./src/routes/horarios');
 const pedidoRoutes = require('./src/routes/pedidos');
+const complementoRoutes = require('./src/routes/complementos');
 
 // ===== REGISTRO DAS ROTAS =====
-// A ordem importa: rotas específicas primeiro
 app.use('/api', produtoRoutes);
 app.use('/api', categoriaRoutes);
 app.use('/api', configRoutes);
 app.use('/api', horarioRoutes);
 app.use('/api', pedidoRoutes);
+app.use('/api', complementoRoutes);
 
 // ===== TRATAMENTO DE ERROS 404 =====
 app.use('*', (req, res) => {
@@ -165,6 +168,8 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log('   - GET  /api/horarios/:subdominio');
     console.log('   - PUT  /api/horarios/:subdominio');
     console.log('   - GET  /api/horarios/disponibilidade/:subdominio');
+    console.log('   - GET  /api/complementos');
+    console.log('   - GET  /api/complementos/produto/:produtoId');
     console.log('   - POST /api/pedidos');
     console.log('   - GET  /api/pedidos/:subdominio');
     console.log('   - GET  /api/pedidos/:subdominio/:id');
