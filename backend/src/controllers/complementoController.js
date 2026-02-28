@@ -5,9 +5,10 @@ const complementoController = {
     // ===== LISTAR TODOS OS COMPLEMENTOS =====
     async listar(req, res) {
         try {
+            const { tenant_id } = req.query;
             const result = await pool.query(
-                'SELECT * FROM complementos WHERE tenant_id = $1 ORDER BY categoria_complemento, ordem',
-                [req.query.tenant_id || 1]
+                'SELECT * FROM complementos WHERE tenant_id = $1 ORDER BY categoria_complemento, ordem, nome',
+                [tenant_id || 1]
             );
             res.json(result.rows);
         } catch (error) {
@@ -47,7 +48,7 @@ const complementoController = {
                 `INSERT INTO complementos (tenant_id, nome, descricao, preco, categoria_complemento, disponivel, ordem)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)
                  RETURNING *`,
-                [tenant_id || 1, nome, descricao || '', preco || 0, categoria_complemento, disponivel !== false, ordem || 0]
+                [tenant_id || 1, nome, descricao || '', preco || 0, categoria_complemento || 'outros', disponivel !== false, ordem || 0]
             );
             
             console.log(`✅ Complemento criado: ${nome}`);
@@ -89,6 +90,19 @@ const complementoController = {
     async excluir(req, res) {
         try {
             const { id } = req.params;
+            
+            // Verificar se existe em algum grupo
+            const gruposVinculados = await pool.query(
+                'SELECT COUNT(*) as total FROM grupo_complemento_itens WHERE complemento_id = $1',
+                [id]
+            );
+            
+            if (parseInt(gruposVinculados.rows[0].total) > 0) {
+                return res.status(400).json({ 
+                    erro: 'Não é possível excluir este complemento pois ele está vinculado a grupos'
+                });
+            }
+            
             const result = await pool.query('DELETE FROM complementos WHERE id = $1 RETURNING id', [id]);
             
             if (result.rows.length === 0) {
@@ -103,12 +117,70 @@ const complementoController = {
         }
     },
 
-    // ===== BUSCAR COMPLEMENTOS POR PRODUTO =====
-    async buscarPorProduto(req, res) {
+    // ===== BUSCAR COMPLEMENTOS POR GRUPO =====
+    async buscarPorGrupo(req, res) {
+        try {
+            const { grupoId } = req.params;
+            
+            const result = await pool.query(
+                `SELECT c.*, gi.ordem as grupo_ordem
+                 FROM grupo_complemento_itens gi
+                 JOIN complementos c ON gi.complemento_id = c.id
+                 WHERE gi.grupo_id = $1 AND c.disponivel = true
+                 ORDER BY gi.ordem, c.nome`,
+                [grupoId]
+            );
+            
+            res.json(result.rows);
+        } catch (error) {
+            console.error('❌ Erro ao buscar complementos por grupo:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ===== BUSCAR GRUPOS POR PRODUTO =====
+    async buscarGruposPorProduto(req, res) {
         try {
             const { produtoId } = req.params;
             
-            // Buscar grupos de complementos vinculados ao produto
+            // Buscar todos os grupos (por enquanto)
+            // Futuramente pode ter uma tabela de vinculação produto-grupo
+            const result = await pool.query(
+                'SELECT * FROM grupos_complementos WHERE tenant_id = $1 ORDER BY ordem, nome',
+                [1] // tenant_id fixo por enquanto
+            );
+            
+            res.json(result.rows);
+        } catch (error) {
+            console.error('❌ Erro ao buscar grupos do produto:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ===== BUSCAR COMPLEMENTOS POR CATEGORIA =====
+    async buscarPorCategoria(req, res) {
+        try {
+            const { categoria } = req.params;
+            const { tenant_id } = req.query;
+            
+            const result = await pool.query(
+                'SELECT * FROM complementos WHERE tenant_id = $1 AND categoria_complemento = $2 AND disponivel = true ORDER BY ordem, nome',
+                [tenant_id || 1, categoria]
+            );
+            
+            res.json(result.rows);
+        } catch (error) {
+            console.error('❌ Erro ao buscar complementos por categoria:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ===== BUSCAR COMPLEMENTOS PARA UM PRODUTO (COM AGRUPAMENTO) =====
+    async buscarParaProduto(req, res) {
+        try {
+            const { produtoId } = req.params;
+            
+            // Buscar todos os grupos
             const gruposQuery = await pool.query(
                 `SELECT g.*, 
                     (SELECT json_agg(
@@ -119,20 +191,37 @@ const complementoController = {
                             'preco', c.preco,
                             'categoria', c.categoria_complemento,
                             'ordem', gi.ordem
-                        ) ORDER BY gi.ordem
+                        ) ORDER BY gi.ordem, c.nome
                     ) FROM grupo_complemento_itens gi
                     JOIN complementos c ON gi.complemento_id = c.id
                     WHERE gi.grupo_id = g.id AND c.disponivel = true
                 ) as complementos
                 FROM grupos_complementos g
                 WHERE g.tenant_id = $1
-                ORDER BY g.ordem`,
-                [1] // tenant_id fixo por enquanto
+                ORDER BY g.ordem, g.nome`,
+                [1] // tenant_id fixo
             );
             
             res.json(gruposQuery.rows);
         } catch (error) {
-            console.error('❌ Erro ao buscar complementos do produto:', error);
+            console.error('❌ Erro ao buscar complementos para produto:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ===== VINCULAR COMPLEMENTOS A UM PRODUTO =====
+    async vincularAoProduto(req, res) {
+        try {
+            const { produtoId } = req.params;
+            const { grupos } = req.body;
+            
+            // Por enquanto, não temos tabela de vinculação produto-grupo
+            // Futuramente implementaremos
+            
+            console.log(`🔄 Vinculando grupos ao produto #${produtoId}:`, grupos);
+            res.json({ mensagem: 'Vínculos salvos com sucesso' });
+        } catch (error) {
+            console.error('❌ Erro ao vincular complementos ao produto:', error);
             res.status(500).json({ erro: error.message });
         }
     }

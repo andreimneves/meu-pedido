@@ -116,6 +116,7 @@ const configRoutes = require('./src/routes/config');
 const horarioRoutes = require('./src/routes/horarios');
 const pedidoRoutes = require('./src/routes/pedidos');
 const complementoRoutes = require('./src/routes/complementos');
+const grupoRoutes = require('./src/routes/grupos');
 
 // ===== REGISTRO DAS ROTAS =====
 app.use('/api', produtoRoutes);
@@ -124,6 +125,7 @@ app.use('/api', configRoutes);
 app.use('/api', horarioRoutes);
 app.use('/api', pedidoRoutes);
 app.use('/api', complementoRoutes);
+app.use('/api', grupoRoutes);
 
 // ===== TRATAMENTO DE ERROS 404 =====
 app.use('*', (req, res) => {
