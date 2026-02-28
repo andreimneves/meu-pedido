@@ -540,3 +540,54 @@ async function atualizarStatus(pedidoId, novoStatus) {
         alert('Erro de conexão: ' + error.message);
     }
 }
+
+// ===== NOTIFICAÇÕES POPUP =====
+function mostrarNotificacao(mensagem, tipo = 'info') {
+    // Criar elemento de notificação se não existir
+    let notificacao = document.createElement('div');
+    notificacao.style.position = 'fixed';
+    notificacao.style.top = '20px';
+    notificacao.style.right = '20px';
+    notificacao.style.padding = '15px 25px';
+    notificacao.style.borderRadius = '5px';
+    notificacao.style.color = 'white';
+    notificacao.style.fontWeight = '500';
+    notificacao.style.zIndex = '9999';
+    notificacao.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    notificacao.style.animation = 'slideIn 0.3s ease';
+    
+    if (tipo === 'sucesso') {
+        notificacao.style.background = '#4CAF50';
+    } else if (tipo === 'erro') {
+        notificacao.style.background = '#f44336';
+    } else {
+        notificacao.style.background = '#2196F3';
+    }
+    
+    notificacao.textContent = mensagem;
+    document.body.appendChild(notificacao);
+    
+    setTimeout(() => {
+        notificacao.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notificacao.parentNode) notificacao.remove();
+        }, 300);
+    }, 3000);
+}
+
+// Adicionar CSS da animação se não existir
+if (!document.getElementById('notificacao-style')) {
+    const style = document.createElement('style');
+    style.id = 'notificacao-style';
+    style.textContent = `
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
