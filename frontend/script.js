@@ -1,517 +1,192 @@
-// frontend/script.js - DEFINITIVO COM HORÁRIOS E FRETE INTELIGENTE
+// frontend/script.js - MOTOR DE AGENDAMENTO E RADAR LOGÍSTICO
 
-const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-    ? 'http://localhost:10000/api'
-    : 'https://meu-pedido-backend.onrender.com/api';
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
-// Estado global
-let produtos = [];
-let gruposComplementosGlobal = [];
-let itensComplementosGlobal = [];
-let categorias = [];
-let categoriaAtiva = 'Todos';
+let produtos = [], gruposComplementosGlobal = [], itensComplementosGlobal = [], categorias = [], categoriaAtiva = 'Todos';
+let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = false;
+let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 
-let carrinho = [];
-let configuracoesLoja = {};
-let taxaFrete = 0;
-let dentroAreaEntrega = false;
-let lojaAberta = true; // Controle de Horário
+// Inteligência de Horários e GPS
+let lojaAbertaStatus = true;
+let deliveryAbertoStatus = true;
+let opcoesLoja = [];
+let opcoesDelivery = [];
+let coordsLoja = { lat: null, lng: null };
 
 window.onload = async () => {
     await carregarConfiguracoes();
     await carregarTudoDoBanco(); 
 };
 
-// ==========================================
-// 1. CARREGAMENTO INICIAL & HORÁRIOS
-// ==========================================
 async function carregarConfiguracoes() {
     try {
-        const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
-        configuracoesLoja = await response.json();
+        const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
+        configuracoesLoja = await res.json();
         
         document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'Nossa Loja';
         document.getElementById('slogan').textContent = configuracoesLoja.slogan || '';
         document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || 'Consulte os horários'}`;
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
+        if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
+
+        // Mensagem Personalizada
+        const isMsgAtiva = configuracoesLoja.mensagem_ativa == 1 || configuracoesLoja.mensagem_ativa === 'true' || configuracoesLoja.mensagem_ativa === true;
+        const textoMsg = configuracoesLoja.mensagem_texto || configuracoesLoja.mensagem_personalizada;
+        if (isMsgAtiva && textoMsg) { const msgDiv = document.getElementById('mensagemPersonalizada'); msgDiv.innerHTML = textoMsg; msgDiv.style.display = 'block'; }
+
+        // Mapear CEP da Loja no Background
+        if (configuracoesLoja.cep_loja) {
+            fetch(`https://cep.awesomeapi.com.br/json/${configuracoesLoja.cep_loja.replace(/\D/g, '')}`)
+            .then(r => r.json()).then(d => { if(d.lat) coordsLoja = {lat: parseFloat(d.lat), lng: parseFloat(d.lng)}; }).catch(e=>{});
+        }
+
+        // Processar Motor de Horários
+        let hLoja = typeof configuracoesLoja.horarios === 'string' ? JSON.parse(configuracoesLoja.horarios) : configuracoesLoja.horarios;
+        let hDel = typeof configuracoesLoja.horarios_delivery === 'string' ? JSON.parse(configuracoesLoja.horarios_delivery) : configuracoesLoja.horarios_delivery;
         
-        if (configuracoesLoja.logo_url) {
-            document.getElementById('logoImagem').src = configuracoesLoja.logo_url;
-            document.getElementById('logoImagem').style.display = 'block';
-            document.getElementById('logoPlaceholder').style.display = 'none';
-        }
+        lojaAbertaStatus = verificarStatusAberto(hLoja);
+        deliveryAbertoStatus = verificarStatusAberto(hDel);
+        opcoesLoja = gerarOpcoesAgendamento(hLoja);
+        opcoesDelivery = gerarOpcoesAgendamento(hDel);
 
-        // MENSAGEM PERSONALIZADA
-        const isMsgAtiva = configuracoesLoja.mensagem_ativa === true || configuracoesLoja.mensagem_ativa === 'true' || configuracoesLoja.mensagem_ativa == 1;
-        const textoPersonalizado = configuracoesLoja.mensagem_texto || configuracoesLoja.mensagem_personalizada;
-        
-        if (isMsgAtiva && textoPersonalizado && textoPersonalizado.trim() !== '') {
-            const msgDiv = document.getElementById('mensagemPersonalizada');
-            msgDiv.innerHTML = textoPersonalizado;
-            msgDiv.style.display = 'block';
-        }
-
-        // VERIFICAÇÃO DE HORÁRIO DE FUNCIONAMENTO
-        verificarHorarioLoja();
-
-    } catch (e) { console.log('Erro configs', e); }
-}
-
-function verificarHorarioLoja() {
-    // Se não tiver horários configurados, assume que está aberta
-    if (!configuracoesLoja.horarios) {
-        lojaAberta = true;
-        return;
-    }
-
-    try {
-        const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-        const agora = new Date();
-        const diaHoje = diasSemana[agora.getDay()];
-        const horaAtual = agora.toTimeString().slice(0, 5); // Ex: "14:30"
-
-        // Converte os horários do banco (se vierem como string JSON)
-        let horarios = typeof configuracoesLoja.horarios === 'string' 
-            ? JSON.parse(configuracoesLoja.horarios) 
-            : configuracoesLoja.horarios;
-
-        const horarioHoje = horarios[diaHoje];
-
-        if (!horarioHoje || !horarioHoje.ativo) {
-            lojaAberta = false;
-        } else {
-            // Verifica se a hora atual está dentro do intervalo
-            if (horaAtual >= horarioHoje.abertura && horaAtual <= horarioHoje.fechamento) {
-                lojaAberta = true;
-            } else {
-                lojaAberta = false;
-            }
-        }
-
-        // Se estiver fechada, cria uma tarja vermelha no topo e avisa o cliente
-        if (!lojaAberta) {
-            const tarja = document.createElement('div');
-            tarja.style.cssText = "background-color: #C83232; color: white; text-align: center; padding: 10px; font-weight: bold; position: sticky; top: 0; z-index: 9999;";
-            tarja.innerHTML = "⚠️ Estamos fechados no momento. Você pode ver o cardápio, mas não poderá finalizar o pedido.";
-            document.body.prepend(tarja);
-        }
-    } catch (e) {
-        console.log("Erro ao verificar horário, assumindo aberta.", e);
-        lojaAberta = true;
-    }
-}
-
-async function carregarTudoDoBanco() {
-    try {
-        const [resProd, resGrupos, resItens] = await Promise.all([
-            fetch(`${API_URL}/cardapio/${SUBDOMINIO}`),
-            fetch(`${API_URL}/grupos-complementos?tenant_id=1`),
-            fetch(`${API_URL}/complementos?tenant_id=1`)
-        ]);
-
-        produtos = await resProd.json();
-        gruposComplementosGlobal = resGrupos.ok ? await resGrupos.json() : [];
-        itensComplementosGlobal = resItens.ok ? await resItens.json() : [];
-
-        categorias = ['Todos', ...new Set(produtos.map(p => p.categoria_nome).filter(Boolean))];
-        renderizarCategorias();
-        renderizarProdutos();
-    } catch (e) {
-        document.getElementById('produtos').innerHTML = `<div style="text-align:center; padding:30px; color:red;">Erro ao carregar cardápio.</div>`;
-    }
-}
-
-window.abrirWhatsappSuporte = function() {
-    let numero = configuracoesLoja.whatsapp || '5551999999999';
-    numero = numero.replace(/\D/g, ''); 
-    if (!numero.startsWith('55')) numero = '55' + numero; 
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent('Olá! Preciso de ajuda com o cardápio/pedido.')}`, '_blank');
-};
-
-// ==========================================
-// 2. VITRINE DE PRODUTOS
-// ==========================================
-function renderizarCategorias() {
-    document.getElementById('categorias').innerHTML = categorias.map(c => 
-        `<button class="categoria-btn ${c === categoriaAtiva ? 'ativa' : ''}" onclick="filtrarCategoria('${c}')">${c}</button>`
-    ).join('');
-}
-
-window.filtrarCategoria = function(cat) { categoriaAtiva = cat; renderizarCategorias(); renderizarProdutos(); }
-window.filtrarProdutos = function() { renderizarProdutos(); }
-
-function renderizarProdutos() {
-    const busca = document.getElementById('searchInput').value.toLowerCase();
-    const filtrados = produtos.filter(p => 
-        (categoriaAtiva === 'Todos' || p.categoria_nome === categoriaAtiva) &&
-        p.nome.toLowerCase().includes(busca)
-    );
-
-    const div = document.getElementById('produtos');
-    if (filtrados.length === 0) return div.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">Nenhum produto encontrado.</div>';
-
-    div.innerHTML = filtrados.map(p => `
-        <div class="produto-card" onclick="abrirDetalheProduto(${p.id})">
-            <div class="produto-info">
-                <h3>${p.nome}</h3>
-                <div class="produto-desc">${p.descricao || ''}</div>
-                <div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div>
-            </div>
-            ${p.imagem_url ? `<img src="${p.imagem_url}" class="produto-imagem">` : `<div class="produto-imagem-placeholder">🍽️</div>`}
-        </div>
-    `).join('');
+    } catch (e) { console.error('Erro configs', e); }
 }
 
 // ==========================================
-// 3. MODAL DE DETALHES E COMPLEMENTOS
+// MOTOR DE AGENDAMENTO 
 // ==========================================
-window.abrirDetalheProduto = async function(id) {
-    produtoDetalheAtual = produtos.find(p => p.id == id);
-    quantidadeDetalhe = 1; complementosSelecionados = {}; 
+function verificarStatusAberto(horariosConf) {
+    if (!horariosConf) return true; // Se não tem config, assume aberto
+    const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const agora = new Date();
+    const confDia = horariosConf[dias[agora.getDay()]];
     
-    document.getElementById('detalheNome').textContent = produtoDetalheAtual.nome;
-    document.getElementById('detalheDescricao').textContent = produtoDetalheAtual.descricao || '';
-    document.getElementById('detalhePrecoBase').textContent = parseFloat(produtoDetalheAtual.preco).toFixed(2);
-    document.getElementById('detalheQuantidade').textContent = quantidadeDetalhe;
-    document.getElementById('detalheObservacao').value = '';
+    if (!confDia || !confDia.ativo) return false;
     
-    const imgCont = document.getElementById('detalheImagemContainer');
-    if(produtoDetalheAtual.imagem_url) {
-        document.getElementById('detalheImagem').src = produtoDetalheAtual.imagem_url; imgCont.style.display = 'block';
-    } else { imgCont.style.display = 'none'; }
-
-    document.getElementById('detalheComplementos').innerHTML = '<div class="loading">Buscando opções...</div>';
-    document.getElementById('produtoDetalheModal').style.display = 'block';
-    document.body.style.overflow = 'hidden';
-
-    try {
-        const res = await fetch(`${API_URL}/complementos/produto/${id}`);
-        let gruposVinculados = res.ok ? await res.json() : [];
-        if (!Array.isArray(gruposVinculados)) gruposVinculados = [];
-        renderizarGruposComplementos(gruposVinculados);
-    } catch (e) {
-        document.getElementById('detalheComplementos').innerHTML = '<div style="color:red; padding:20px;">Erro ao carregar adicionais.</div>';
-        atualizarTotalDetalhe();
-    }
+    const horaAtualFloat = agora.getHours() + (agora.getMinutes() / 60);
+    const [abreH, abreM] = confDia.abertura.split(':').map(Number);
+    const [fechaH, fechaM] = confDia.fechamento.split(':').map(Number);
+    
+    return (horaAtualFloat >= (abreH + abreM/60) && horaAtualFloat <= (fechaH + fechaM/60));
 }
 
-window.fecharDetalheProduto = function() { document.getElementById('produtoDetalheModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+function gerarOpcoesAgendamento(horariosConf) {
+    if (!horariosConf) return [];
+    const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const agora = new Date();
+    let opcoes = [];
 
-async function renderizarGruposComplementos(gruposVinculados) {
-    const container = document.getElementById('detalheComplementos');
-    if (gruposVinculados.length === 0) { container.innerHTML = ''; atualizarTotalDetalhe(); return; }
+    // Varre os próximos 4 dias para criar as caixas de horário
+    for (let i = 0; i < 4; i++) { 
+        let dataAlvo = new Date(agora);
+        dataAlvo.setDate(agora.getDate() + i);
+        let diaIdx = dataAlvo.getDay();
+        let confDia = horariosConf[dias[diaIdx]];
 
-    let html = '';
-    for (let vinculo of gruposVinculados) {
-        const grupoCompleto = gruposComplementosGlobal.find(g => g.id == vinculo.id);
-        if (!grupoCompleto) continue;
-
-        complementosSelecionados[grupoCompleto.id] = [];
-        let itensDoGrupo = [];
-        try {
-            const resItens = await fetch(`${API_URL}/grupo-complementos/${grupoCompleto.id}/itens`);
-            if (resItens.ok) itensDoGrupo = await resItens.json();
-        } catch(e) {}
-
-        if (itensDoGrupo.length === 0) continue; 
-
-        let reqText = grupoCompleto.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL';
-        let reqClass = grupoCompleto.obrigatorio ? 'badge-obrig' : 'badge-opc';
-        let limitText = grupoCompleto.limite_selecao > 1 ? `Escolha até ${grupoCompleto.limite_selecao} opções` : `Escolha 1 opção`;
-
-        html += `<div class="grupo-comp" id="grupo_${grupoCompleto.id}"><div class="grupo-comp-header"><div><div class="grupo-comp-titulo">${grupoCompleto.nome}</div><div class="grupo-comp-desc">${limitText}</div></div><span class="${reqClass}" id="badge_${grupoCompleto.id}">${reqText}</span></div>`;
-
-        itensDoGrupo.forEach(item => {
-            if(item.disponivel === false) return; 
-            let precoFormatado = parseFloat(item.preco) > 0 ? `+ R$ ${parseFloat(item.preco).toFixed(2)}` : '';
-            let isRadio = grupoCompleto.limite_selecao === 1 ? 'radio-mark' : '';
+        if (confDia && confDia.ativo && confDia.abertura && confDia.fechamento) {
+            let [abreH] = confDia.abertura.split(':').map(Number);
+            let [fechaH] = confDia.fechamento.split(':').map(Number);
             
-            html += `
-                <label class="item-comp checkbox-container">
-                    <div class="item-comp-info">
-                        <div class="item-comp-nome">${item.nome}</div>
-                        <div class="item-comp-preco">${precoFormatado}</div>
-                    </div>
-                    <input type="checkbox" class="cb-item" data-grupo="${grupoCompleto.id}" data-item-id="${item.id}" data-item-nome="${item.nome}" data-item-preco="${item.preco}" onchange="toggleComplemento(${grupoCompleto.id}, this)">
-                    <span class="checkmark ${isRadio}"></span>
-                </label>`;
-        });
-        html += `</div>`;
-    }
-    container.innerHTML = html;
-    atualizarTotalDetalhe();
-}
+            let startH = abreH;
+            if (i === 0) { // Se for hoje
+                let horaAtual = agora.getHours();
+                if (horaAtual >= fechaH) continue; // Já fechou hoje
+                startH = Math.max(abreH, horaAtual + 1); // Pula para a próxima hora redonda
+            }
 
-window.toggleComplemento = function(grupoId, checkbox) {
-    const grupoInfo = gruposComplementosGlobal.find(g => g.id == grupoId);
-    const limite = grupoInfo.limite_selecao;
-    let selecionados = complementosSelecionados[grupoId];
-
-    if (checkbox.checked) {
-        if (selecionados.length >= limite) {
-            if (limite === 1) {
-                const cbAntigoId = selecionados[0].id;
-                document.querySelector(`input[data-item-id="${cbAntigoId}"][data-grupo="${grupoId}"]`).checked = false;
-                selecionados = []; 
-            } else {
-                checkbox.checked = false;
-                alert(`Você só pode escolher até ${limite} opções neste grupo.`);
-                return;
+            for (let h = startH; h < fechaH; h++) {
+                let dataFormatada = dataAlvo.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+                let labelDia = i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : dias[diaIdx].charAt(0).toUpperCase() + dias[diaIdx].slice(1);
+                opcoes.push(`${labelDia} (${dataFormatada}) - ${String(h).padStart(2,'0')}:00 às ${String(h+1).padStart(2,'0')}:00`);
             }
         }
-        selecionados.push({ id: checkbox.getAttribute('data-item-id'), nome: checkbox.getAttribute('data-item-nome'), preco: parseFloat(checkbox.getAttribute('data-item-preco')) });
-    } else {
-        const itemId = checkbox.getAttribute('data-item-id');
-        selecionados = selecionados.filter(i => i.id !== itemId);
     }
-    complementosSelecionados[grupoId] = selecionados;
-    
-    if (grupoInfo.obrigatorio) {
-        const badge = document.getElementById(`badge_${grupoId}`);
-        if (selecionados.length > 0) { badge.className = 'badge-opc'; badge.textContent = 'OK'; badge.style.background = '#4CAF50'; } 
-        else { badge.className = 'badge-obrig'; badge.textContent = 'OBRIGATÓRIO'; badge.style.background = '#333'; }
-    }
-    atualizarTotalDetalhe();
-}
-
-window.alterarQuantidadeDetalhe = function(delta) {
-    quantidadeDetalhe += delta;
-    if (quantidadeDetalhe < 1) quantidadeDetalhe = 1;
-    document.getElementById('detalheQuantidade').textContent = quantidadeDetalhe;
-    atualizarTotalDetalhe();
-}
-
-function atualizarTotalDetalhe() {
-    let subtotal = parseFloat(produtoDetalheAtual.preco);
-    for (let grupo in complementosSelecionados) { complementosSelecionados[grupo].forEach(item => { subtotal += item.preco; }); }
-    
-    let totalCena = subtotal * quantidadeDetalhe;
-    document.getElementById('detalhePrecoTotal').textContent = totalCena.toFixed(2);
-    
-    let tudoCerto = true;
-    for (let grupo in complementosSelecionados) {
-        const gInfo = gruposComplementosGlobal.find(g => g.id == grupo);
-        if (gInfo && gInfo.obrigatorio && complementosSelecionados[grupo].length === 0) tudoCerto = false;
-    }
-    
-    const btnAdd = document.querySelector('.btn-adicionar-final');
-    if(tudoCerto) { btnAdd.disabled = false; btnAdd.style.opacity = '1'; } 
-    else { btnAdd.disabled = true; btnAdd.style.opacity = '0.5'; }
-}
-
-window.adicionarProdutoPersonalizadoAoCarrinho = function() {
-    let listaComps = []; let precoComps = 0;
-    for (let grupo in complementosSelecionados) {
-        complementosSelecionados[grupo].forEach(item => { listaComps.push({ nome: item.nome, preco: item.preco }); precoComps += item.preco; });
-    }
-    
-    const obs = document.getElementById('detalheObservacao').value.trim();
-    const precoBase = parseFloat(produtoDetalheAtual.preco);
-    const precoUnitarioTotal = precoBase + precoComps;
-
-    const indexExistente = carrinho.findIndex(i => i.idProduto === produtoDetalheAtual.id && i.observacao === obs && JSON.stringify(i.complementos) === JSON.stringify(listaComps));
-    if (indexExistente !== -1) {
-        carrinho[indexExistente].quantidade += quantidadeDetalhe;
-        carrinho[indexExistente].precoTotalLinha = carrinho[indexExistente].quantidade * carrinho[indexExistente].precoUnitario;
-    } else {
-        carrinho.push({ idProduto: produtoDetalheAtual.id, nome: produtoDetalheAtual.nome, quantidade: quantidadeDetalhe, precoBase: precoBase, precoUnitario: precoUnitarioTotal, precoTotalLinha: precoUnitarioTotal * quantidadeDetalhe, complementos: listaComps, observacao: obs });
-    }
-
-    fecharDetalheProduto();
-    atualizarRodapeCarrinho();
-    alert('✅ Adicionado ao carrinho!');
+    return opcoes;
 }
 
 // ==========================================
-// 4. GESTÃO DO CARRINHO
+// CÁLCULO DE DISTÂNCIA REAL (FÓRMULA HAVERSINE)
 // ==========================================
-function atualizarRodapeCarrinho() {
-    const rodape = document.getElementById('rodapeCarrinho');
-    if (carrinho.length > 0) {
-        const totalItens = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
-        const valorTotal = carrinho.reduce((sum, item) => sum + item.precoTotalLinha, 0);
-        
-        document.getElementById('rodapeQtd').textContent = totalItens;
-        document.getElementById('rodapeTotal').textContent = valorTotal.toFixed(2);
-        document.getElementById('cartCount').textContent = totalItens;
-        rodape.style.display = 'flex';
-    } else {
-        rodape.style.display = 'none';
-        document.getElementById('cartCount').textContent = '0';
-        fecharCarrinho();
-    }
+function calcularDistanciaGeo(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Raio da Terra em KM
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
 }
 
-window.abrirCarrinho = function() {
-    if(carrinho.length === 0) return alert('Seu carrinho está vazio!');
-    
-    const divItens = document.getElementById('cartItems');
-    divItens.innerHTML = carrinho.map((item, index) => {
-        let compText = item.complementos.map(c => `+ ${c.nome}`).join('<br>');
-        let obsText = item.observacao ? `<br><em>Obs: ${item.observacao}</em>` : '';
-        return `
-            <div class="cart-item">
-                <div class="cart-item-info">
-                    <h4>${item.quantidade}x ${item.nome}</h4>
-                    ${compText ? `<div class="cart-item-comps">${compText}</div>` : ''}
-                    ${obsText ? `<div class="cart-item-comps" style="color:#C83232;">${obsText}</div>` : ''}
-                    <div class="cart-item-price">R$ ${item.precoTotalLinha.toFixed(2)}</div>
-                </div>
-                <div class="cart-item-actions">
-                    <button class="cart-item-remove" onclick="removerDoCarrinho(${index})">Remover</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    calcularSubtotalGeral();
-    document.getElementById('cartModal').style.display = 'block';
-    document.body.style.overflow = 'hidden';
-
-    // Bloqueia botão de finalizar se loja fechada
-    if (!lojaAberta) {
-        const btnWhats = document.querySelector('.whatsapp-btn');
-        btnWhats.disabled = true;
-        btnWhats.style.background = '#999';
-        btnWhats.innerHTML = '🚫 Loja Fechada no Momento';
-    }
-}
-
-window.fecharCarrinho = function() { document.getElementById('cartModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
-window.removerDoCarrinho = function(index) { carrinho.splice(index, 1); atualizarRodapeCarrinho(); if(carrinho.length > 0) abrirCarrinho(); }
-
-function calcularSubtotalGeral() {
-    const sub = carrinho.reduce((sum, i) => sum + i.precoTotalLinha, 0);
-    document.getElementById('cartSubtotal').textContent = sub.toFixed(2);
-    const isDelivery = document.getElementById('deliveryOption').checked;
-    const final = sub + (isDelivery ? taxaFrete : 0);
-    document.getElementById('cartTotalFinal').textContent = final.toFixed(2);
-}
-
-// ==========================================
-// 5. CÁLCULO DE FRETE PERFEITO (Com CEP da Loja e Frete Grátis)
-// ==========================================
-window.toggleDelivery = function(isDelivery) {
-    document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
-    document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
-    if(isDelivery) { 
-        document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP para calcular a taxa'; 
-        document.getElementById('freteInfo').className = 'frete-info';
-        taxaFrete = 0; 
-    } else { 
-        taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
-    }
-    calcularSubtotalGeral();
-}
-
-window.mascaraCEP = function(i) {
-    let v = i.value.replace(/\D/g, '');
-    if (v.length > 5) v = v.substring(0,5) + '-' + v.substring(5,8);
-    i.value = v;
-}
+window.mascaraCEP = function(i) { let v = i.value.replace(/\D/g, ''); if (v.length > 5) v = v.substring(0,5) + '-' + v.substring(5,8); i.value = v; }
 
 window.calcularFretePorCEP = async function() {
     const cepInput = document.getElementById('cepInput').value;
-    const cepLimpo = cepInput.replace(/\D/g, '');
+    const cepCliente = cepInput.replace(/\D/g, '');
     
-    if(cepLimpo.length !== 8) {
-        document.getElementById('cepInfo').innerHTML = '❌ CEP Inválido (8 números)';
-        return;
-    }
-    
-    document.getElementById('cepInfo').innerHTML = '🔄 Buscando CEP...';
+    if(cepCliente.length !== 8) { document.getElementById('cepInfo').innerHTML = '❌ CEP Inválido'; return; }
+    document.getElementById('cepInfo').innerHTML = '🔄 Consultando Satélite...';
     
     try {
-        const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-        const dados = await response.json();
+        const resCli = await fetch(`https://cep.awesomeapi.com.br/json/${cepCliente}`);
+        const dadosCli = await resCli.json();
         
-        if(dados.erro) {
-            document.getElementById('cepInfo').innerHTML = '❌ CEP não encontrado nos correios';
-            return;
+        if(dadosCli.status === 404 || !dadosCli.lat) {
+            document.getElementById('cepInfo').innerHTML = '❌ CEP não mapeado pelo GPS. Use a retirada.';
+            dentroAreaEntrega = false; return;
         }
 
-        // 1. DADOS DE COMPARAÇÃO
-        const cepLoja = configuracoesLoja.cep_loja ? configuracoesLoja.cep_loja.replace(/\D/g, '') : '';
-        const normalizar = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
-        const cidadeCep = normalizar(dados.localidade);
-        const bairroCep = normalizar(dados.bairro);
-        const cidadeConfig = normalizar(configuracoesLoja.cidade);
+        document.getElementById('clienteEndereco').value = dadosCli.address || '';
+        document.getElementById('clienteBairro').value = dadosCli.district || '';
 
-        let bloqueado = false;
-        let motivoBloqueio = '';
-        taxaFrete = parseFloat(configuracoesLoja.taxa_minima) || 0; // Taxa padrão inicial
+        // Tenta buscar a loja na hora se falhou no início
+        if (!coordsLoja.lat && configuracoesLoja.cep_loja) {
+            const resLoja = await fetch(`https://cep.awesomeapi.com.br/json/${configuracoesLoja.cep_loja.replace(/\D/g, '')}`);
+            const dadosLoja = await resLoja.json();
+            if(dadosLoja.lat) coordsLoja = {lat: parseFloat(dadosLoja.lat), lng: parseFloat(dadosLoja.lng)};
+        }
 
-        // 2. REGRA DO CEP DA LOJA: Se o cliente mora no exato CEP da Loja (vizinho)
-        if (cepLoja && cepLimpo === cepLoja) {
-            // Pode decidir se é frete grátis ou taxa mínima para vizinhos. Vamos aplicar a taxa mínima padrão (ou 0 se quiser).
+        if (coordsLoja.lat && coordsLoja.lng) {
+            const kmReal = calcularDistanciaGeo(coordsLoja.lat, coordsLoja.lng, parseFloat(dadosCli.lat), parseFloat(dadosCli.lng));
+            const kmMax = parseFloat(configuracoesLoja.km_maximo_entrega) || 15;
+
+            // BLOQUEIO SUPREMO
+            if (kmReal > kmMax) {
+                document.getElementById('cepInfo').innerHTML = `📍 Distância: ${kmReal.toFixed(1)} km`;
+                document.getElementById('freteInfo').innerHTML = `Infelizmente seu endereço está fora da nossa área de entrega (Máx: ${kmMax}km). Você pode optar por retirar em nossa loja.`;
+                document.getElementById('freteInfo').className = 'frete-info erro';
+                dentroAreaEntrega = false; taxaFrete = 0; calcularSubtotalGeral();
+                return;
+            }
+            
+            document.getElementById('cepInfo').innerHTML = `✅ Aprovado (${kmReal.toFixed(1)} km)`;
+            
+            // CÁLCULO FINANCEIRO
+            let taxaMin = parseFloat(configuracoesLoja.taxa_minima) || 0;
+            let taxaKm = parseFloat(configuracoesLoja.taxa_por_km) || 0;
+            taxaFrete = taxaMin + (kmReal * taxaKm);
+            if (taxaFrete < taxaMin) taxaFrete = taxaMin; // Impede ficar abaixo do mínimo
+            
+        } else {
+            // Se falhar o sistema de coordenadas, aprova mas cobra taxa mínima base
+            document.getElementById('cepInfo').innerHTML = `✅ Endereço Encontrado`;
             taxaFrete = parseFloat(configuracoesLoja.taxa_minima) || 0;
-            bloqueado = false;
-        } 
-        else {
-            // 3. TRAVA DE CIDADE
-            if (cidadeConfig && cidadeConfig !== '' && cidadeCep !== cidadeConfig) {
-                bloqueado = true;
-                motivoBloqueio = `Atendemos apenas a cidade de ${configuracoesLoja.cidade}.`;
-            }
-
-            // 4. TRAVA E TAXAS POR BAIRROS
-            if (!bloqueado) {
-                let bairrosLista = [];
-                if (typeof configuracoesLoja.bairros_entrega === 'string' && configuracoesLoja.bairros_entrega.startsWith('[')) {
-                    try { bairrosLista = JSON.parse(configuracoesLoja.bairros_entrega); } catch(e) {}
-                } else if (Array.isArray(configuracoesLoja.bairros_entrega)) {
-                    bairrosLista = configuracoesLoja.bairros_entrega;
-                }
-
-                if (bairrosLista && bairrosLista.length > 0) {
-                    const bairroMatch = bairrosLista.find(b => normalizar(b.nome || b) === bairroCep);
-                    if (!bairroMatch) {
-                        bloqueado = true;
-                        motivoBloqueio = `Ainda não entregamos no bairro ${dados.bairro}.`;
-                    } else {
-                        taxaFrete = parseFloat(bairroMatch.taxa) || 0;
-                    }
-                } 
-                else if (typeof configuracoesLoja.bairros_entrega === 'string' && configuracoesLoja.bairros_entrega.trim().length > 0) {
-                    // Caso o admin tenha salvo bairros apenas com texto e vírgulas
-                    const listaTextual = configuracoesLoja.bairros_entrega.split(',').map(normalizar);
-                    if (!listaTextual.includes(bairroCep)) {
-                        bloqueado = true;
-                        motivoBloqueio = `Ainda não entregamos no bairro ${dados.bairro}.`;
-                    }
-                }
-            }
         }
 
-        // APLICA O BLOQUEIO NA TELA
-        if (bloqueado) {
-            document.getElementById('cepInfo').innerHTML = `❌ ${motivoBloqueio}`;
-            document.getElementById('freteInfo').innerHTML = '⚠️ Fora da área de cobertura';
-            document.getElementById('freteInfo').className = 'frete-info erro';
-            dentroAreaEntrega = false; taxaFrete = 0; calcularSubtotalGeral();
-            return;
-        }
-        
-        // CEP APROVADO!
-        document.getElementById('clienteEndereco').value = dados.logradouro || '';
-        document.getElementById('clienteBairro').value = dados.bairro || '';
-        document.getElementById('cepInfo').innerHTML = '✅ CEP Encontrado';
         dentroAreaEntrega = true;
-        
-        // 5. REGRA DO FRETE GRÁTIS
-        const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
-        const isFreteGratisAtivo = configuracoesLoja.frete_gratis_ativo == 1 || configuracoesLoja.frete_gratis_ativo === 'true' || configuracoesLoja.frete_gratis_ativo === true;
-        const freteGratisAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 0;
 
-        if (isFreteGratisAtivo && freteGratisAcima > 0 && sub >= freteGratisAcima) {
+        // FRETE GRÁTIS
+        const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
+        const freeAtivo = configuracoesLoja.frete_gratis_ativo == 1 || configuracoesLoja.frete_gratis_ativo === 'true' || configuracoesLoja.frete_gratis_ativo === true;
+        const freeAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 0;
+
+        if (freeAtivo && freeAcima > 0 && sub >= freeAcima) {
             taxaFrete = 0; 
             document.getElementById('freteInfo').innerHTML = '🎉 Parabéns! O Frete é Grátis!';
             document.getElementById('freteInfo').className = 'frete-info';
             document.getElementById('freteInfo').style.background = '#4CAF50';
             document.getElementById('freteInfo').style.color = 'white';
         } else {
-            document.getElementById('freteInfo').innerHTML = taxaFrete > 0 ? `🚚 Taxa de Entrega: R$ ${taxaFrete.toFixed(2)}` : `🚚 Entrega Grátis!`;
+            document.getElementById('freteInfo').innerHTML = `🚚 Taxa Calculada: R$ ${taxaFrete.toFixed(2)}`;
             document.getElementById('freteInfo').className = 'frete-info';
             document.getElementById('freteInfo').style.background = '#e8f5e9';
             document.getElementById('freteInfo').style.color = '#333';
@@ -519,85 +194,216 @@ window.calcularFretePorCEP = async function() {
         
         calcularSubtotalGeral();
         
-    } catch(e) { document.getElementById('cepInfo').innerHTML = '❌ Falha de conexão. Tente novamente.'; }
+    } catch(e) { document.getElementById('cepInfo').innerHTML = '❌ Falha de satélite.'; }
 }
 
 // ==========================================
-// 6. FINALIZAR PEDIDO
+// RESTO DO SISTEMA (Cardápio, Abas, etc)
 // ==========================================
-window.finalizarPedido = async function() {
-    if (!lojaAberta) return alert("A loja está fechada no momento!");
+async function carregarTudoDoBanco() {
+    try {
+        const [resProd, resGrupos, resItens] = await Promise.all([ fetch(`${API_URL}/cardapio/${SUBDOMINIO}`), fetch(`${API_URL}/grupos-complementos?tenant_id=1`), fetch(`${API_URL}/complementos?tenant_id=1`) ]);
+        produtos = await resProd.json(); gruposComplementosGlobal = resGrupos.ok ? await resGrupos.json() : []; itensComplementosGlobal = resItens.ok ? await resItens.json() : [];
+        categorias = ['Todos', ...new Set(produtos.map(p => p.categoria_nome).filter(Boolean))]; renderizarCategorias(); renderizarProdutos();
+    } catch (e) { document.getElementById('produtos').innerHTML = `<div style="text-align:center; color:red;">Erro ao carregar cardápio.</div>`; }
+}
 
+window.abrirWhatsappSuporte = function() { let n = configuracoesLoja.whatsapp || '5551999999999'; n = n.replace(/\D/g, ''); if(!n.startsWith('55')) n='55'+n; window.open(`https://wa.me/${n}?text=Ol%C3%A1`, '_blank'); };
+function renderizarCategorias() { document.getElementById('categorias').innerHTML = categorias.map(c => `<button class="categoria-btn ${c === categoriaAtiva ? 'ativa' : ''}" onclick="filtrarCategoria('${c}')">${c}</button>`).join(''); }
+window.filtrarCategoria = function(cat) { categoriaAtiva = cat; renderizarCategorias(); renderizarProdutos(); }
+window.filtrarProdutos = function() { renderizarProdutos(); }
+function renderizarProdutos() {
+    const b = document.getElementById('searchInput').value.toLowerCase();
+    const f = produtos.filter(p => (categoriaAtiva === 'Todos' || p.categoria_nome === categoriaAtiva) && p.nome.toLowerCase().includes(b));
+    const div = document.getElementById('produtos');
+    if (f.length === 0) return div.innerHTML = '<div style="text-align:center; color:#999; padding:30px;">Nenhum produto.</div>';
+    div.innerHTML = f.map(p => `<div class="produto-card" onclick="abrirDetalheProduto(${p.id})"><div class="produto-info"><h3>${p.nome}</h3><div class="produto-desc">${p.descricao || ''}</div><div class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2)}</div></div>${p.imagem_url ? `<img src="${p.imagem_url}" class="produto-imagem">` : `<div class="produto-imagem-placeholder">🍽️</div>`}</div>`).join('');
+}
+
+window.abrirDetalheProduto = async function(id) {
+    produtoDetalheAtual = produtos.find(p => p.id == id); quantidadeDetalhe = 1; complementosSelecionados = {}; 
+    document.getElementById('detalheNome').textContent = produtoDetalheAtual.nome; document.getElementById('detalheDescricao').textContent = produtoDetalheAtual.descricao || ''; document.getElementById('detalhePrecoBase').textContent = parseFloat(produtoDetalheAtual.preco).toFixed(2); document.getElementById('detalheQuantidade').textContent = quantidadeDetalhe; document.getElementById('detalheObservacao').value = '';
+    const imgCont = document.getElementById('detalheImagemContainer'); if(produtoDetalheAtual.imagem_url) { document.getElementById('detalheImagem').src = produtoDetalheAtual.imagem_url; imgCont.style.display = 'block'; } else { imgCont.style.display = 'none'; }
+    document.getElementById('detalheComplementos').innerHTML = '<div class="loading">Buscando opções...</div>'; document.getElementById('produtoDetalheModal').style.display = 'block'; document.body.style.overflow = 'hidden';
+    try { const res = await fetch(`${API_URL}/complementos/produto/${id}`); renderizarGruposComplementos(res.ok ? await res.json() : []); } catch (e) { document.getElementById('detalheComplementos').innerHTML = ''; atualizarTotalDetalhe(); }
+}
+window.fecharDetalheProduto = function() { document.getElementById('produtoDetalheModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+
+async function renderizarGruposComplementos(gruposVinculados) {
+    const c = document.getElementById('detalheComplementos'); if(!Array.isArray(gruposVinculados) || gruposVinculados.length === 0) { c.innerHTML = ''; atualizarTotalDetalhe(); return; }
+    let html = '';
+    for (let v of gruposVinculados) {
+        const g = gruposComplementosGlobal.find(x => x.id == v.id); if(!g) continue;
+        complementosSelecionados[g.id] = []; let itens = [];
+        try { const r = await fetch(`${API_URL}/grupo-complementos/${g.id}/itens`); if(r.ok) itens = await r.json(); } catch(e){}
+        if(itens.length === 0) continue;
+        let rTxt = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'; let rCls = g.obrigatorio ? 'badge-obrig' : 'badge-opc'; let lTxt = g.limite_selecao > 1 ? `Escolha até ${g.limite_selecao} opções` : `Escolha 1 opção`;
+        html += `<div class="grupo-comp" id="grupo_${g.id}"><div class="grupo-comp-header"><div><div class="grupo-comp-titulo">${g.nome}</div><div class="grupo-comp-desc">${lTxt}</div></div><span class="${rCls}" id="badge_${g.id}">${rTxt}</span></div>`;
+        itens.forEach(i => {
+            if(i.disponivel===false) return;
+            let pf = parseFloat(i.preco)>0 ? `+ R$ ${parseFloat(i.preco).toFixed(2)}` : ''; let rad = g.limite_selecao===1?'radio-mark':'';
+            html += `<label class="item-comp checkbox-container"><div class="item-comp-info"><div class="item-comp-nome">${i.nome}</div><div class="item-comp-preco">${pf}</div></div><input type="checkbox" class="cb-item" data-grupo="${g.id}" data-item-id="${i.id}" data-item-nome="${i.nome}" data-item-preco="${i.preco}" onchange="toggleComplemento(${g.id}, this)"><span class="checkmark ${rad}"></span></label>`;
+        }); html += `</div>`;
+    } c.innerHTML = html; atualizarTotalDetalhe();
+}
+
+window.toggleComplemento = function(gId, cb) {
+    const gInfo = gruposComplementosGlobal.find(g => g.id == gId); let sel = complementosSelecionados[gId];
+    if (cb.checked) {
+        if(sel.length >= gInfo.limite_selecao) { if(gInfo.limite_selecao===1) { let idVelho = sel[0].id; document.querySelector(`input[data-item-id="${idVelho}"][data-grupo="${gId}"]`).checked = false; sel=[]; } else { cb.checked = false; alert(`Limite de ${gInfo.limite_selecao}`); return; } }
+        sel.push({ id: cb.getAttribute('data-item-id'), nome: cb.getAttribute('data-item-nome'), preco: parseFloat(cb.getAttribute('data-item-preco')) });
+    } else { sel = sel.filter(i => i.id !== cb.getAttribute('data-item-id')); }
+    complementosSelecionados[gId] = sel;
+    if (gInfo.obrigatorio) { const bdg = document.getElementById(`badge_${gId}`); if(sel.length>0){ bdg.className='badge-opc'; bdg.textContent='OK'; bdg.style.background='#4CAF50';}else{bdg.className='badge-obrig'; bdg.textContent='OBRIGATÓRIO'; bdg.style.background='#333';} }
+    atualizarTotalDetalhe();
+}
+window.alterarQuantidadeDetalhe = function(d) { quantidadeDetalhe+=d; if(quantidadeDetalhe<1) quantidadeDetalhe=1; document.getElementById('detalheQuantidade').textContent=quantidadeDetalhe; atualizarTotalDetalhe(); }
+function atualizarTotalDetalhe() {
+    let sub = parseFloat(produtoDetalheAtual.preco); for(let g in complementosSelecionados) complementosSelecionados[g].forEach(i => sub += i.preco);
+    document.getElementById('detalhePrecoTotal').textContent = (sub*quantidadeDetalhe).toFixed(2);
+    let tudoCerto = true; for(let g in complementosSelecionados) { let gI = gruposComplementosGlobal.find(x=>x.id==g); if(gI && gI.obrigatorio && complementosSelecionados[g].length===0) tudoCerto=false; }
+    const btn = document.querySelector('.btn-adicionar-final'); btn.disabled = !tudoCerto; btn.style.opacity = tudoCerto ? '1' : '0.5';
+}
+
+window.adicionarProdutoPersonalizadoAoCarrinho = function() {
+    let lComps = []; let pComps = 0; for (let g in complementosSelecionados) complementosSelecionados[g].forEach(i => { lComps.push({nome:i.nome, preco:i.preco}); pComps+=i.preco; });
+    const obs = document.getElementById('detalheObservacao').value.trim(); const pUnit = parseFloat(produtoDetalheAtual.preco) + pComps;
+    const idx = carrinho.findIndex(i => i.idProduto === produtoDetalheAtual.id && i.observacao === obs && JSON.stringify(i.complementos) === JSON.stringify(lComps));
+    if (idx !== -1) { carrinho[idx].quantidade += quantidadeDetalhe; carrinho[idx].precoTotalLinha = carrinho[idx].quantidade * carrinho[idx].precoUnitario; } 
+    else { carrinho.push({ idProduto: produtoDetalheAtual.id, nome: produtoDetalheAtual.nome, quantidade: quantidadeDetalhe, precoUnitario: pUnit, precoTotalLinha: pUnit*quantidadeDetalhe, complementos: lComps, observacao: obs }); }
+    fecharDetalheProduto(); atualizarRodapeCarrinho(); alert('✅ Adicionado ao carrinho!');
+}
+
+function atualizarRodapeCarrinho() {
+    const rodape = document.getElementById('rodapeCarrinho');
+    if (carrinho.length > 0) {
+        document.getElementById('rodapeQtd').textContent = carrinho.reduce((s,i)=>s+i.quantidade,0);
+        document.getElementById('rodapeTotal').textContent = carrinho.reduce((s,i)=>s+i.precoTotalLinha,0).toFixed(2);
+        document.getElementById('cartCount').textContent = carrinho.reduce((s,i)=>s+i.quantidade,0);
+        rodape.style.display = 'flex';
+    } else { rodape.style.display = 'none'; document.getElementById('cartCount').textContent = '0'; fecharCarrinho(); }
+}
+
+window.abrirCarrinho = function() {
+    if(carrinho.length === 0) return alert('Carrinho vazio!');
+    document.getElementById('cartItems').innerHTML = carrinho.map((i, idx) => `<div class="cart-item"><div class="cart-item-info"><h4>${i.quantidade}x ${i.nome}</h4>${i.complementos.map(c=>`+ ${c.nome}`).join('<br>')}${i.observacao?`<br><em style="color:#C83232">Obs: ${i.observacao}</em>`:''}<div class="cart-item-price">R$ ${i.precoTotalLinha.toFixed(2)}</div></div><button class="cart-item-remove" onclick="removerDoCarrinho(${idx})">Remover</button></div>`).join('');
+    
+    // Força checagem da aba de Delivery ativa para rodar os avisos de horário
+    toggleDelivery(document.getElementById('deliveryOption').checked);
+    document.getElementById('cartModal').style.display = 'block'; document.body.style.overflow = 'hidden';
+}
+
+window.toggleDelivery = function(isDelivery) {
+    document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
+    document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
+    
+    let msgBox = document.getElementById('statusLojaMensagem');
+    let agenBox = document.getElementById('agendamentoContainer');
+    let select = document.getElementById('agendamentoSelect');
+    let btn = document.querySelector('.whatsapp-btn');
+    
+    msgBox.style.display = 'none'; agenBox.style.display = 'none'; select.innerHTML = '';
+    btn.disabled = false; btn.style.background = '#25D366'; btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
+
+    // REGRA DE OURO DOS HORÁRIOS:
+    if (!lojaAbertaStatus) {
+        msgBox.innerHTML = "Nossa loja está fechada no momento, mas você pode fazer o seu pedido agora e retirar colocando o próximo horário de funcionamento da loja ou agendar a sua entrega a partir do próximo dia e horário de delivery.";
+        msgBox.style.display = 'block'; msgBox.style.background = '#fff3e0'; msgBox.style.color = '#e65100'; msgBox.style.borderLeft = '4px solid #ff9800';
+        
+        let ops = isDelivery ? opcoesDelivery : opcoesLoja;
+        if (ops.length > 0) {
+            select.innerHTML = ops.map(o => `<option value="${o}">${o}</option>`).join('');
+            agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Pedido';
+        } else {
+            btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Loja Indisponível';
+        }
+    } else if (isDelivery && !deliveryAbertoStatus) {
+        msgBox.innerHTML = "Estamos sem delivery no momento, você pode optar por retirar na loja agora ou agendar a sua entrega para um próximo horário disponível.";
+        msgBox.style.display = 'block'; msgBox.style.background = '#e3f2fd'; msgBox.style.color = '#0d47a1'; msgBox.style.borderLeft = '4px solid #2196F3';
+        
+        if (opcoesDelivery.length > 0) {
+            select.innerHTML = opcoesDelivery.map(o => `<option value="${o}">${o}</option>`).join('');
+            agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Entrega';
+        } else {
+            btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Delivery Indisponível';
+        }
+    }
+
+    if(isDelivery) { 
+        document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP para verificação de distância.'; 
+        document.getElementById('freteInfo').className = 'frete-info'; taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
+    } else { 
+        taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
+    }
+    calcularSubtotalGeral();
+}
+
+window.fecharCarrinho = function() { document.getElementById('cartModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+window.removerDoCarrinho = function(idx) { carrinho.splice(idx, 1); atualizarRodapeCarrinho(); if(carrinho.length>0) abrirCarrinho(); }
+function calcularSubtotalGeral() {
+    const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0); document.getElementById('cartSubtotal').textContent = sub.toFixed(2);
+    document.getElementById('cartTotalFinal').textContent = (sub + (document.getElementById('deliveryOption').checked ? taxaFrete : 0)).toFixed(2);
+}
+
+window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
     
+    let strAgendamento = "";
+    if (document.getElementById('agendamentoContainer').style.display === 'block') {
+        strAgendamento = document.getElementById('agendamentoSelect').value;
+        if (!strAgendamento) return alert("Selecione um horário válido para o agendamento.");
+    }
+    
     if(tipo === 'delivery') {
-        nome = document.getElementById('clienteNome').value.trim();
-        tel = document.getElementById('clienteTelefone').value.trim();
-        if(!nome || !tel || !document.getElementById('clienteEndereco').value || !document.getElementById('clienteNumero').value) {
-            return alert('Por favor, preencha todos os dados de entrega obrigatórios!');
-        }
-        if(!dentroAreaEntrega) return alert('Desculpe, este endereço está fora da área de cobertura ou o CEP não foi validado.');
+        nome = document.getElementById('clienteNome').value.trim(); tel = document.getElementById('clienteTelefone').value.trim();
+        if(!nome || !tel || !document.getElementById('clienteEndereco').value || !document.getElementById('clienteNumero').value) return alert('Preencha todos os dados de entrega!');
+        if(!dentroAreaEntrega) return alert('Desculpe, este endereço está fora da área de entrega baseada em KM.');
     } else {
-        nome = document.getElementById('pickupNome').value.trim();
-        tel = document.getElementById('pickupTelefone').value.trim();
-        if(!nome || !tel) return alert('Por favor, preencha o seu nome e WhatsApp!');
+        nome = document.getElementById('pickupNome').value.trim(); tel = document.getElementById('pickupTelefone').value.trim();
+        if(!nome || !tel) return alert('Preencha seu nome e WhatsApp!');
     }
 
-    const btn = document.querySelector('.whatsapp-btn');
-    btn.innerHTML = '⏳ Processando...'; btn.disabled = true;
-
-    const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
-    const totalFinal = sub + (tipo === 'delivery' ? taxaFrete : 0);
+    const btn = document.querySelector('.whatsapp-btn'); btn.innerHTML = '⏳ Processando...'; btn.disabled = true;
+    const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0); const totalFinal = sub + (tipo === 'delivery' ? taxaFrete : 0);
 
     let dadosPedido = {
-        cliente_nome: nome, cliente_telefone: tel, tipo_entrega: tipo, taxa_entrega: tipo === 'delivery' ? taxaFrete : 0, subtotal: sub, total: totalFinal, observacoes: '',
-        itens: carrinho.map(item => {
-            let nomeProdutoAdmin = item.nome;
-            if (item.complementos && item.complementos.length > 0) nomeProdutoAdmin += ' (+ ' + item.complementos.map(c => c.nome).join(', ') + ')';
-            if (item.observacao) nomeProdutoAdmin += ` [Obs: ${item.observacao}]`;
-            return { produto_id: item.idProduto, produto_nome: nomeProdutoAdmin, quantidade: item.quantidade, preco_unitario: item.precoUnitario, subtotal: item.precoTotalLinha };
+        cliente_nome: nome, cliente_telefone: tel, tipo_entrega: tipo, taxa_entrega: tipo === 'delivery' ? taxaFrete : 0, subtotal: sub, total: totalFinal, 
+        observacoes: strAgendamento ? `AGENDADO: ${strAgendamento}` : '',
+        itens: carrinho.map(i => {
+            let n = i.nome; if(i.complementos.length>0) n += ' (+ ' + i.complementos.map(c=>c.nome).join(', ') + ')';
+            if(i.observacao) n += ` [Obs: ${i.observacao}]`;
+            return { produto_id: i.idProduto, produto_nome: n, quantidade: i.quantidade, preco_unitario: i.precoUnitario, subtotal: i.precoTotalLinha };
         })
     };
 
     if (tipo === 'delivery') {
         const comp = document.getElementById('clienteComplemento').value;
         dadosPedido.cliente_endereco = `${document.getElementById('clienteEndereco').value}, ${document.getElementById('clienteNumero').value}${comp ? ' - ' + comp : ''}`;
-        dadosPedido.cliente_bairro = document.getElementById('clienteBairro').value;
-        dadosPedido.cliente_cep = document.getElementById('cepInput').value;
+        dadosPedido.cliente_bairro = document.getElementById('clienteBairro').value; dadosPedido.cliente_cep = document.getElementById('cepInput').value;
     }
 
     let idPedidoReal = '';
     try {
         const res = await fetch(`${API_URL}/pedidos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subdominio: SUBDOMINIO, pedido: dadosPedido }) });
-        const dbData = await res.json();
-        if(dbData && dbData.id) idPedidoReal = ` #${dbData.id}`; 
+        const dbData = await res.json(); if(dbData && dbData.id) idPedidoReal = ` #${dbData.id}`; 
     } catch(e) {}
 
     let msg = `🍽️ *NOVO PEDIDO${idPedidoReal}*\n━━━━━━━━━━━━━━━━\n`;
-    msg += `👤 *Cliente:* ${nome}\n📱 *Tel:* ${tel}\n\n🛍️ *RESUMO DO PEDIDO:*\n\n`;
-
-    carrinho.forEach(item => {
-        msg += `*${item.quantidade}x ${item.nome}* (R$ ${item.precoTotalLinha.toFixed(2)})\n`;
-        item.complementos.forEach(c => { msg += `  ▫️ ${c.nome}${parseFloat(c.preco) > 0 ? ` (+R$ ${parseFloat(c.preco).toFixed(2)})` : ''}\n`; });
-        if (item.observacao) msg += `  💬 *Obs:* ${item.observacao}\n`;
-        msg += `\n`;
+    if(strAgendamento) msg += `⏰ *AGENDADO PARA:* ${strAgendamento}\n━━━━━━━━━━━━━━━━\n`;
+    msg += `👤 *Cliente:* ${nome}\n📱 *Tel:* ${tel}\n\n🛍️ *RESUMO:*\n\n`;
+    carrinho.forEach(i => {
+        msg += `*${i.quantidade}x ${i.nome}* (R$ ${i.precoTotalLinha.toFixed(2)})\n`;
+        i.complementos.forEach(c => { msg += `  ▫️ ${c.nome}${parseFloat(c.preco)>0 ? ` (+R$ ${parseFloat(c.preco).toFixed(2)})`:''}\n`; });
+        if(i.observacao) msg += `  💬 *Obs:* ${i.observacao}\n`; msg += `\n`;
     });
 
     msg += `━━━━━━━━━━━━━━━━\n💵 Subtotal: R$ ${sub.toFixed(2)}\n`;
-    
-    if(tipo === 'delivery') {
-        msg += `🚚 Frete: ${taxaFrete > 0 ? 'R$ '+taxaFrete.toFixed(2) : '*GRÁTIS*'}\n📍 *ENTREGA EM:*\n${dadosPedido.cliente_endereco}\n${dadosPedido.cliente_bairro} - CEP: ${dadosPedido.cliente_cep}\n`;
-    } else { msg += `🏠 *RETIRADA NO BALCÃO*\n`; }
-    
+    if(tipo === 'delivery') { msg += `🚚 Frete: ${taxaFrete > 0 ? 'R$ '+taxaFrete.toFixed(2) : '*GRÁTIS*'}\n📍 *ENTREGA EM:*\n${dadosPedido.cliente_endereco}\n${dadosPedido.cliente_bairro} - CEP: ${dadosPedido.cliente_cep}\n`; } 
+    else { msg += `🏠 *RETIRADA NA LOJA*\n`; }
     msg += `\n💰 *TOTAL A PAGAR: R$ ${totalFinal.toFixed(2)}*`;
 
-    carrinho = []; atualizarRodapeCarrinho();
-    btn.innerHTML = '📲 Enviar Pedido via WhatsApp'; btn.disabled = false;
-
-    let numeroWa = configuracoesLoja.whatsapp || '5551999999999';
-    numeroWa = numeroWa.replace(/\D/g, '');
-    if(!numeroWa.startsWith('55')) numeroWa = '55' + numeroWa;
-
-    window.open(`https://wa.me/${numeroWa}?text=${encodeURIComponent(msg)}`, '_blank');
+    carrinho = []; atualizarRodapeCarrinho(); btn.innerHTML = '📲 Enviar Pedido via WhatsApp'; btn.disabled = false;
+    let nw = configuracoesLoja.whatsapp || '5551999999999'; nw = nw.replace(/\D/g, ''); if(!nw.startsWith('55')) nw = '55' + nw;
+    window.open(`https://wa.me/${nw}?text=${encodeURIComponent(msg)}`, '_blank');
 }
