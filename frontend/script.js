@@ -68,14 +68,19 @@ async function carregarConfiguracoes() {
             document.getElementById('logoPlaceholder').style.display = 'none';
         }
 
-        // CORREÇÃO: Mensagem Personalizada Inteligente
-        const isMsgAtiva = configuracoesLoja.mensagem_ativa === true || configuracoesLoja.mensagem_ativa === 'true' || configuracoesLoja.mensagem_ativa == 1;
-        const textoPersonalizado = configuracoesLoja.mensagem_texto || configuracoesLoja.mensagem_personalizada;
+        // MÁGICA DA MENSAGEM: Lê qualquer variação que o banco envie
+        const msgDiv = document.getElementById('mensagemPersonalizada');
+        const textoMsg = configuracoesLoja.mensagem_personalizada || configuracoesLoja.mensagem_texto || configuracoesLoja.mensagem || '';
         
-        if (isMsgAtiva && textoPersonalizado && textoPersonalizado.trim() !== '') {
-            const msgDiv = document.getElementById('mensagemPersonalizada');
-            msgDiv.innerHTML = textoPersonalizado;
+        // Verifica ativação forçando conversão para texto
+        const statusAtivo = String(configuracoesLoja.mensagem_ativa).toLowerCase();
+        const msgAtiva = (statusAtivo === 'true' || statusAtivo === '1' || statusAtivo === 'sim');
+
+        if (msgAtiva && textoMsg.trim() !== '') {
+            msgDiv.innerHTML = textoMsg;
             msgDiv.style.display = 'block';
+        } else {
+            msgDiv.style.display = 'none';
         }
 
     } catch (e) { console.log('Erro configs', e); }
@@ -483,50 +488,73 @@ window.calcularFretePorCEP = async function() {
             return;
         }
 
-        // --- CORREÇÃO: Lógica Blindada de Bloqueio ---
+        // --- BLINDAGEM TOTAL DE ÁREA DE ENTREGA ---
         let bloqueado = false;
         let motivoBloqueio = '';
+        taxaFrete = 0;
 
-        // 1. Bloqueia se a cidade for diferente da configurada
-        if (configuracoesLoja.cidade && configuracoesLoja.cidade.trim() !== '') {
-            const cidadeConfig = configuracoesLoja.cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            const cidadeCep = dados.localidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            
-            if (cidadeCep !== cidadeConfig) {
-                bloqueado = true;
-                motivoBloqueio = `Atendemos apenas a cidade de ${configuracoesLoja.cidade}.`;
+        // Função interna para limpar acentos e espaços, evitando erros de digitação (ex: "São Paulo" vira "saopaulo")
+        const normalizar = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
+        const cidadeCep = normalizar(dados.localidade);
+        const bairroCep = normalizar(dados.bairro);
+        const cidadeConfig = normalizar(configuracoesLoja.cidade);
+
+        // 1. Trava de Cidade (Se a loja preencheu uma cidade nas configurações)
+        if (cidadeConfig && cidadeConfig !== '' && cidadeCep !== cidadeConfig) {
+            bloqueado = true;
+            motivoBloqueio = `Atendemos apenas a cidade de ${configuracoesLoja.cidade}.`;
+        }
+
+        // 2. Trava de Bairro (Se a loja preencheu bairros)
+        if (!bloqueado) {
+            let temRegraBairro = false;
+            let taxaEncontrada = null;
+            let bairroAtendido = false;
+
+            // A) Tenta ler se o Admin salvou como lista complexa [{nome: 'Centro', taxa: 5}]
+            let bairrosLista = [];
+            if (typeof configuracoesLoja.bairros_entrega === 'string' && configuracoesLoja.bairros_entrega.startsWith('[')) {
+                try { bairrosLista = JSON.parse(configuracoesLoja.bairros_entrega); } catch(e) {}
+            } else if (Array.isArray(configuracoesLoja.bairros_entrega)) {
+                bairrosLista = configuracoesLoja.bairros_entrega;
             }
-        }
 
-        // 2. Bloqueia se os bairros de entrega estiverem definidos e este não estiver na lista
-        let bairrosLista = [];
-        if (typeof configuracoesLoja.bairros_entrega === 'string') {
-            try { bairrosLista = JSON.parse(configuracoesLoja.bairros_entrega); } catch(e) {}
-        } else if (Array.isArray(configuracoesLoja.bairros_entrega)) {
-            bairrosLista = configuracoesLoja.bairros_entrega;
-        }
+            if (bairrosLista && bairrosLista.length > 0) {
+                temRegraBairro = true;
+                const bairroMatch = bairrosLista.find(b => normalizar(b.nome || b) === bairroCep);
+                if (bairroMatch) {
+                    bairroAtendido = true;
+                    taxaEncontrada = parseFloat(bairroMatch.taxa || configuracoesLoja.taxa_minima) || 0;
+                }
+            } 
+            // B) Tenta ler se o Admin salvou apenas como texto separado por vírgula ("Centro, Botafogo, Copacabana")
+            else if (typeof configuracoesLoja.bairros_entrega === 'string' && configuracoesLoja.bairros_entrega.trim().length > 0) {
+                temRegraBairro = true;
+                const listaTextual = configuracoesLoja.bairros_entrega.split(',').map(normalizar);
+                if (listaTextual.includes(bairroCep)) {
+                    bairroAtendido = true;
+                    taxaEncontrada = parseFloat(configuracoesLoja.taxa_minima) || 0;
+                }
+            }
 
-        if (!bloqueado && bairrosLista && bairrosLista.length > 0) {
-            const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            const bairroCep = normalize(dados.bairro);
-            
-            const bairroAtendido = bairrosLista.find(b => normalize(b.nome) === bairroCep);
-            
-            if (!bairroAtendido) {
-                bloqueado = true;
-                motivoBloqueio = `Desculpe, ainda não entregamos no bairro ${dados.bairro}.`;
+            // Verifica o resultado da leitura de bairros
+            if (temRegraBairro) {
+                if (!bairroAtendido) {
+                    bloqueado = true;
+                    motivoBloqueio = `Ainda não entregamos no bairro ${dados.bairro}.`;
+                } else {
+                    taxaFrete = taxaEncontrada;
+                }
             } else {
-                taxaFrete = parseFloat(bairroAtendido.taxa) || 0;
+                // Se o lojista deixou o campo de bairros VAZIO, cobra a taxa geral para a cidade toda
+                taxaFrete = parseFloat(configuracoesLoja.taxa_minima) || 0;
             }
-        } else if (!bloqueado) {
-            // Se não há lista de bairros restrita, pega a taxa genérica
-            taxaFrete = parseFloat(configuracoesLoja.taxa_minima) || 5.00;
         }
 
-        // Executa o bloqueio na interface
+        // Executa o Bloqueio Final na Tela
         if (bloqueado) {
             document.getElementById('cepInfo').innerHTML = `❌ ${motivoBloqueio}`;
-            document.getElementById('freteInfo').innerHTML = '⚠️ Fora da área de entrega';
+            document.getElementById('freteInfo').innerHTML = '⚠️ Fora da área de cobertura';
             document.getElementById('freteInfo').className = 'frete-info erro';
             dentroAreaEntrega = false;
             taxaFrete = 0;
@@ -534,22 +562,24 @@ window.calcularFretePorCEP = async function() {
             return;
         }
         
-        // Se passou em tudo, o CEP é válido!
+        // Se o código chegou aqui, o CEP foi APROVADO! 🎉
         document.getElementById('clienteEndereco').value = dados.logradouro || '';
         document.getElementById('clienteBairro').value = dados.bairro || '';
         document.getElementById('cepInfo').innerHTML = '✅ CEP Encontrado';
         dentroAreaEntrega = true;
         
+        // Cálculo do Frete Grátis
         const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
-        const freteGratisAtivo = configuracoesLoja.frete_gratis_ativo !== false;
-        const freteGratisAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 50.00;
+        // Garante que entende "1", "true" ou true
+        const isFreteGratisAtivo = configuracoesLoja.frete_gratis_ativo == 1 || configuracoesLoja.frete_gratis_ativo === 'true' || configuracoesLoja.frete_gratis_ativo === true;
+        const freteGratisAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 0;
 
-        if (freteGratisAtivo && sub >= freteGratisAcima) {
+        if (isFreteGratisAtivo && freteGratisAcima > 0 && sub >= freteGratisAcima) {
             taxaFrete = 0; 
             document.getElementById('freteInfo').innerHTML = '🎉 Parabéns! Entrega Grátis!';
             document.getElementById('freteInfo').className = 'frete-info';
         } else {
-            document.getElementById('freteInfo').innerHTML = `🚚 Taxa de Entrega: R$ ${taxaFrete.toFixed(2)}`;
+            document.getElementById('freteInfo').innerHTML = taxaFrete > 0 ? `🚚 Taxa de Entrega: R$ ${taxaFrete.toFixed(2)}` : `🚚 Entrega Grátis!`;
             document.getElementById('freteInfo').className = 'frete-info';
         }
         
