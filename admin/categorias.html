@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorias - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="admin-header">
+        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
+        <div class="user-info">
+            <span>👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html" class="active">📁 Categorias</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="config.html">⚙️ Configurações</a></li>
+            </ul>
+        </div>
+        
+        <div class="admin-content">
+            <h1>📁 Gerenciar Categorias</h1>
+            
+            <button class="btn-add" onclick="abrirModalCategoria()">+ Nova Categoria</button>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Ordem</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoriasTable">
+                        <tr><td colspan="3">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Categoria -->
+    <div id="categoriaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModalCategoria()">&times;</span>
+            <h2 id="modalTituloCategoria">Nova Categoria</h2>
+            
+            <form onsubmit="event.preventDefault(); salvarCategoria();">
+                <div class="form-group">
+                    <label>Nome da Categoria</label>
+                    <input type="text" id="categoriaNome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ordem (1, 2, 3...)</label>
+                    <input type="number" id="categoriaOrdem" value="0">
+                </div>
+                
+                <button type="submit" class="btn-save">Salvar Categoria</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
