@@ -6,311 +6,74 @@
     <title>Configurações - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Poppins', 'Segoe UI', sans-serif;
-            background-color: #f5f5f5;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', 'Segoe UI', sans-serif; background-color: #f5f5f5; }
 
         /* HEADER */
-        .admin-header {
-            background: linear-gradient(135deg, #C83232, #A02828);
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .admin-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .logout {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .logout:hover {
-            background: rgba(255,255,255,0.3);
-        }
+        .admin-header { background: linear-gradient(135deg, #C83232, #A02828); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .admin-header h1 { font-size: 24px; font-weight: 600; }
+        .user-info { display: flex; align-items: center; gap: 20px; }
+        .logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .logout:hover { background: rgba(255,255,255,0.3); }
 
         /* CONTAINER */
-        .admin-container {
-            display: flex;
-            min-height: calc(100vh - 70px);
-        }
+        .admin-container { display: flex; min-height: calc(100vh - 70px); }
 
         /* SIDEBAR */
-        .admin-sidebar {
-            width: 250px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-            padding: 20px 0;
-        }
-
-        .admin-sidebar ul {
-            list-style: none;
-        }
-
-        .admin-sidebar li {
-            margin-bottom: 5px;
-        }
-
-        .admin-sidebar a {
-            display: block;
-            padding: 12px 20px;
-            color: #333;
-            text-decoration: none;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-        }
-
-        .admin-sidebar a:hover {
-            background: #f8f8f8;
-            border-left-color: #C83232;
-            color: #C83232;
-        }
-
-        .admin-sidebar a.active {
-            background: #f0f0f0;
-            border-left-color: #C83232;
-            color: #C83232;
-            font-weight: 500;
-        }
+        .admin-sidebar { width: 250px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px 0; }
+        .admin-sidebar ul { list-style: none; }
+        .admin-sidebar li { margin-bottom: 5px; }
+        .admin-sidebar a { display: block; padding: 12px 20px; color: #333; text-decoration: none; transition: all 0.3s; border-left: 3px solid transparent; }
+        .admin-sidebar a:hover { background: #f8f8f8; border-left-color: #C83232; color: #C83232; }
+        .admin-sidebar a.active { background: #f0f0f0; border-left-color: #C83232; color: #C83232; font-weight: 500; }
 
         /* CONTEÚDO */
-        .admin-content {
-            flex: 1;
-            padding: 30px;
-            background: #f9f9f9;
-        }
-
-        .admin-content h1 {
-            font-size: 28px;
-            color: #333;
-            margin-bottom: 30px;
-        }
+        .admin-content { flex: 1; padding: 30px; background: #f9f9f9; }
+        .admin-content h1 { font-size: 28px; color: #333; margin-bottom: 30px; }
 
         /* SEÇÕES DE CONFIGURAÇÃO */
-        .config-section {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .config-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #C83232;
-        }
-
-        .form-group small {
-            display: block;
-            color: #666;
-            font-size: 12px;
-            margin-top: 5px;
-        }
+        .config-section { background: white; border-radius: 10px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .config-section h2 { color: #333; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #C83232; }
+        .form-group small { display: block; color: #666; font-size: 12px; margin-top: 5px; }
 
         /* BOTÕES */
-        .btn-save {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: background 0.3s;
-        }
-
-        .btn-save:hover {
-            background: #388E3C;
-        }
+        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
+        .btn-save:hover { background: #388E3C; }
 
         /* UPLOAD DE LOGO */
-        .upload-area {
-            border: 2px dashed #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #fafafa;
-            margin-bottom: 15px;
-        }
-
-        .upload-area:hover {
-            border-color: #C83232;
-            background: #fff5f5;
-        }
-
-        .upload-area input {
-            display: none;
-        }
-
-        .upload-area span {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .logo-preview-container {
-            text-align: center;
-            margin: 15px 0;
-        }
-
-        .logo-preview {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #ddd;
-            padding: 3px;
-            background: white;
-            display: none;
-            margin: 0 auto;
-        }
-
-        .logo-preview.ativo {
-            display: block;
-        }
+        .upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #fafafa; margin-bottom: 15px; }
+        .upload-area:hover { border-color: #C83232; background: #fff5f5; }
+        .upload-area input { display: none; }
+        .upload-area span { font-size: 14px; color: #666; }
+        .logo-preview-container { text-align: center; margin: 15px 0; }
+        .logo-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #ddd; padding: 3px; background: white; display: none; margin: 0 auto; }
+        .logo-preview.ativo { display: block; }
 
         /* MENSAGENS */
-        .success-message {
-            background: #4CAF50;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .error-message {
-            background: #f44336;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .warning-message {
-            background: #ff9800;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
+        .success-message { background: #4CAF50; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
+        .error-message { background: #f44336; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
+        .warning-message { background: #ff9800; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
 
         /* CHECKBOX */
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 15px 0;
-        }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
+        .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; margin-right: 5px; accent-color: #C83232; cursor: pointer; }
 
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-            margin-right: 5px;
-        }
-
-        /* GRIDS */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        /* LOADING */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #C83232;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* INFO BOX */
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196F3;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 13px;
-            border-radius: 4px;
-        }
+        /* GRIDS & OUTROS */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #C83232; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin: 10px 0; font-size: 13px; border-radius: 4px; }
+        
+        /* HORÁRIOS ESTILOS */
+        .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .horario-row:last-child { border-bottom: none; }
+        .dia-nome { width: 120px; font-weight: 600; color: #333; text-transform: capitalize; }
+        .horario-inputs { display: flex; gap: 10px; align-items: center; }
     </style>
 </head>
 <body>
@@ -355,8 +118,17 @@
         const SUBDOMINIO = 'dlcrepes';
         
         let configuracoes = {};
+        
+        const diasSemana = [
+            { id: 'domingo', nome: 'Domingo' },
+            { id: 'segunda', nome: 'Segunda-feira' },
+            { id: 'terca', nome: 'Terça-feira' },
+            { id: 'quarta', nome: 'Quarta-feira' },
+            { id: 'quinta', nome: 'Quinta-feira' },
+            { id: 'sexta', nome: 'Sexta-feira' },
+            { id: 'sabado', nome: 'Sábado' }
+        ];
 
-        // Verificar login
         if (!localStorage.getItem('adminLogado')) {
             window.location.href = 'index.html';
         }
@@ -371,58 +143,49 @@
             const error = document.getElementById('errorMessage');
             const warning = document.getElementById('warningMessage');
             
-            success.style.display = 'none';
-            error.style.display = 'none';
-            warning.style.display = 'none';
+            success.style.display = 'none'; error.style.display = 'none'; warning.style.display = 'none';
             
             if (tipo === 'success') {
-                success.textContent = texto;
-                success.style.display = 'block';
-                setTimeout(() => { success.style.display = 'none'; }, 3000);
+                success.textContent = texto; success.style.display = 'block'; setTimeout(() => { success.style.display = 'none'; }, 3000);
             } else if (tipo === 'error') {
-                error.textContent = texto;
-                error.style.display = 'block';
-                setTimeout(() => { error.style.display = 'none'; }, 3000);
+                error.textContent = texto; error.style.display = 'block'; setTimeout(() => { error.style.display = 'none'; }, 3000);
             } else {
-                warning.textContent = texto;
-                warning.style.display = 'block';
-                setTimeout(() => { warning.style.display = 'none'; }, 3000);
+                warning.textContent = texto; warning.style.display = 'block'; setTimeout(() => { warning.style.display = 'none'; }, 3000);
             }
         }
 
         async function carregarConfiguracoes() {
             try {
-                console.log('🔄 Carregando configurações...');
-                
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 configuracoes = await response.json();
-                console.log('✅ Configurações carregadas:', configuracoes);
-                
                 exibirFormulario();
-                
             } catch (error) {
-                console.error('❌ Erro ao carregar configurações:', error);
                 document.getElementById('configContainer').innerHTML = `
                     <div style="text-align:center; padding:40px; color:red;">
                         ❌ Erro ao carregar configurações: ${error.message}<br>
                         <button onclick="carregarConfiguracoes()" style="margin-top:20px; padding:10px 20px; background:#C83232; color:white; border:none; border-radius:5px; cursor:pointer;">
                             🔄 Tentar novamente
                         </button>
-                    </div>
-                `;
+                    </div>`;
             }
         }
 
         function exibirFormulario() {
+            const freteGratisAtivo = configuracoes.frete_gratis_ativo === true || configuracoes.frete_gratis_ativo === 'true' || configuracoes.frete_gratis_ativo == 1;
+            const bannerAtivo = configuracoes.mensagem_banner_ativo === true || configuracoes.mensagem_banner_ativo === 'true' || configuracoes.mensagem_banner_ativo == 1;
+
+            let htmlBairros = '';
+            if (typeof configuracoes.bairros_entrega === 'string') {
+                htmlBairros = configuracoes.bairros_entrega;
+            } else if (Array.isArray(configuracoes.bairros_entrega)) {
+                htmlBairros = configuracoes.bairros_entrega.map(b => b.nome || b).join(', ');
+            }
+
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
                     
-                    <!-- DADOS DA LOJA -->
                     <div class="config-section">
                         <h2>🏪 Dados da Loja</h2>
                         
@@ -459,70 +222,46 @@
                         
                         <div class="form-group">
                             <label>Endereço Completo</label>
-                            <textarea id="endereco_completo" rows="2" placeholder="Bairro Santa Marta, Santa Maria - RS">${configuracoes.endereco_completo || ''}</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>CEP da Loja</label>
-                            <input type="text" id="cep_loja" value="${configuracoes.cep_loja || '97000000'}" placeholder="00000-000">
+                            <textarea id="endereco_completo" rows="2" placeholder="Ex: Bairro Santa Marta, Santa Maria - RS">${configuracoes.endereco_completo || ''}</textarea>
                         </div>
                         
                         <div class="form-group">
                             <label>Cor Principal</label>
-                            <input type="color" id="cor_principal" value="${configuracoes.cor_principal || '#C83232'}">
+                            <input type="color" id="cor_principal" value="${configuracoes.cor_principal || '#C83232'}" style="height: 40px;">
                         </div>
                     </div>
 
-                    <!-- HORÁRIO DE FUNCIONAMENTO -->
-                    <div class="config-section">
-                        <h2>⏰ Horário de Funcionamento</h2>
-                        <div class="info-box">
-                            ℹ️ Este horário será exibido no cardápio para os clientes.
-                        </div>
-                        <div class="form-group">
-                            <label>Horário de Funcionamento</label>
-                            <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}" placeholder="Ex: Seg a Dom: 18h às 23h">
-                        </div>
-                    </div>
-
-                    <!-- CONFIGURAÇÕES DE ENTREGA -->
                     <div class="config-section">
                         <h2>🚚 Configurações de Entrega</h2>
-                        
-                        <div class="info-box">
-                            ℹ️ Configure as taxas de entrega e distância máxima.
-                        </div>
-                        
+                        <div class="info-box">ℹ️ Configure as taxas de entrega, CEP base e cidades permitidas.</div>
+
                         <div class="grid-2">
                             <div class="form-group">
-                                <label>Taxa por KM (R$)</label>
-                                <input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 2.00}">
+                                <label>Sua Cidade (Para bloqueio de fora)</label>
+                                <input type="text" id="cidade" value="${configuracoes.cidade || ''}" placeholder="Ex: Santa Maria">
                             </div>
-                            
                             <div class="form-group">
-                                <label>Taxa Mínima (R$)</label>
+                                <label>CEP da Loja (Para isentar vizinhos)</label>
+                                <input type="text" id="cep_loja" value="${configuracoes.cep_loja || ''}" placeholder="Ex: 97000-000">
+                            </div>
+                            <div class="form-group">
+                                <label>Taxa de Entrega Padrão (R$)</label>
                                 <input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}">
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
-                            <label>Distância Máxima para Entrega (KM)</label>
-                            <input type="number" id="km_maximo_entrega" step="0.1" min="0" value="${configuracoes.km_maximo_entrega || 30.00}">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Mensagem quando fora da área</label>
-                            <textarea id="mensagem_km_excedido" rows="2">${configuracoes.mensagem_km_excedido || 'Fora da área de entrega. Escolha retirada.'}</textarea>
+                            <label>Bairros Atendidos (Opcional)</label>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">Se quiser restringir a entrega a bairros específicos, digite-os separados por vírgula. Ex: Centro, Camobi. Deixe vazio para atender toda a cidade.</p>
+                            <textarea id="bairros_entrega" rows="2" placeholder="Centro, Camobi">${htmlBairros}</textarea>
                         </div>
                         
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-                            <h3 style="margin-bottom: 15px;">🎁 Frete Grátis</h3>
-                            
+                            <h3 style="margin-bottom: 15px; font-size: 16px;">🎁 Frete Grátis</h3>
                             <div class="checkbox-group">
-                                <input type="checkbox" id="frete_gratis_ativo" ${configuracoes.frete_gratis_ativo !== false ? 'checked' : ''}>
-                                <label>Ativar frete grátis</label>
+                                <input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}>
+                                <label for="frete_gratis_ativo">Ativar frete grátis</label>
                             </div>
-                            
                             <div id="freteGratisValorGroup" class="form-group">
                                 <label>Frete Grátis Acima de R$</label>
                                 <input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}">
@@ -531,22 +270,32 @@
                         </div>
                     </div>
 
-                    <!-- MENSAGEM PERSONALIZADA -->
+                    <div class="config-section">
+                        <h2>⏰ Horários de Funcionamento</h2>
+                        <div class="info-box">ℹ️ Se a loja estiver fechada no horário atual, o cliente verá o cardápio mas não poderá enviar o pedido.</div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label>Texto Resumo do Horário (Aparece no topo da loja)</label>
+                            <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}" placeholder="Ex: Seg a Dom: 18h às 23h">
+                        </div>
+
+                        <h3 style="font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Controle Automático Diário</h3>
+                        <div id="horariosContainer">
+                            </div>
+                    </div>
+
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
-                        
-                        <div class="info-box">
-                            📢 Esta mensagem aparecerá no topo do cardápio.
-                        </div>
+                        <div class="info-box">📢 Esta mensagem aparecerá em destaque no topo do cardápio para os clientes.</div>
                         
                         <div class="checkbox-group">
-                            <input type="checkbox" id="banner_ativo" ${configuracoes.mensagem_banner_ativo ? 'checked' : ''}>
-                            <label>Ativar mensagem no topo do cardápio</label>
+                            <input type="checkbox" id="banner_ativo" ${bannerAtivo ? 'checked' : ''}>
+                            <label for="banner_ativo">Ativar mensagem no topo do cardápio</label>
                         </div>
                         
                         <div class="form-group">
-                            <label>Mensagem</label>
-                            <textarea id="banner_mensagem" rows="2" placeholder="Digite sua mensagem...">${configuracoes.mensagem_banner || ''}</textarea>
+                            <label>Texto da Mensagem</label>
+                            <textarea id="banner_mensagem" rows="2" placeholder="Ex: Devido à chuva, nossas entregas podem atrasar.">${configuracoes.mensagem_banner || configuracoes.mensagem_texto || configuracoes.mensagem_personalizada || ''}</textarea>
                         </div>
                         
                         <div class="grid-2">
@@ -554,12 +303,10 @@
                                 <label>Ícone (emoji)</label>
                                 <input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}" maxlength="2">
                             </div>
-                            
                             <div class="form-group">
                                 <label>Cor de Fundo</label>
                                 <input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}">
                             </div>
-                            
                             <div class="form-group">
                                 <label>Cor do Texto</label>
                                 <input type="color" id="banner_cor_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}">
@@ -568,24 +315,55 @@
                         
                         <div class="mensagem-preview" id="previewMensagem" style="background:${configuracoes.mensagem_banner_cor || '#FFF3E0'}; color:${configuracoes.mensagem_banner_texto || '#E65100'}; padding:15px; border-radius:8px; margin-top:15px; text-align:center;">
                             <span id="previewIcone">${configuracoes.mensagem_banner_icone || '📢'}</span>
-                            <span id="previewTexto">${configuracoes.mensagem_banner || 'Preview da mensagem'}</span>
+                            <span id="previewTexto">${configuracoes.mensagem_banner || configuracoes.mensagem_texto || 'Preview da mensagem'}</span>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-save">💾 Salvar Todas as Configurações</button>
+                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Todas as Configurações</button>
                 </form>
             `;
             
             document.getElementById('configContainer').innerHTML = html;
             
-            // Controle do frete grátis
+            // Ativa funções pós-renderização
+            renderizarGridHorarios(configuracoes.horarios);
+            ativarEventosDinamicos();
+        }
+
+        function renderizarGridHorarios(horariosBanco) {
+            const container = document.getElementById('horariosContainer');
+            let h = {};
+            if (horariosBanco) {
+                h = typeof horariosBanco === 'string' ? JSON.parse(horariosBanco) : horariosBanco;
+            }
+
+            container.innerHTML = diasSemana.map(dia => {
+                const diaAtivo = h[dia.id] ? h[dia.id].ativo : true;
+                const diaAbre = h[dia.id] && h[dia.id].abertura ? h[dia.id].abertura : '18:00';
+                const diaFecha = h[dia.id] && h[dia.id].fechamento ? h[dia.id].fechamento : '23:59';
+
+                return `
+                    <div class="horario-row">
+                        <div class="dia-nome">${dia.nome}</div>
+                        <div class="horario-inputs">
+                            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; margin-right:15px;">
+                                <input type="checkbox" id="ativo_${dia.id}" class="switch-input" ${diaAtivo ? 'checked' : ''}>
+                                <span style="font-weight:500;">Aberto</span>
+                            </label>
+                            <input type="time" id="abre_${dia.id}" value="${diaAbre}" class="form-control" style="width:110px;">
+                            <span style="color:#666;">às</span>
+                            <input type="time" id="fecha_${dia.id}" value="${diaFecha}" class="form-control" style="width:110px;">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function ativarEventosDinamicos() {
+            // Frete grátis
             const freteCheckbox = document.getElementById('frete_gratis_ativo');
             const freteValorGroup = document.getElementById('freteGratisValorGroup');
-            
-            function toggleFreteGratis() {
-                freteValorGroup.style.display = freteCheckbox.checked ? 'block' : 'none';
-            }
-            
+            const toggleFreteGratis = () => { freteValorGroup.style.display = freteCheckbox.checked ? 'block' : 'none'; };
             freteCheckbox.addEventListener('change', toggleFreteGratis);
             toggleFreteGratis();
             
@@ -595,12 +373,12 @@
             const bannerCorFundo = document.getElementById('banner_cor_fundo');
             const bannerCorTexto = document.getElementById('banner_cor_texto');
             
-            function atualizarPreview() {
+            const atualizarPreview = () => {
                 document.getElementById('previewMensagem').style.background = bannerCorFundo.value;
                 document.getElementById('previewMensagem').style.color = bannerCorTexto.value;
                 document.getElementById('previewIcone').textContent = bannerIcone.value || '📢';
                 document.getElementById('previewTexto').textContent = bannerMsg.value || 'Preview';
-            }
+            };
             
             bannerMsg.addEventListener('input', atualizarPreview);
             bannerIcone.addEventListener('input', atualizarPreview);
@@ -612,94 +390,87 @@
         async function uploadLogo(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
-            // Validar tipo
-            if (!file.type.startsWith('image/')) {
-                mostrarMensagem('error', 'Por favor, selecione uma imagem válida');
-                return;
-            }
-            
-            // Validar tamanho (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                mostrarMensagem('error', 'A imagem deve ter no máximo 5MB');
-                return;
-            }
+            if (!file.type.startsWith('image/')) return mostrarMensagem('error', 'Por favor, selecione uma imagem válida');
+            if (file.size > 5 * 1024 * 1024) return mostrarMensagem('error', 'A imagem deve ter no máximo 5MB');
             
             const formData = new FormData();
             formData.append('imagem', file);
             
             try {
-                const response = await fetch(`${API_URL}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
+                const response = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
                 const data = await response.json();
                 
                 if (data.sucesso) {
                     document.getElementById('logo_url').value = data.arquivo.url;
-                    
                     const preview = document.getElementById('logoPreview');
                     preview.src = data.arquivo.url;
                     preview.classList.add('ativo');
-                    
                     mostrarMensagem('success', '✅ Logo enviada com sucesso!');
                 } else {
                     mostrarMensagem('error', '❌ Erro ao enviar logo');
                 }
-            } catch (error) {
-                console.error('Erro no upload:', error);
-                mostrarMensagem('error', '❌ Erro de conexão ao enviar logo');
-            }
+            } catch (error) { mostrarMensagem('error', '❌ Erro de conexão ao enviar logo'); }
         }
 
         // ===== SALVAR CONFIGURAÇÕES =====
-        async function salvarConfiguracoes() {
-            const btn = document.querySelector('.btn-save');
+        window.salvarConfiguracoes = async function() {
+            const btn = document.getElementById('btnSalvarGeral');
             const textoOriginal = btn.textContent;
-            btn.textContent = '💾 Salvando...';
+            btn.textContent = '⏳ Salvando...';
             btn.disabled = true;
             
-            const config = {
+            // Coleta os horários
+            const objHorarios = {};
+            diasSemana.forEach(dia => {
+                objHorarios[dia.id] = {
+                    ativo: document.getElementById(`ativo_${dia.id}`).checked,
+                    abertura: document.getElementById(`abre_${dia.id}`).value,
+                    fechamento: document.getElementById(`fecha_${dia.id}`).value
+                };
+            });
+
+            const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 whatsapp: document.getElementById('whatsapp').value,
                 endereco_completo: document.getElementById('endereco_completo').value,
-                cep_loja: document.getElementById('cep_loja').value,
                 cor_principal: document.getElementById('cor_principal').value,
-                taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 2,
-                taxa_minima: parseFloat(document.getElementById('taxa_minima').value) || 5,
-                km_maximo_entrega: parseFloat(document.getElementById('km_maximo_entrega').value) || 30,
-                mensagem_km_excedido: document.getElementById('mensagem_km_excedido').value,
+                
+                cidade: document.getElementById('cidade').value,
+                cep_loja: document.getElementById('cep_loja').value,
+                taxa_minima: parseFloat(document.getElementById('taxa_minima').value) || 0,
+                bairros_entrega: document.getElementById('bairros_entrega').value,
+                
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
-                frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 50,
+                frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
+                
                 mensagem_banner_ativo: document.getElementById('banner_ativo').checked,
+                mensagem_ativa: document.getElementById('banner_ativo').checked, // Duplicado para garantir compatibilidade
                 mensagem_banner: document.getElementById('banner_mensagem').value,
+                mensagem_texto: document.getElementById('banner_mensagem').value, // Duplicado para garantir compatibilidade
                 mensagem_banner_icone: document.getElementById('banner_icone').value,
                 mensagem_banner_cor: document.getElementById('banner_cor_fundo').value,
-                mensagem_banner_texto: document.getElementById('banner_cor_texto').value
+                mensagem_banner_texto: document.getElementById('banner_cor_texto').value,
+
+                horarios: JSON.stringify(objHorarios) // Salva o controle diário como String segura
             };
 
             try {
-                console.log('💾 Salvando configurações...', config);
-                
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
+                    body: JSON.stringify(configData)
                 });
 
                 if (response.ok) {
                     mostrarMensagem('success', '✅ Configurações salvas com sucesso!');
                 } else {
-                    const erro = await response.json();
-                    mostrarMensagem('error', '❌ Erro ao salvar: ' + (erro.erro || 'Erro desconhecido'));
+                    mostrarMensagem('error', '❌ Erro ao salvar configurações.');
                 }
             } catch (error) {
-                console.error('❌ Erro ao salvar:', error);
-                mostrarMensagem('error', '❌ Erro de conexão: ' + error.message);
+                mostrarMensagem('error', '❌ Erro de conexão.');
             } finally {
                 btn.textContent = textoOriginal;
                 btn.disabled = false;
