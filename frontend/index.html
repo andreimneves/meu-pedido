@@ -14,6 +14,7 @@
                 <span id="logoPlaceholder">🍽️</span>
                 <img id="logoImagem" src="" alt="Logo" style="display: none;">
             </div>
+            
             <div class="header-info">
                 <h1 id="nomeLoja">Carregando...</h1>
                 <div class="slogan" id="slogan"></div>
@@ -22,14 +23,15 @@
                     <span id="endereco">📍 Carregando...</span>
                 </div>
             </div>
+            
             <div class="cart-icon" onclick="abrirCarrinho()">
                 🛒 <span class="cart-count" id="cartCount">0</span>
             </div>
         </div>
 
-        <div id="mensagemPersonalizada" class="mensagem-personalizada" style="display: none;"></div>
+        <div id="mensagemPersonalizada" class="mensagem-personalizada" style="display: none; margin-top: 15px; margin-bottom: 5px;"></div>
 
-        <div class="suporte-whatsapp" id="suporteWhatsapp" onclick="abrirWhatsappSuporte()">
+        <div class="suporte-whatsapp" id="suporteWhatsapp" onclick="abrirWhatsappSuporte()" style="margin-top: 5px;">
             <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
             <span>Dúvidas? Conte com a gente!</span>
         </div>
@@ -38,12 +40,20 @@
             <input type="text" id="searchInput" placeholder="🔍 Buscar no cardápio..." onkeyup="filtrarProdutos()">
         </div>
 
-        <div class="categorias" id="categorias"><button class="categoria-btn ativa">Todos</button></div>
-        <div class="produtos" id="produtos"><div class="loading">Carregando cardápio...</div></div>
+        <div class="categorias" id="categorias">
+            <button class="categoria-btn ativa">Todos</button>
+        </div>
+
+        <div class="produtos" id="produtos">
+            <div class="loading">Carregando cardápio...</div>
+        </div>
 
         <div style="height: 80px;"></div> 
+        
         <div class="rodape-carrinho" id="rodapeCarrinho" onclick="abrirCarrinho()">
-            <div class="rodape-info"><span class="rodape-qtd" id="rodapeQtd">0</span> itens no carrinho</div>
+            <div class="rodape-info">
+                <span class="rodape-qtd" id="rodapeQtd">0</span> itens no carrinho
+            </div>
             <div class="rodape-total">Ver carrinho <span>R$ <span id="rodapeTotal">0,00</span></span></div>
         </div>
     </div>
@@ -54,25 +64,33 @@
                 <h2 id="detalheNome">Nome do Produto</h2>
                 <span class="close-bottom" onclick="fecharDetalheProduto()">&times;</span>
             </div>
+            
             <div class="detalhe-scroll">
                 <div id="detalheImagemContainer" style="display:none; width: 100%; height: 200px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px; overflow: hidden;">
                     <img id="detalheImagem" src="" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <p id="detalheDescricao" style="color: #666; font-size: 14px; margin-bottom: 10px;"></p>
                 <h3 style="color: #C83232; margin-bottom: 20px;">R$ <span id="detalhePrecoBase">0,00</span></h3>
-                <div id="detalheComplementos"></div>
+
+                <div id="detalheComplementos">
+                    <div class="loading">Carregando opções...</div>
+                </div>
+                
                 <div class="form-row" style="margin-top: 20px;">
                     <label>Alguma observação?</label>
-                    <textarea id="detalheObservacao" rows="2" placeholder="Ex: Tirar cebola..."></textarea>
+                    <textarea id="detalheObservacao" rows="2" placeholder="Ex: Tirar cebola, ponto da carne..."></textarea>
                 </div>
             </div>
+
             <div class="detalhe-footer">
                 <div class="quantidade-controle">
                     <button type="button" class="btn-qtd" onclick="alterarQuantidadeDetalhe(-1)">-</button>
                     <span id="detalheQuantidade">1</span>
                     <button type="button" class="btn-qtd" onclick="alterarQuantidadeDetalhe(1)">+</button>
                 </div>
-                <button class="btn-adicionar-final" onclick="adicionarProdutoPersonalizadoAoCarrinho()">Adicionar • R$ <span id="detalhePrecoTotal">0,00</span></button>
+                <button class="btn-adicionar-final" onclick="adicionarProdutoPersonalizadoAoCarrinho()">
+                    Adicionar • R$ <span id="detalhePrecoTotal">0,00</span>
+                </button>
             </div>
         </div>
     </div>
@@ -83,7 +101,10 @@
             <h2>🛒 Seu Pedido</h2>
             
             <div class="cart-items" id="cartItems"></div>
-            <div class="cart-total"><span>Subtotal:</span> <strong>R$ <span id="cartSubtotal">0,00</span></strong></div>
+            
+            <div class="cart-total">
+                <span>Subtotal:</span> <strong>R$ <span id="cartSubtotal">0,00</span></strong>
+            </div>
 
             <div class="form-section">
                 <h3>📋 Como deseja receber?</h3>
@@ -99,13 +120,19 @@
                 </div>
 
                 <div id="agendamentoContainer" style="display:none; background:#fff9c4; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #fff59d;">
-                    <label style="font-weight:bold; color:#f57f17; display:block; margin-bottom:8px;">📅 Selecione um horário para agendamento:</label>
+                    <label style="font-weight:bold; color:#f57f17; display:block; margin-bottom:8px;">📅 Selecione o horário de agendamento:</label>
                     <select id="agendamentoSelect" class="form-control"></select>
                 </div>
 
                 <div id="deliveryFields" style="display: none;">
-                    <div class="form-row"><label>👤 Nome completo *</label><input type="text" id="clienteNome" placeholder="Seu nome"></div>
-                    <div class="form-row"><label>📱 WhatsApp *</label><input type="tel" id="clienteTelefone" placeholder="(DDD) 99999-9999"></div>
+                    <div class="form-row">
+                        <label>👤 Nome completo *</label>
+                        <input type="text" id="clienteNome" placeholder="Seu nome">
+                    </div>
+                    <div class="form-row">
+                        <label>📱 WhatsApp *</label>
+                        <input type="tel" id="clienteTelefone" placeholder="(DDD) 99999-9999">
+                    </div>
                     <div class="form-row">
                         <label>📍 CEP *</label>
                         <div style="display: flex; gap: 10px;">
@@ -115,17 +142,35 @@
                         <div class="cep-info" id="cepInfo"></div>
                     </div>
                     <div class="address-grid">
-                        <div class="form-row" style="grid-column: 1/-1;"><label>🏠 Endereço *</label><input type="text" id="clienteEndereco" readonly style="background:#f0f0f0;"></div>
-                        <div class="form-row"><label>Número *</label><input type="text" id="clienteNumero"></div>
-                        <div class="form-row"><label>Bairro *</label><input type="text" id="clienteBairro" readonly style="background: #f0f0f0;"></div>
+                        <div class="form-row" style="grid-column: 1/-1;">
+                            <label>🏠 Endereço *</label>
+                            <input type="text" id="clienteEndereco" readonly style="background:#f0f0f0;">
+                        </div>
+                        <div class="form-row">
+                            <label>Número *</label>
+                            <input type="text" id="clienteNumero">
+                        </div>
+                        <div class="form-row">
+                            <label>Bairro *</label>
+                            <input type="text" id="clienteBairro" readonly style="background: #f0f0f0;">
+                        </div>
                     </div>
-                    <div class="form-row"><label>📍 Complemento</label><input type="text" id="clienteComplemento"></div>
+                    <div class="form-row">
+                        <label>📍 Complemento</label>
+                        <input type="text" id="clienteComplemento" placeholder="Apto, Bloco...">
+                    </div>
                     <div class="frete-info" id="freteInfo">👆 Informe seu CEP para verificação de distância.</div>
                 </div>
 
                 <div id="pickupFields">
-                    <div class="form-row"><label>👤 Nome completo *</label><input type="text" id="pickupNome" placeholder="Seu nome"></div>
-                    <div class="form-row"><label>📱 WhatsApp *</label><input type="tel" id="pickupTelefone" placeholder="(DDD) 99999-9999"></div>
+                    <div class="form-row">
+                        <label>👤 Nome completo *</label>
+                        <input type="text" id="pickupNome" placeholder="Seu nome">
+                    </div>
+                    <div class="form-row">
+                        <label>📱 WhatsApp *</label>
+                        <input type="tel" id="pickupTelefone" placeholder="(DDD) 99999-9999">
+                    </div>
                 </div>
                 
                 <div class="cart-total" style="margin-top: 15px; font-size: 18px; border-top: 2px solid #ddd; padding-top: 15px;">

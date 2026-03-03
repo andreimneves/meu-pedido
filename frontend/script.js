@@ -1,4 +1,4 @@
-// frontend/script.js - MOTOR DE AGENDAMENTO E RADAR LOGÍSTICO
+// frontend/script.js - MOTOR DE AGENDAMENTO E RADAR LOGÍSTICO (REFINADO)
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
@@ -89,10 +89,10 @@ function gerarOpcoesAgendamento(horariosConf) {
             let [fechaH] = confDia.fechamento.split(':').map(Number);
             
             let startH = abreH;
-            if (i === 0) { // Se for hoje
+            if (i === 0) { 
                 let horaAtual = agora.getHours();
-                if (horaAtual >= fechaH) continue; // Já fechou hoje
-                startH = Math.max(abreH, horaAtual + 1); // Pula para a próxima hora redonda
+                if (horaAtual >= fechaH) continue; 
+                startH = Math.max(abreH, horaAtual + 1); 
             }
 
             for (let h = startH; h < fechaH; h++) {
@@ -109,7 +109,7 @@ function gerarOpcoesAgendamento(horariosConf) {
 // CÁLCULO DE DISTÂNCIA REAL (FÓRMULA HAVERSINE)
 // ==========================================
 function calcularDistanciaGeo(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Raio da Terra em KM
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
@@ -138,7 +138,6 @@ window.calcularFretePorCEP = async function() {
         document.getElementById('clienteEndereco').value = dadosCli.address || '';
         document.getElementById('clienteBairro').value = dadosCli.district || '';
 
-        // Tenta buscar a loja na hora se falhou no início
         if (!coordsLoja.lat && configuracoesLoja.cep_loja) {
             const resLoja = await fetch(`https://cep.awesomeapi.com.br/json/${configuracoesLoja.cep_loja.replace(/\D/g, '')}`);
             const dadosLoja = await resLoja.json();
@@ -149,7 +148,6 @@ window.calcularFretePorCEP = async function() {
             const kmReal = calcularDistanciaGeo(coordsLoja.lat, coordsLoja.lng, parseFloat(dadosCli.lat), parseFloat(dadosCli.lng));
             const kmMax = parseFloat(configuracoesLoja.km_maximo_entrega) || 15;
 
-            // BLOQUEIO SUPREMO
             if (kmReal > kmMax) {
                 document.getElementById('cepInfo').innerHTML = `📍 Distância: ${kmReal.toFixed(1)} km`;
                 document.getElementById('freteInfo').innerHTML = `Infelizmente seu endereço está fora da nossa área de entrega (Máx: ${kmMax}km). Você pode optar por retirar em nossa loja.`;
@@ -160,21 +158,18 @@ window.calcularFretePorCEP = async function() {
             
             document.getElementById('cepInfo').innerHTML = `✅ Aprovado (${kmReal.toFixed(1)} km)`;
             
-            // CÁLCULO FINANCEIRO
             let taxaMin = parseFloat(configuracoesLoja.taxa_minima) || 0;
             let taxaKm = parseFloat(configuracoesLoja.taxa_por_km) || 0;
             taxaFrete = taxaMin + (kmReal * taxaKm);
-            if (taxaFrete < taxaMin) taxaFrete = taxaMin; // Impede ficar abaixo do mínimo
+            if (taxaFrete < taxaMin) taxaFrete = taxaMin; 
             
         } else {
-            // Se falhar o sistema de coordenadas, aprova mas cobra taxa mínima base
             document.getElementById('cepInfo').innerHTML = `✅ Endereço Encontrado`;
             taxaFrete = parseFloat(configuracoesLoja.taxa_minima) || 0;
         }
 
         dentroAreaEntrega = true;
 
-        // FRETE GRÁTIS
         const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
         const freeAtivo = configuracoesLoja.frete_gratis_ativo == 1 || configuracoesLoja.frete_gratis_ativo === 'true' || configuracoesLoja.frete_gratis_ativo === true;
         const freeAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 0;
@@ -288,11 +283,12 @@ window.abrirCarrinho = function() {
     if(carrinho.length === 0) return alert('Carrinho vazio!');
     document.getElementById('cartItems').innerHTML = carrinho.map((i, idx) => `<div class="cart-item"><div class="cart-item-info"><h4>${i.quantidade}x ${i.nome}</h4>${i.complementos.map(c=>`+ ${c.nome}`).join('<br>')}${i.observacao?`<br><em style="color:#C83232">Obs: ${i.observacao}</em>`:''}<div class="cart-item-price">R$ ${i.precoTotalLinha.toFixed(2)}</div></div><button class="cart-item-remove" onclick="removerDoCarrinho(${idx})">Remover</button></div>`).join('');
     
-    // Força checagem da aba de Delivery ativa para rodar os avisos de horário
+    // Força a interface a reagir à opção atual e mostrar os avisos se for o caso
     toggleDelivery(document.getElementById('deliveryOption').checked);
     document.getElementById('cartModal').style.display = 'block'; document.body.style.overflow = 'hidden';
 }
 
+// A MÁGICA DOS AVISOS NO CARRINHO
 window.toggleDelivery = function(isDelivery) {
     document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
     document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
@@ -305,35 +301,35 @@ window.toggleDelivery = function(isDelivery) {
     msgBox.style.display = 'none'; agenBox.style.display = 'none'; select.innerHTML = '';
     btn.disabled = false; btn.style.background = '#25D366'; btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
 
-    // REGRA DE OURO DOS HORÁRIOS:
-    if (!lojaAbertaStatus) {
-        msgBox.innerHTML = "Nossa loja está fechada no momento, mas você pode fazer o seu pedido agora e retirar colocando o próximo horário de funcionamento da loja ou agendar a sua entrega a partir do próximo dia e horário de delivery.";
-        msgBox.style.display = 'block'; msgBox.style.background = '#fff3e0'; msgBox.style.color = '#e65100'; msgBox.style.borderLeft = '4px solid #ff9800';
-        
-        let ops = isDelivery ? opcoesDelivery : opcoesLoja;
-        if (ops.length > 0) {
-            select.innerHTML = ops.map(o => `<option value="${o}">${o}</option>`).join('');
-            agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Pedido';
-        } else {
-            btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Loja Indisponível';
-        }
-    } else if (isDelivery && !deliveryAbertoStatus) {
-        msgBox.innerHTML = "Estamos sem delivery no momento, você pode optar por retirar na loja agora ou agendar a sua entrega para um próximo horário disponível.";
-        msgBox.style.display = 'block'; msgBox.style.background = '#e3f2fd'; msgBox.style.color = '#0d47a1'; msgBox.style.borderLeft = '4px solid #2196F3';
-        
-        if (opcoesDelivery.length > 0) {
-            select.innerHTML = opcoesDelivery.map(o => `<option value="${o}">${o}</option>`).join('');
-            agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Entrega';
-        } else {
-            btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Delivery Indisponível';
-        }
-    }
-
-    if(isDelivery) { 
+    if (isDelivery) {
         document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP para verificação de distância.'; 
         document.getElementById('freteInfo').className = 'frete-info'; taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
-    } else { 
+        
+        if (!deliveryAbertoStatus) {
+            msgBox.innerHTML = `🛵 <strong>Estamos fora do horário de delivery no momento.</strong><br>Você pode agendar sua entrega abaixo${lojaAbertaStatus ? " ou optar por retirar na loja agora mesmo." : "."}`;
+            msgBox.style.display = 'block'; msgBox.style.background = '#e3f2fd'; msgBox.style.color = '#0d47a1'; msgBox.style.borderLeft = '4px solid #2196F3';
+            
+            if (opcoesDelivery.length > 0) {
+                select.innerHTML = opcoesDelivery.map(o => `<option value="${o}">${o}</option>`).join('');
+                agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Entrega';
+            } else {
+                btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Delivery Indisponível';
+            }
+        }
+    } else { // Retirada
         taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
+        
+        if (!lojaAbertaStatus) {
+            msgBox.innerHTML = `🏪 <strong>Nossa loja está fechada no momento.</strong><br>Mas você pode fazer o seu pedido agora e agendar a retirada para o nosso próximo horário de funcionamento.`;
+            msgBox.style.display = 'block'; msgBox.style.background = '#fff3e0'; msgBox.style.color = '#e65100'; msgBox.style.borderLeft = '4px solid #ff9800';
+            
+            if (opcoesLoja.length > 0) {
+                select.innerHTML = opcoesLoja.map(o => `<option value="${o}">${o}</option>`).join('');
+                agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Retirada';
+            } else {
+                btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Loja Indisponível';
+            }
+        }
     }
     calcularSubtotalGeral();
 }
@@ -345,14 +341,19 @@ function calcularSubtotalGeral() {
     document.getElementById('cartTotalFinal').textContent = (sub + (document.getElementById('deliveryOption').checked ? taxaFrete : 0)).toFixed(2);
 }
 
+// VALIDAÇÃO IMPLACÁVEL NA FINALIZAÇÃO
 window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
-    
     let strAgendamento = "";
-    if (document.getElementById('agendamentoContainer').style.display === 'block') {
+    
+    // Trava de Agendamento
+    if (tipo === 'delivery' && !deliveryAbertoStatus) {
         strAgendamento = document.getElementById('agendamentoSelect').value;
-        if (!strAgendamento) return alert("Selecione um horário válido para o agendamento.");
+        if (!strAgendamento) return alert("Por favor, selecione um horário válido para o agendamento da entrega.");
+    } else if (tipo === 'pickup' && !lojaAbertaStatus) {
+        strAgendamento = document.getElementById('agendamentoSelect').value;
+        if (!strAgendamento) return alert("Por favor, selecione um horário válido para o agendamento da retirada.");
     }
     
     if(tipo === 'delivery') {
