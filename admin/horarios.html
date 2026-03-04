@@ -170,13 +170,15 @@
             });
 
             const configData = {
+                tipo_atualizacao: 'horarios', // A ETIQUETA SECRETA
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
 
             try {
-                const res = await fetch(`${API_URL}/config-horarios/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                // A ROTA QUE SEMPRE FUNCIONOU!
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
                     carregarHorarios();

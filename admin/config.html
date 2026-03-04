@@ -75,7 +75,7 @@
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
             if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 3000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 8000); }
+            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 5000); }
         }
 
         async function carregarConfiguracoes() {
@@ -83,7 +83,7 @@
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
                 configuracoes = await response.json(); 
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar.</div>`; }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`; }
         }
 
         function exibirFormulario() {
@@ -92,6 +92,7 @@
 
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
+                    
                     <div class="config-section">
                         <h2>🏪 Dados da Loja</h2>
                         <div class="form-group">
@@ -155,6 +156,7 @@
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
             const configData = {
+                tipo_atualizacao: 'geral', // A ETIQUETA SECRETA
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
@@ -175,14 +177,16 @@
             };
 
             try {
-                const res = await fetch(`${API_URL}/config-geral/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                // A ROTA QUE SEMPRE FUNCIONOU!
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
+                    carregarConfiguracoes();
                 } else { 
                     const err = await res.json().catch(() => ({erro: res.statusText}));
-                    mostrarMensagem('error', `❌ Erro DB: ${err.erro}`); 
+                    mostrarMensagem('error', `❌ Erro: ${err.erro}`); 
                 }
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão. Verifique sua internet.'); } 
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
             finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
 
