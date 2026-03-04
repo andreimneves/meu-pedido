@@ -155,6 +155,7 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
+            // ENVIA SÓ AS CONFIGS. O Backend não tocará nos horários.
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -174,6 +175,15 @@
                 mensagem_banner_cor: document.getElementById('mensagem_banner_cor').value,
                 mensagem_banner_texto: document.getElementById('mensagem_banner_texto').value
             };
+
+            try {
+                // Rota Original Estável! Sem 404!
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
+                else mostrarMensagem('error', '❌ Erro ao salvar.');
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
+            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
+        }
 
             try {
                 // A ROTA FÍSICA SEPARADA (IMPOSSÍVEL APAGAR OS HORÁRIOS)

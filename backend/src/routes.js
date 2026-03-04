@@ -1,4 +1,3 @@
-// backend/src/routes.js
 const express = require('express');
 const router = express.Router();
 
@@ -10,25 +9,16 @@ const configController = require('./controllers/configController');
 
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
-// ==========================================
-// AS DUAS ROTAS SEPARADAS E DEFINITIVAS
-// ==========================================
+// A ROTA ÚNICA E SEGURA (NUNCA DÁ 404)
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio/geral', safe(configController.atualizarGeral));
-router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios));
+router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes)); 
 
-// ==========================================
-// CATEGORIAS
-// ==========================================
 router.get('/categorias', safe(categoriaController.listar));
 router.get('/categorias/:id', safe(categoriaController.buscarPorId));
 router.post('/categorias', safe(categoriaController.criar));
 router.put('/categorias/:id', safe(categoriaController.atualizar));
 router.delete('/categorias/:id', safe(categoriaController.excluir));
 
-// ==========================================
-// PRODUTOS
-// ==========================================
 router.get('/produtos', safe(produtoController.listarTodos));
 router.get('/produtos/:id', safe(produtoController.buscarPorId));
 router.post('/produtos', safe(produtoController.criar));
@@ -36,18 +26,12 @@ router.put('/produtos/:id', safe(produtoController.atualizar));
 router.delete('/produtos/:id', safe(produtoController.excluir));
 router.get('/cardapio/:subdominio', safe(produtoController.cardapio));
 
-// ==========================================
-// PEDIDOS E DASHBOARD
-// ==========================================
 router.post('/pedidos', safe(pedidoController.criarPedido));
 router.get('/pedidos/:subdominio', safe(pedidoController.listarPedidos));
 router.get('/pedidos/:subdominio/:id', safe(pedidoController.buscarPedido));
 router.put('/pedidos/:subdominio/:id/status', safe(pedidoController.atualizarStatus));
 router.get('/dashboard/:subdominio', safe(pedidoController.dashboard));
 
-// ==========================================
-// COMPLEMENTOS
-// ==========================================
 router.get('/grupos-complementos', safe(complementoController.listarGrupos));
 router.post('/grupos-complementos', safe(complementoController.criarGrupo));
 router.put('/grupos-complementos/:id', safe(complementoController.atualizarGrupo));

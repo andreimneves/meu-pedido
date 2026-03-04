@@ -1,4 +1,3 @@
-// backend/src/controllers/configController.js
 const pool = require('../config/database');
 
 async function garantirColunas() {
@@ -16,24 +15,19 @@ async function garantirColunas() {
 }
 
 const configController = {
-    // 1. BUSCAR TUDO
     async buscarConfiguracoes(req, res) {
         try {
             await garantirColunas();
             const { subdominio } = req.params;
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
-
-            const tenantId = tenantQuery.rows[0].id;
-            const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
-
-            if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantId });
+            const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantQuery.rows[0].id]);
+            if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantQuery.rows[0].id });
             res.json(configQuery.rows[0]);
         } catch (error) { res.status(500).json({ erro: error.message }); }
     },
 
-    // 2. ATUALIZAR SÓ CONFIGURAÇÕES GERAIS (Não toca em horários)
-    async atualizarGeral(req, res) {
+    async atualizarConfiguracoes(req, res) {
         try {
             await garantirColunas();
             const { subdominio } = req.params;
@@ -43,71 +37,53 @@ const configController = {
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
             const tenantId = tenantQuery.rows[0].id;
             
-            const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
+            const existe = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
+            const atual = existe.rows.length > 0 ? existe.rows[0] : {};
+
+            // MESCLAGEM INTELIGENTE: Só sobrepõe se o frontend enviou o dado.
+            const obj = {
+                nome_loja: d.nome_loja !== undefined ? d.nome_loja : (atual.nome_loja || ''),
+                slogan: d.slogan !== undefined ? d.slogan : (atual.slogan || ''),
+                horario_funcionamento: d.horario_funcionamento !== undefined ? d.horario_funcionamento : (atual.horario_funcionamento || 'Seg a Dom: 18h às 23h'),
+                endereco_completo: d.endereco_completo !== undefined ? d.endereco_completo : (atual.endereco_completo || ''),
+                whatsapp: d.whatsapp !== undefined ? d.whatsapp : (atual.whatsapp || ''),
+                cep_loja: d.cep_loja !== undefined ? d.cep_loja : (atual.cep_loja || ''),
+                km_maximo_entrega: d.km_maximo_entrega !== undefined ? d.km_maximo_entrega : (atual.km_maximo_entrega || 15),
+                mensagem_km_excedido: d.mensagem_km_excedido !== undefined ? d.mensagem_km_excedido : (atual.mensagem_km_excedido || ''),
+                cor_principal: d.cor_principal !== undefined ? d.cor_principal : (atual.cor_principal || '#C83232'),
+                taxa_por_km: d.taxa_por_km !== undefined ? d.taxa_por_km : (atual.taxa_por_km || 0),
+                taxa_minima: d.taxa_minima !== undefined ? d.taxa_minima : (atual.taxa_minima || 0),
+                frete_gratis_ativo: d.frete_gratis_ativo !== undefined ? d.frete_gratis_ativo : (atual.frete_gratis_ativo || false),
+                frete_gratis_acima: d.frete_gratis_acima !== undefined ? d.frete_gratis_acima : (atual.frete_gratis_acima || 0),
+                mensagem_banner_ativo: d.mensagem_banner_ativo !== undefined ? d.mensagem_banner_ativo : (atual.mensagem_banner_ativo || false),
+                mensagem_banner: d.mensagem_banner !== undefined ? d.mensagem_banner : (atual.mensagem_banner || ''),
+                mensagem_banner_cor: d.mensagem_banner_cor !== undefined ? d.mensagem_banner_cor : (atual.mensagem_banner_cor || '#FFF3E0'),
+                mensagem_banner_texto: d.mensagem_banner_texto !== undefined ? d.mensagem_banner_texto : (atual.mensagem_banner_texto || '#E65100'),
+                mensagem_banner_icone: d.mensagem_banner_icone !== undefined ? d.mensagem_banner_icone : (atual.mensagem_banner_icone || '📢'),
+                logo_url: d.logo_url !== undefined ? d.logo_url : (atual.logo_url || ''),
+                horarios: d.horarios !== undefined ? d.horarios : (atual.horarios || '{}'),
+                horarios_delivery: d.horarios_delivery !== undefined ? d.horarios_delivery : (atual.horarios_delivery || '{}')
+            };
 
             if (existe.rows.length > 0) {
                 await pool.query(
                     `UPDATE configuracoes_loja SET
-                        nome_loja = $1, slogan = $2, endereco_completo = $3, whatsapp = $4, cep_loja = $5,
-                        km_maximo_entrega = $6, mensagem_km_excedido = $7, cor_principal = $8, taxa_por_km = $9, taxa_minima = $10,
-                        frete_gratis_ativo = $11, frete_gratis_acima = $12, mensagem_banner_ativo = $13, mensagem_banner = $14,
-                        mensagem_banner_cor = $15, mensagem_banner_texto = $16, mensagem_banner_icone = $17, logo_url = $18
-                    WHERE tenant_id = $19`,
-                    [
-                        d.nome_loja || '', d.slogan || '', d.endereco_completo || '', d.whatsapp || '', d.cep_loja || '',
-                        d.km_maximo_entrega || 15, d.mensagem_km_excedido || '', d.cor_principal || '#C83232', d.taxa_por_km || 0, d.taxa_minima || 0,
-                        d.frete_gratis_ativo !== false, d.frete_gratis_acima || 0, d.mensagem_banner_ativo || false, d.mensagem_banner || '',
-                        d.mensagem_banner_cor || '#FFF3E0', d.mensagem_banner_texto || '#E65100', d.mensagem_banner_icone || '📢', d.logo_url || '',
-                        tenantId
-                    ]
+                        nome_loja=$1, slogan=$2, horario_funcionamento=$3, endereco_completo=$4, whatsapp=$5, cep_loja=$6,
+                        km_maximo_entrega=$7, mensagem_km_excedido=$8, cor_principal=$9, taxa_por_km=$10, taxa_minima=$11,
+                        frete_gratis_ativo=$12, frete_gratis_acima=$13, mensagem_banner_ativo=$14, mensagem_banner=$15,
+                        mensagem_banner_cor=$16, mensagem_banner_texto=$17, mensagem_banner_icone=$18, logo_url=$19,
+                        horarios=$20, horarios_delivery=$21
+                    WHERE tenant_id=$22`,
+                    [obj.nome_loja, obj.slogan, obj.horario_funcionamento, obj.endereco_completo, obj.whatsapp, obj.cep_loja, obj.km_maximo_entrega, obj.mensagem_km_excedido, obj.cor_principal, obj.taxa_por_km, obj.taxa_minima, obj.frete_gratis_ativo, obj.frete_gratis_acima, obj.mensagem_banner_ativo, obj.mensagem_banner, obj.mensagem_banner_cor, obj.mensagem_banner_texto, obj.mensagem_banner_icone, obj.logo_url, obj.horarios, obj.horarios_delivery, tenantId]
                 );
             } else {
                 await pool.query(
-                    `INSERT INTO configuracoes_loja (
-                        tenant_id, nome_loja, slogan, endereco_completo, whatsapp, cep_loja, km_maximo_entrega, mensagem_km_excedido, 
-                        cor_principal, taxa_por_km, taxa_minima, frete_gratis_ativo, frete_gratis_acima, mensagem_banner_ativo, 
-                        mensagem_banner, mensagem_banner_cor, mensagem_banner_texto, mensagem_banner_icone, logo_url
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-                    [
-                        tenantId, d.nome_loja || '', d.slogan || '', d.endereco_completo || '', d.whatsapp || '', d.cep_loja || '',
-                        d.km_maximo_entrega || 15, d.mensagem_km_excedido || '', d.cor_principal || '#C83232', d.taxa_por_km || 0, d.taxa_minima || 0,
-                        d.frete_gratis_ativo !== false, d.frete_gratis_acima || 0, d.mensagem_banner_ativo || false, d.mensagem_banner || '',
-                        d.mensagem_banner_cor || '#FFF3E0', d.mensagem_banner_texto || '#E65100', d.mensagem_banner_icone || '📢', d.logo_url || ''
-                    ]
+                    `INSERT INTO configuracoes_loja (tenant_id, nome_loja, slogan, horario_funcionamento, endereco_completo, whatsapp, cep_loja, km_maximo_entrega, mensagem_km_excedido, cor_principal, taxa_por_km, taxa_minima, frete_gratis_ativo, frete_gratis_acima, mensagem_banner_ativo, mensagem_banner, mensagem_banner_cor, mensagem_banner_texto, mensagem_banner_icone, logo_url, horarios, horarios_delivery) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+                    [tenantId, obj.nome_loja, obj.slogan, obj.horario_funcionamento, obj.endereco_completo, obj.whatsapp, obj.cep_loja, obj.km_maximo_entrega, obj.mensagem_km_excedido, obj.cor_principal, obj.taxa_por_km, obj.taxa_minima, obj.frete_gratis_ativo, obj.frete_gratis_acima, obj.mensagem_banner_ativo, obj.mensagem_banner, obj.mensagem_banner_cor, obj.mensagem_banner_texto, obj.mensagem_banner_icone, obj.logo_url, obj.horarios, obj.horarios_delivery]
                 );
             }
-            res.json({ mensagem: 'Configurações Gerais salvas com sucesso!' });
-        } catch(e) { res.status(500).json({ erro: e.message }); }
-    },
-
-    // 3. ATUALIZAR SÓ OS HORÁRIOS (Não toca no Frete nem Mensagens)
-    async atualizarHorarios(req, res) {
-        try {
-            await garantirColunas();
-            const { subdominio } = req.params;
-            const d = req.body;
-            
-            const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
-            if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
-            const tenantId = tenantQuery.rows[0].id;
-            
-            const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
-
-            if (existe.rows.length > 0) {
-                // AQUI É A BLINDAGEM MÁXIMA: Este comando SQL só atualiza 3 colunas e ignora todas as outras!
-                await pool.query(
-                    `UPDATE configuracoes_loja SET
-                        horario_funcionamento = $1, horarios = $2, horarios_delivery = $3
-                    WHERE tenant_id = $4`,
-                    [d.horario_funcionamento || 'Seg a Dom: 18h às 23h', d.horarios || '{}', d.horarios_delivery || '{}', tenantId]
-                );
-            } else {
-                await pool.query(
-                    `INSERT INTO configuracoes_loja (tenant_id, horario_funcionamento, horarios, horarios_delivery) VALUES ($1, $2, $3, $4)`,
-                    [tenantId, d.horario_funcionamento || 'Seg a Dom: 18h às 23h', d.horarios || '{}', d.horarios_delivery || '{}']
-                );
-            }
-            res.json({ mensagem: 'Horários salvos com sucesso!' });
+            res.json({ mensagem: 'Salvo com sucesso!' });
         } catch(e) { res.status(500).json({ erro: e.message }); }
     }
 };
