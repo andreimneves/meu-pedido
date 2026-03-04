@@ -9,7 +9,7 @@ const configController = require('./controllers/configController');
 
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
-// A ROTA ÚNICA QUE NUNCA FALHA E SEMPRE EXISTIU
+// A ÚNICA ROTA DE CONFIGURAÇÃO (100% SEGURA)
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
 router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes)); 
 
