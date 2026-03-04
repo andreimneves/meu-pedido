@@ -94,8 +94,8 @@
         }
 
         function exibirFormulario() {
-            const freteGratisAtivo = String(configuracoes.frete_gratis_ativo) === 'true' || configuracoes.frete_gratis_ativo == 1;
-            const bannerAtivo = String(configuracoes.mensagem_banner_ativo) === 'true' || configuracoes.mensagem_banner_ativo == 1;
+            const freteGratisAtivo = String(configuracoes.frete_gratis_ativo) === 'true';
+            const bannerAtivo = String(configuracoes.mensagem_banner_ativo) === 'true';
 
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
@@ -149,12 +149,12 @@
 
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
-                        <div class="checkbox-group"><input type="checkbox" id="mensagem_ativa" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
-                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_banner || configuracoes.mensagem_texto || ''}</textarea></div>
+                        <div class="checkbox-group"><input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
+                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_banner" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
                         <div class="grid-2">
-                            <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
-                            <div class="form-group"><label>Cor de Fundo</label><input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
-                            <div class="form-group"><label>Cor do Texto</label><input type="color" id="banner_cor_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}"></div>
+                            <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="mensagem_banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
+                            <div class="form-group"><label>Cor de Fundo</label><input type="color" id="mensagem_banner_cor" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
+                            <div class="form-group"><label>Cor do Texto</label><input type="color" id="mensagem_banner_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}"></div>
                         </div>
                     </div>
 
@@ -177,7 +177,7 @@
             container.innerHTML = diasSemana.map(dia => {
                 const prefix = tipo.toLowerCase();
                 let diaAtivo = true;
-                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true' || dBanco[dia.id].ativo === true); }
+                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true'); }
                 const diaAbre = dBanco && dBanco[dia.id] && dBanco[dia.id].abertura ? dBanco[dia.id].abertura : '18:00';
                 const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
 
@@ -213,6 +213,7 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
+            // ENVIANDO NOME POR NOME IGUAL AO BACKEND SEM MARGEM PARA ERRO
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -228,11 +229,15 @@
                 taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 0,
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
-                mensagem_ativa: document.getElementById('mensagem_ativa').checked,
-                mensagem_texto: document.getElementById('mensagem_texto').value,
-                mensagem_banner_icone: document.getElementById('banner_icone').value,
-                mensagem_banner_cor: document.getElementById('banner_cor_fundo').value,
-                mensagem_banner_texto: document.getElementById('banner_cor_texto').value,
+                
+                // MENSAGEM PERSONALIZADA BLINDADA
+                mensagem_banner_ativo: document.getElementById('mensagem_banner_ativo').checked,
+                mensagem_banner: document.getElementById('mensagem_banner').value,
+                mensagem_banner_icone: document.getElementById('mensagem_banner_icone').value,
+                mensagem_banner_cor: document.getElementById('mensagem_banner_cor').value,
+                mensagem_banner_texto: document.getElementById('mensagem_banner_texto').value,
+                
+                // HORÁRIOS BLINDADOS
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };

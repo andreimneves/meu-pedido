@@ -24,8 +24,8 @@ async function carregarConfiguracoes() {
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
         if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
 
-        // APLICAÇÃO PERFEITA DA MENSAGEM PERSONALIZADA
-        const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true' || configuracoesLoja.mensagem_banner_ativo == 1;
+        // APLICAÇÃO DA MENSAGEM PERSONALIZADA (Com base nas chaves definitivas)
+        const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true';
         const textoMsg = configuracoesLoja.mensagem_banner;
         
         if (isMsgAtiva && textoMsg && textoMsg.trim() !== '') { 
@@ -226,7 +226,7 @@ async function renderizarGruposComplementos(gruposVinculados) {
         complementosSelecionados[g.id] = []; let itens = [];
         try { const r = await fetch(`${API_URL}/grupo-complementos/${g.id}/itens`); if(r.ok) itens = await r.json(); } catch(e){}
         if(itens.length === 0) continue;
-        let rTxt = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'; let rCls = g.obrigatorio ? 'badge-obrig' : 'badge-opc'; let lTxt = g.limite_selecao > 1 ? `Escolha até ${g.limite_selecao} opções` : `Escolha 1 opção`;
+        let rTxt = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'; let rCls = g.obrigatorio ? 'badge-obrig' : 'badge-opc'; let lTxt = g.limite_selecao > 1 ? `Escolha até ${g.limite_selecao} opções` : `Escolha 1 option`;
         html += `<div class="grupo-comp" id="grupo_${g.id}"><div class="grupo-comp-header"><div><div class="grupo-comp-titulo">${g.nome}</div><div class="grupo-comp-desc">${lTxt}</div></div><span class="${rCls}" id="badge_${g.id}">${rTxt}</span></div>`;
         itens.forEach(i => {
             if(i.disponivel===false) return;
@@ -291,7 +291,6 @@ window.toggleDelivery = function(isDelivery) {
     document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
     
     const statusTempoReal = obterStatusHorariosEmTempoReal();
-    
     let msgBox = document.getElementById('statusLojaMensagem');
     let agenBox = document.getElementById('agendamentoContainer');
     let select = document.getElementById('agendamentoSelect');
