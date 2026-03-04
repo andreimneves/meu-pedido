@@ -13,6 +13,11 @@
         .stat-icon.green { background: #e8f5e9; color: #388e3c; }
         .stat-info h3 { font-size: 14px; color: #666; margin-bottom: 5px; font-weight: 500; }
         .stat-info .value { font-size: 24px; font-weight: 700; color: #333; }
+        .recent-orders { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .order-row { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .order-row:last-child { border-bottom: none; }
+        .order-cliente { font-weight: 600; color: #333; }
+        .order-valor { color: #C83232; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -37,13 +42,13 @@
         </div>
         
         <div class="admin-content">
-            <h1>📊 Resumo de Hoje</h1>
+            <h1>📊 Visão Geral</h1>
             
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-icon blue">📦</div>
                     <div class="stat-info">
-                        <h3>Pedidos Recebidos Hoje</h3>
+                        <h3>Pedidos Hoje</h3>
                         <div class="value" id="pedidosHoje">0</div>
                     </div>
                 </div>
@@ -51,15 +56,20 @@
                 <div class="stat-card">
                     <div class="stat-icon green">💰</div>
                     <div class="stat-info">
-                        <h3>Faturamento de Hoje</h3>
+                        <h3>Faturamento Hoje</h3>
                         <div class="value" id="faturamentoHoje">R$ 0,00</div>
                     </div>
                 </div>
             </div>
             
-            <div class="card" style="background:white; padding:20px; border-radius:10px;">
-                <h3 style="margin-bottom:15px;">Últimos Pedidos</h3>
-                <p style="color:#666; font-size:14px;">Para ver todos os detalhes e gerir os status, vá até a aba <a href="pedidos.html" style="color:#C83232; font-weight:bold;">📋 Pedidos</a>.</p>
+            <div class="recent-orders">
+                <h3 style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">Últimos Pedidos Recebidos</h3>
+                <div id="listaUltimosPedidos">
+                    <div class="loading">Carregando pedidos recentes...</div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="pedidos.html" style="color: #C83232; text-decoration: none; font-weight: 600;">Ver todos os pedidos ➔</a>
+                </div>
             </div>
         </div>
     </div>
@@ -73,27 +83,46 @@
 
         async function carregarDashboard() {
             try {
-                const res = await fetch(`${API_URL}/pedidos?subdominio=${SUBDOMINIO}`, { cache: 'no-store' });
+                const res = await fetch(`${API_URL}/pedidos?subdominio=${SUBDOMINIO}`);
                 const pedidos = await res.json();
                 
-                const hojeStr = new Date().toLocaleDateString('pt-BR'); // "03/03/2026"
+                const hojeData = new Date();
+                const hojeStr = hojeData.toLocaleDateString('pt-BR'); 
                 
                 let qtdHoje = 0;
                 let valorHoje = 0;
+                let htmlUltimos = '';
 
-                pedidos.forEach(p => {
-                    const dataPedido = new Date(p.criado_em || p.created_at).toLocaleDateString('pt-BR');
-                    if (dataPedido === hojeStr) {
+                // Separa apenas os de hoje e soma
+                pedidos.forEach((p, index) => {
+                    let d = new Date(p.criado_em || p.created_at);
+                    if (d.toLocaleDateString('pt-BR') === hojeStr) {
                         qtdHoje++;
                         valorHoje += parseFloat(p.total) || 0;
+                    }
+                    
+                    // Monta a lista dos 5 últimos
+                    if (index < 5) {
+                        htmlUltimos += `
+                            <div class="order-row">
+                                <div>
+                                    <div class="order-cliente">#${p.id} - ${p.cliente_nome}</div>
+                                    <div style="font-size: 12px; color: #666;">${d.toLocaleTimeString('pt-BR')} • ${p.tipo_entrega === 'delivery' ? '🚚 Delivery' : '🏠 Retirada'}</div>
+                                </div>
+                                <div class="order-valor">R$ ${parseFloat(p.total).toFixed(2)}</div>
+                            </div>
+                        `;
                     }
                 });
 
                 document.getElementById('pedidosHoje').textContent = qtdHoje;
                 document.getElementById('faturamentoHoje').textContent = `R$ ${valorHoje.toFixed(2).replace('.', ',')}`;
+                
+                document.getElementById('listaUltimosPedidos').innerHTML = htmlUltimos || '<p style="text-align:center; color:#999; padding:20px;">Nenhum pedido recente.</p>';
 
             } catch (error) {
                 console.error("Erro ao carregar resumo", error);
+                document.getElementById('listaUltimosPedidos').innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar pedidos.</p>';
             }
         }
 

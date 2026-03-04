@@ -4,7 +4,7 @@ const pool = require('../config/database');
 const configController = {
     async buscarConfiguracoes(req, res) {
         try {
-            // AUTO-MIGRAÇÃO DEFINITIVA: Garante que TODAS as colunas novas existam na base de dados
+            // AUTO-MIGRAÇÃO DEFINITIVA: Garante TODAS as colunas, incluindo os novos horários
             const migrationQuery = `
                 ALTER TABLE configuracoes_loja 
                 ADD COLUMN IF NOT EXISTS logo_url VARCHAR(255),
@@ -19,7 +19,9 @@ const configController = {
                 ADD COLUMN IF NOT EXISTS taxa_por_km DECIMAL(10,2) DEFAULT 2.00,
                 ADD COLUMN IF NOT EXISTS taxa_minima DECIMAL(10,2) DEFAULT 5.00,
                 ADD COLUMN IF NOT EXISTS km_maximo_entrega DECIMAL(10,2) DEFAULT 30.00,
-                ADD COLUMN IF NOT EXISTS mensagem_km_excedido TEXT;
+                ADD COLUMN IF NOT EXISTS mensagem_km_excedido TEXT,
+                ADD COLUMN IF NOT EXISTS horarios TEXT,
+                ADD COLUMN IF NOT EXISTS horarios_delivery TEXT;
             `;
             await pool.query(migrationQuery).catch(e => console.log('Aviso de migração:', e.message));
 
@@ -44,7 +46,8 @@ const configController = {
                     cor_principal: '#C83232', taxa_por_km: 2.00, taxa_minima: 5.00,
                     frete_gratis_ativo: true, frete_gratis_acima: 50.00,
                     mensagem_banner_ativo: false, mensagem_banner: '',
-                    mensagem_banner_cor: '#FFF3E0', mensagem_banner_texto: '#E65100', mensagem_banner_icone: '📢'
+                    mensagem_banner_cor: '#FFF3E0', mensagem_banner_texto: '#E65100', mensagem_banner_icone: '📢',
+                    horarios: '', horarios_delivery: ''
                 });
             }
             res.json(configQuery.rows[0]);
@@ -55,7 +58,7 @@ const configController = {
 
     async atualizarConfiguracoes(req, res) {
         try {
-            // AUTO-MIGRAÇÃO: Garante a criação das colunas antes de tentar guardar os dados
+            // AUTO-MIGRAÇÃO DE SEGURANÇA
             const migrationQuery = `
                 ALTER TABLE configuracoes_loja 
                 ADD COLUMN IF NOT EXISTS logo_url VARCHAR(255),
@@ -70,9 +73,11 @@ const configController = {
                 ADD COLUMN IF NOT EXISTS taxa_por_km DECIMAL(10,2) DEFAULT 2.00,
                 ADD COLUMN IF NOT EXISTS taxa_minima DECIMAL(10,2) DEFAULT 5.00,
                 ADD COLUMN IF NOT EXISTS km_maximo_entrega DECIMAL(10,2) DEFAULT 30.00,
-                ADD COLUMN IF NOT EXISTS mensagem_km_excedido TEXT;
+                ADD COLUMN IF NOT EXISTS mensagem_km_excedido TEXT,
+                ADD COLUMN IF NOT EXISTS horarios TEXT,
+                ADD COLUMN IF NOT EXISTS horarios_delivery TEXT;
             `;
-            await pool.query(migrationQuery).catch(e => console.log('Aviso de migração:', e.message));
+            await pool.query(migrationQuery).catch(e => console.log('Aviso de migração ao salvar:', e.message));
 
             const { subdominio } = req.params;
             const dados = req.body;
@@ -95,7 +100,8 @@ const configController = {
                         frete_gratis_ativo = $12, frete_gratis_acima = $13,
                         mensagem_banner_ativo = $14, mensagem_banner = $15,
                         mensagem_banner_cor = $16, mensagem_banner_texto = $17,
-                        mensagem_banner_icone = $18, logo_url = $19 
+                        mensagem_banner_icone = $18, logo_url = $19,
+                        horarios = $21, horarios_delivery = $22
                     WHERE tenant_id = $20`,
                     [
                         dados.nome_loja, dados.slogan, dados.horario_funcionamento,
@@ -103,9 +109,11 @@ const configController = {
                         dados.km_maximo_entrega, dados.mensagem_km_excedido,
                         dados.cor_principal, dados.taxa_por_km, dados.taxa_minima,
                         dados.frete_gratis_ativo !== false, dados.frete_gratis_acima || 50,
-                        dados.mensagem_banner_ativo || false, dados.mensagem_banner || '',
+                        dados.mensagem_banner_ativo || dados.mensagem_ativa || false, 
+                        dados.mensagem_banner || dados.mensagem_texto || '',
                         dados.mensagem_banner_cor || '#FFF3E0', dados.mensagem_banner_texto || '#E65100',
-                        dados.mensagem_banner_icone || '📢', dados.logo_url || '', tenantId
+                        dados.mensagem_banner_icone || '📢', dados.logo_url || '', tenantId,
+                        dados.horarios || '', dados.horarios_delivery || ''
                     ]
                 );
             } else {
@@ -116,17 +124,20 @@ const configController = {
                         mensagem_km_excedido, cor_principal, taxa_por_km,
                         taxa_minima, frete_gratis_ativo, frete_gratis_acima,
                         mensagem_banner_ativo, mensagem_banner, mensagem_banner_cor,
-                        mensagem_banner_texto, mensagem_banner_icone, logo_url
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+                        mensagem_banner_texto, mensagem_banner_icone, logo_url,
+                        horarios, horarios_delivery
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
                     [
                         tenantId, dados.nome_loja, dados.slogan, dados.horario_funcionamento,
                         dados.endereco_completo, dados.whatsapp, dados.cep_loja,
                         dados.km_maximo_entrega, dados.mensagem_km_excedido,
                         dados.cor_principal, dados.taxa_por_km, dados.taxa_minima,
                         dados.frete_gratis_ativo !== false, dados.frete_gratis_acima || 50,
-                        dados.mensagem_banner_ativo || false, dados.mensagem_banner || '',
+                        dados.mensagem_banner_ativo || dados.mensagem_ativa || false, 
+                        dados.mensagem_banner || dados.mensagem_texto || '',
                         dados.mensagem_banner_cor || '#FFF3E0', dados.mensagem_banner_texto || '#E65100',
-                        dados.mensagem_banner_icone || '📢', dados.logo_url || ''
+                        dados.mensagem_banner_icone || '📢', dados.logo_url || '',
+                        dados.horarios || '', dados.horarios_delivery || ''
                     ]
                 );
             }
