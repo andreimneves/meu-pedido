@@ -66,7 +66,7 @@
     <script>
         const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
-        let configuracoes = {};
+        let configuracoes = {}; // MEMÓRIA INVISÍVEL
 
         if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
         function logout() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
@@ -81,7 +81,7 @@
         async function carregarConfiguracoes() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
-                configuracoes = await response.json();
+                configuracoes = await response.json(); // CARREGA TUDO PARA A MEMÓRIA
                 exibirFormulario();
             } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`; }
         }
@@ -155,9 +155,9 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
-            // AQUI ESTÁ A ETIQUETA SECRETA DA CONFIGURAÇÃO
+            // MAGIA AQUI: O ...configuracoes pega nos horários já gravados e envia-os de volta, impedindo que o servidor os apague!
             const configData = {
-                tipo_atualizacao: 'geral',
+                ...configuracoes,
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
@@ -178,10 +178,12 @@
             };
 
             try {
-                // A MESMA ROTA QUE SEMPRE FUNCIONOU!
+                // USA A ROTA PRINCIPAL ESTÁVEL
                 const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
-                if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
-                else mostrarMensagem('error', '❌ Erro ao salvar.');
+                if (res.ok) {
+                    mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
+                    carregarConfiguracoes(); // Atualiza a memória oculta
+                } else { mostrarMensagem('error', '❌ Erro ao salvar.'); }
             } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
             finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
