@@ -59,7 +59,7 @@
             <h1>⚙️ Configurações Gerais</h1>
             <div id="successMessage" class="success-message"></div>
             <div id="errorMessage" class="error-message"></div>
-            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando configurações...</div></div>
+            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando...</div></div>
         </div>
     </div>
 
@@ -155,7 +155,6 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
-            // ENVIAMOS APENAS AS CONFIGURAÇÕES! O Backend manterá os Horários Intactos.
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -177,11 +176,11 @@
             };
 
             try {
-                // ROTA PADRÃO - Sem erros 404
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                // A ROTA FÍSICA SEPARADA (IMPOSSÍVEL APAGAR OS HORÁRIOS)
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/geral`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
-                    carregarConfiguracoes(); // Refresh
+                    carregarConfiguracoes();
                 } else { mostrarMensagem('error', '❌ Erro ao salvar.'); }
             } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
             finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }

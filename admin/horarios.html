@@ -169,7 +169,6 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // ENVIAMOS APENAS OS HORÁRIOS! O Backend manterá a Mensagem Intacta.
             const configData = {
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
@@ -177,16 +176,16 @@
             };
 
             try {
-                // ROTA PADRÃO - Sem erros 404
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                // A ROTA FÍSICA SEPARADA (IMPOSSÍVEL APAGAR O RESTO)
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/horarios`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
-                    carregarHorarios(); // Refresh
+                    carregarHorarios();
                 } else {
                     const err = await res.json();
                     mostrarMensagem('error', `❌ Falha: ${err.erro}`);
                 }
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); } 
             finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
         }
 

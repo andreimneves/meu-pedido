@@ -1,3 +1,4 @@
+// backend/src/routes.js
 const express = require('express');
 const router = express.Router();
 
@@ -10,10 +11,11 @@ const configController = require('./controllers/configController');
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
 // ==========================================
-// A PORTA ÚNICA E SEGURA (QUE NUNCA DÁ 404)
+// AS DUAS ROTAS SEPARADAS E DEFINITIVAS
 // ==========================================
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes)); 
+router.put('/config/:subdominio/geral', safe(configController.atualizarGeral));
+router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios));
 
 // ==========================================
 // CATEGORIAS
