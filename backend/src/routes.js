@@ -1,13 +1,24 @@
+// backend/src/routes.js
+
 const express = require('express');
 const router = express.Router();
 
+// IMPORTAÇÃO DOS CONTROLADORES
 const produtoController = require('./controllers/produtoController');
 const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
+const configController = require('./controllers/configController'); // <--- ADICIONADO: O cérebro das configurações
 
 // MÁGICA ANTI-CRASH: Se faltar alguma função antiga, o servidor NÃO desliga!
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
+
+// ==========================================
+// CONFIGURAÇÕES DA LOJA E HORÁRIOS (A PEÇA QUE FALTAVA)
+// ==========================================
+router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
+router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes));
+router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios)); // Rota Exclusiva de Horários!
 
 // ==========================================
 // CATEGORIAS
