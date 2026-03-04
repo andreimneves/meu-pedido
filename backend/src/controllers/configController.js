@@ -32,12 +32,12 @@ const configController = {
         } catch (error) { res.status(500).json({ erro: error.message }); }
     },
 
-    // 2. ATUALIZAR APENAS AS CONFIGURAÇÕES GERAIS (Ignora Horários)
-    async atualizarConfiguracoes(req, res) {
+    // 2. ATUALIZAR APENAS AS CONFIGURAÇÕES GERAIS
+    async atualizarGeral(req, res) {
         try {
             await garantirColunas();
             const { subdominio } = req.params;
-            const dados = req.body;
+            const d = req.body;
             
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
@@ -46,7 +46,7 @@ const configController = {
             const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
 
             if (existe.rows.length > 0) {
-                // SÓ FAZ UPDATE NAS CONFIGURAÇÕES (Intocável para os Horários)
+                // ATUALIZA SÓ O GERAL (Nunca toca nos horários)
                 await pool.query(
                     `UPDATE configuracoes_loja SET
                         nome_loja = $1, slogan = $2, endereco_completo = $3, whatsapp = $4, cep_loja = $5,
@@ -55,11 +55,10 @@ const configController = {
                         mensagem_banner_cor = $15, mensagem_banner_texto = $16, mensagem_banner_icone = $17, logo_url = $18
                     WHERE tenant_id = $19`,
                     [
-                        dados.nome_loja || '', dados.slogan || '', dados.endereco_completo || '', dados.whatsapp || '', dados.cep_loja || '',
-                        dados.km_maximo_entrega || 15, dados.mensagem_km_excedido || '', dados.cor_principal || '#C83232', dados.taxa_por_km || 0, dados.taxa_minima || 0,
-                        dados.frete_gratis_ativo !== false, dados.frete_gratis_acima || 0, 
-                        dados.mensagem_banner_ativo || dados.mensagem_ativa || false, dados.mensagem_banner || dados.mensagem_texto || '',
-                        dados.mensagem_banner_cor || '#FFF3E0', dados.mensagem_banner_texto || '#E65100', dados.mensagem_banner_icone || '📢', dados.logo_url || '',
+                        d.nome_loja || '', d.slogan || '', d.endereco_completo || '', d.whatsapp || '', d.cep_loja || '',
+                        d.km_maximo_entrega || 15, d.mensagem_km_excedido || '', d.cor_principal || '#C83232', d.taxa_por_km || 0, d.taxa_minima || 0,
+                        d.frete_gratis_ativo !== false, d.frete_gratis_acima || 0, d.mensagem_banner_ativo || false, d.mensagem_banner || '',
+                        d.mensagem_banner_cor || '#FFF3E0', d.mensagem_banner_texto || '#E65100', d.mensagem_banner_icone || '📢', d.logo_url || '',
                         tenantId
                     ]
                 );
@@ -71,24 +70,23 @@ const configController = {
                         mensagem_banner, mensagem_banner_cor, mensagem_banner_texto, mensagem_banner_icone, logo_url
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
                     [
-                        tenantId, dados.nome_loja || '', dados.slogan || '', dados.endereco_completo || '', dados.whatsapp || '', dados.cep_loja || '',
-                        dados.km_maximo_entrega || 15, dados.mensagem_km_excedido || '', dados.cor_principal || '#C83232', dados.taxa_por_km || 0, dados.taxa_minima || 0,
-                        dados.frete_gratis_ativo !== false, dados.frete_gratis_acima || 0, 
-                        dados.mensagem_banner_ativo || dados.mensagem_ativa || false, dados.mensagem_banner || dados.mensagem_texto || '',
-                        dados.mensagem_banner_cor || '#FFF3E0', dados.mensagem_banner_texto || '#E65100', dados.mensagem_banner_icone || '📢', dados.logo_url || ''
+                        tenantId, d.nome_loja || '', d.slogan || '', d.endereco_completo || '', d.whatsapp || '', d.cep_loja || '',
+                        d.km_maximo_entrega || 15, d.mensagem_km_excedido || '', d.cor_principal || '#C83232', d.taxa_por_km || 0, d.taxa_minima || 0,
+                        d.frete_gratis_ativo !== false, d.frete_gratis_acima || 0, d.mensagem_banner_ativo || false, d.mensagem_banner || '',
+                        d.mensagem_banner_cor || '#FFF3E0', d.mensagem_banner_texto || '#E65100', d.mensagem_banner_icone || '📢', d.logo_url || ''
                     ]
                 );
             }
-            res.json({ mensagem: 'Configurações guardadas com sucesso!' });
+            res.json({ mensagem: 'Configurações Gerais salvas com sucesso!' });
         } catch(e) { res.status(500).json({ erro: e.message }); }
     },
 
-    // 3. A NOVA ROTA EXCLUSIVA PARA HORÁRIOS (Sugerida por si)
+    // 3. ATUALIZAR APENAS OS HORÁRIOS E TEXTO RESUMO
     async atualizarHorarios(req, res) {
         try {
             await garantirColunas();
             const { subdominio } = req.params;
-            const dados = req.body;
+            const d = req.body;
             
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
@@ -97,20 +95,20 @@ const configController = {
             const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
 
             if (existe.rows.length > 0) {
-                // SÓ FAZ UPDATE NOS HORÁRIOS (Intocável para o resto)
+                // ATUALIZA SÓ OS HORÁRIOS E TEXTO (Nunca toca na Mensagem Personalizada/Logo)
                 await pool.query(
                     `UPDATE configuracoes_loja SET
                         horario_funcionamento = $1, horarios = $2, horarios_delivery = $3
                     WHERE tenant_id = $4`,
-                    [dados.horario_funcionamento || 'Seg a Dom: 18h às 23h', dados.horarios || '{}', dados.horarios_delivery || '{}', tenantId]
+                    [d.horario_funcionamento || 'Seg a Dom: 18h às 23h', d.horarios || '{}', d.horarios_delivery || '{}', tenantId]
                 );
             } else {
                 await pool.query(
                     `INSERT INTO configuracoes_loja (tenant_id, horario_funcionamento, horarios, horarios_delivery) VALUES ($1, $2, $3, $4)`,
-                    [tenantId, dados.horario_funcionamento || 'Seg a Dom: 18h às 23h', dados.horarios || '{}', dados.horarios_delivery || '{}']
+                    [tenantId, d.horario_funcionamento || 'Seg a Dom: 18h às 23h', d.horarios || '{}', d.horarios_delivery || '{}']
                 );
             }
-            res.json({ mensagem: 'Horários guardados com sucesso!' });
+            res.json({ mensagem: 'Horários salvos com sucesso!' });
         } catch(e) { res.status(500).json({ erro: e.message }); }
     }
 };

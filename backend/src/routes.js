@@ -1,24 +1,21 @@
 // backend/src/routes.js
-
 const express = require('express');
 const router = express.Router();
 
-// IMPORTAÇÃO DOS CONTROLADORES
 const produtoController = require('./controllers/produtoController');
 const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
-const configController = require('./controllers/configController'); // <--- ADICIONADO: O cérebro das configurações
+const configController = require('./controllers/configController'); // IMPORTAMOS O CONFIG
 
-// MÁGICA ANTI-CRASH: Se faltar alguma função antiga, o servidor NÃO desliga!
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
 // ==========================================
-// CONFIGURAÇÕES DA LOJA E HORÁRIOS (A PEÇA QUE FALTAVA)
+// AS 3 ROTAS DE CONFIGURAÇÃO (SEPARADAS!)
 // ==========================================
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes));
-router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios)); // Rota Exclusiva de Horários!
+router.put('/config/:subdominio/geral', safe(configController.atualizarGeral));       // Rota 1: Configurações
+router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios)); // Rota 2: Horários
 
 // ==========================================
 // CATEGORIAS
@@ -49,7 +46,7 @@ router.put('/pedidos/:subdominio/:id/status', safe(pedidoController.atualizarSta
 router.get('/dashboard/:subdominio', safe(pedidoController.dashboard));
 
 // ==========================================
-// COMPLEMENTOS (O NOSSO NOVO MOTOR)
+// COMPLEMENTOS
 // ==========================================
 router.get('/grupos-complementos', safe(complementoController.listarGrupos));
 router.post('/grupos-complementos', safe(complementoController.criarGrupo));
@@ -61,12 +58,10 @@ router.post('/complementos', safe(complementoController.criarItem));
 router.put('/complementos/:id', safe(complementoController.atualizarItem));
 router.delete('/complementos/:id', safe(complementoController.excluirItem));
 
-// Itens dentro dos Grupos
 router.get('/grupo-complementos/:id/itens', safe(complementoController.listarItensDoGrupo));
 router.post('/grupos/:grupoId/itens/:itemId', safe(complementoController.vincularItemAoGrupo));
 router.delete('/grupos/:grupoId/itens/:itemId', safe(complementoController.removerItemDoGrupo));
 
-// Vínculos com o Produto
 router.get('/produtos/:produtoId/grupos', safe(complementoController.listarGruposDoProduto));
 router.post('/produtos/:produtoId/grupos', safe(complementoController.vincularGruposProduto));
 router.get('/complementos/produto/:produtoId', safe(complementoController.listarGruposDoProduto));
