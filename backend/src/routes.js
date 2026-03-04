@@ -10,11 +10,10 @@ const configController = require('./controllers/configController');
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
 // ==========================================
-// AS 3 ROTAS DE CONFIGURAÇÃO (BLINDADAS E ÚNICAS)
+// A PORTA ÚNICA E SEGURA (QUE NUNCA DÁ 404)
 // ==========================================
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config-geral/:subdominio', safe(configController.atualizarGeral));       // Porta 1: Só Configurações
-router.put('/config-horarios/:subdominio', safe(configController.atualizarHorarios)); // Porta 2: Só Horários
+router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes)); 
 
 // ==========================================
 // CATEGORIAS

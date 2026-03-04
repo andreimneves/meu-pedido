@@ -78,15 +78,12 @@
             else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 5000); }
         }
 
-        // Esta função busca na "porta antiga" (porque os dados vêm de lá para leitura)
         async function carregarConfiguracoes() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) {
-                document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`;
-            }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`; }
         }
 
         function exibirFormulario() {
@@ -158,7 +155,9 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
+            // AQUI ESTÁ A ETIQUETA SECRETA DA CONFIGURAÇÃO
             const configData = {
+                tipo_atualizacao: 'geral',
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
@@ -179,25 +178,12 @@
             };
 
             try {
-                // COMUNICANDO COM A NOVA "PORTA VIRTUAL" QUE CRIAMOS NO SERVIDOR (config-geral)
-                const res = await fetch(`${API_URL}/config-geral/${SUBDOMINIO}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(configData) 
-                });
-                
-                if (res.ok) {
-                    mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
-                } else {
-                    const erroResp = await res.json();
-                    mostrarMensagem('error', `❌ Erro do Servidor: ${erroResp.erro || res.statusText}`);
-                }
-            } catch (error) { 
-                mostrarMensagem('error', '❌ Erro de Conexão com a Internet.'); 
-            } finally { 
-                btn.textContent = '💾 Salvar Configurações Gerais'; 
-                btn.disabled = false; 
-            }
+                // A MESMA ROTA QUE SEMPRE FUNCIONOU!
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
+                else mostrarMensagem('error', '❌ Erro ao salvar.');
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
+            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
 
         carregarConfiguracoes();

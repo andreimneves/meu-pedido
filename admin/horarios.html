@@ -25,10 +25,10 @@
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
+        .btn-save:hover { background: #388E3C; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; font-weight: 500; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
         .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; color: #0d47a1; }
-        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .horario-card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid; }
         .horario-card.loja { border-color: #ffcdd2; background: #fffafb; }
@@ -36,11 +36,10 @@
         .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .dia-nome { width: 50px; font-weight: 600; color: #555; font-size: 14px; text-transform: capitalize; }
         .time-input { width: 95px !important; padding: 8px !important; text-align: center; }
-        
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0 10px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #4CAF50; }
         input:checked + .slider:before { transform: translateX(22px); }
     </style>
@@ -85,8 +84,8 @@
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
-            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 5000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 8000); }
+            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 4000); }
+            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 4000); }
         }
 
         function parseJSONSeguro(texto) {
@@ -171,21 +170,22 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
+            // AQUI ESTÁ A ETIQUETA SECRETA
             const configData = {
+                tipo_atualizacao: 'horarios',
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
 
             try {
-                // ROTA EXCLUSIVA E BLINDADA: /config-horarios/dlcrepes
-                const res = await fetch(`${API_URL}/config-horarios/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                // A MESMA ROTA QUE SEMPRE FUNCIONOU NO SISTEMA! SEM ERRO 404!
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
                 } else {
-                    let erroTxt = 'Erro Desconhecido';
-                    try { const errObj = await res.json(); erroTxt = errObj.erro || res.statusText; } catch(e) { erroTxt = res.statusText; }
-                    mostrarMensagem('error', `❌ Falha: ${erroTxt}`);
+                    const err = await res.json();
+                    mostrarMensagem('error', `❌ Falha: ${err.erro}`);
                 }
             } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); } 
             finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
