@@ -125,6 +125,7 @@
                             <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
                             <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
                         </div>
+                        <input type="hidden" id="mensagem_km_excedido" value="${configuracoes.mensagem_km_excedido || ''}">
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
                             <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
                             <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
@@ -149,7 +150,7 @@
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
                         <div class="checkbox-group"><input type="checkbox" id="mensagem_ativa" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
-                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
+                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_banner || configuracoes.mensagem_texto || ''}</textarea></div>
                         <div class="grid-2">
                             <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
                             <div class="form-group"><label>Cor de Fundo</label><input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
@@ -164,8 +165,8 @@
             document.getElementById('configContainer').innerHTML = html;
             
             let hLoja = {}; let hDel = {};
-            if (configuracoes.horarios) { try { hLoja = JSON.parse(configuracoes.horarios); } catch(e){} }
-            if (configuracoes.horarios_delivery) { try { hDel = JSON.parse(configuracoes.horarios_delivery); } catch(e){} }
+            try { hLoja = typeof configuracoes.horarios === 'string' ? JSON.parse(configuracoes.horarios) : (configuracoes.horarios || {}); } catch(e){}
+            try { hDel = typeof configuracoes.horarios_delivery === 'string' ? JSON.parse(configuracoes.horarios_delivery) : (configuracoes.horarios_delivery || {}); } catch(e){}
             
             renderizarGridHorarios('Loja', hLoja);
             renderizarGridHorarios('Delivery', hDel);
@@ -176,7 +177,7 @@
             container.innerHTML = diasSemana.map(dia => {
                 const prefix = tipo.toLowerCase();
                 let diaAtivo = true;
-                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true'); }
+                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true' || dBanco[dia.id].ativo === true); }
                 const diaAbre = dBanco && dBanco[dia.id] && dBanco[dia.id].abertura ? dBanco[dia.id].abertura : '18:00';
                 const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
 
@@ -212,28 +213,26 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // ENVIANDO NOME POR NOME IGUAL AO BACKEND
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
-                horario_funcionamento: document.getElementById('horario_funcionamento').value, // <--- AGORA SALVA CORRETAMENTE!
+                horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 whatsapp: document.getElementById('whatsapp').value,
                 endereco_completo: document.getElementById('endereco_completo').value,
                 cor_principal: document.getElementById('cor_principal').value,
                 cep_loja: document.getElementById('cep_loja').value,
                 km_maximo_entrega: parseFloat(document.getElementById('km_maximo_entrega').value) || 15,
+                mensagem_km_excedido: document.getElementById('mensagem_km_excedido').value,
                 taxa_minima: parseFloat(document.getElementById('taxa_minima').value) || 0,
                 taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 0,
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
-                
-                mensagem_banner_ativo: document.getElementById('mensagem_ativa').checked, // <--- NOMES ALINHADOS
-                mensagem_banner: document.getElementById('mensagem_texto').value,
+                mensagem_ativa: document.getElementById('mensagem_ativa').checked,
+                mensagem_texto: document.getElementById('mensagem_texto').value,
                 mensagem_banner_icone: document.getElementById('banner_icone').value,
                 mensagem_banner_cor: document.getElementById('banner_cor_fundo').value,
                 mensagem_banner_texto: document.getElementById('banner_cor_texto').value,
-                
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
