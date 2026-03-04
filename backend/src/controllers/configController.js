@@ -34,14 +34,27 @@ const configController = {
         try {
             await garantirColunas();
             const { subdominio } = req.params;
+            
+            // Buscar tenant
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
-            if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
+            if (tenantQuery.rows.length === 0) {
+                return res.status(404).json({ erro: 'Loja não encontrada' });
+            }
             
             const tenantId = tenantQuery.rows[0].id;
+            
+            // Buscar configurações
             const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
-            if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantId });
+            
+            if (configQuery.rows.length === 0) {
+                return res.json({ tenant_id: tenantId });
+            }
+            
             res.json(configQuery.rows[0]);
-        } catch (error) { res.status(500).json({ erro: error.message }); }
+        } catch (error) { 
+            console.error('Erro ao buscar configurações:', error);
+            res.status(500).json({ erro: error.message }); 
+        }
     },
 
     async atualizarConfiguracoes(req, res) {
@@ -50,68 +63,139 @@ const configController = {
             const { subdominio } = req.params;
             const dadosEnviados = req.body;
             
+            console.log('📥 Dados recebidos:', dadosEnviados);
+            
+            // Buscar tenant
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
-            if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
+            if (tenantQuery.rows.length === 0) {
+                return res.status(404).json({ erro: 'Loja não encontrada' });
+            }
             
             const tenantId = tenantQuery.rows[0].id;
 
-            // LISTA DE TODAS AS COLUNAS EXISTENTES
-            const colunasPermitidas = [
-                'nome_loja', 'slogan', 'horario_funcionamento', 'endereco_completo',
-                'whatsapp', 'cep_loja', 'km_maximo_entrega', 'mensagem_km_excedido',
-                'cor_principal', 'taxa_por_km', 'taxa_minima', 'frete_gratis_ativo',
-                'frete_gratis_acima', 'mensagem_banner_ativo', 'mensagem_banner',
-                'mensagem_banner_cor', 'mensagem_banner_texto', 'mensagem_banner_icone',
-                'logo_url', 'horarios', 'horarios_delivery'
-            ];
-
-            // Verifica se já existe um registro de configurações
+            // Verificar se já existe registro
             const existe = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
 
             if (existe.rows.length > 0) {
-                // PEGA OS DADOS ATUAIS DO BANCO
-                const dadosAtuais = existe.rows[0];
+                // MÉTODO SIMPLES E DIRETO: Update específico para cada campo
+                // Vamos construir um UPDATE que só altera os campos enviados
                 
-                // CRIA UM OBJETO COM TODOS OS DADOS (ATUAIS + NOVOS)
-                const dadosCompletos = { ...dadosAtuais };
+                const updates = [];
+                const values = [];
+                let paramCount = 1;
                 
-                // SOBRESCREVE APENAS OS CAMPOS QUE FORAM ENVIADOS
-                for (let chave of colunasPermitidas) {
-                    if (dadosEnviados[chave] !== undefined) {
-                        dadosCompletos[chave] = dadosEnviados[chave];
+                // Mapear todos os campos possíveis
+                const campos = {
+                    nome_loja: dadosEnviados.nome_loja,
+                    slogan: dadosEnviados.slogan,
+                    horario_funcionamento: dadosEnviados.horario_funcionamento,
+                    endereco_completo: dadosEnviados.endereco_completo,
+                    whatsapp: dadosEnviados.whatsapp,
+                    cep_loja: dadosEnviados.cep_loja,
+                    km_maximo_entrega: dadosEnviados.km_maximo_entrega,
+                    mensagem_km_excedido: dadosEnviados.mensagem_km_excedido,
+                    cor_principal: dadosEnviados.cor_principal,
+                    taxa_por_km: dadosEnviados.taxa_por_km,
+                    taxa_minima: dadosEnviados.taxa_minima,
+                    frete_gratis_ativo: dadosEnviados.frete_gratis_ativo,
+                    frete_gratis_acima: dadosEnviados.frete_gratis_acima,
+                    mensagem_banner_ativo: dadosEnviados.mensagem_banner_ativo,
+                    mensagem_banner: dadosEnviados.mensagem_banner,
+                    mensagem_banner_cor: dadosEnviados.mensagem_banner_cor,
+                    mensagem_banner_texto: dadosEnviados.mensagem_banner_texto,
+                    mensagem_banner_icone: dadosEnviados.mensagem_banner_icone,
+                    logo_url: dadosEnviados.logo_url,
+                    horarios: dadosEnviados.horarios,
+                    horarios_delivery: dadosEnviados.horarios_delivery
+                };
+                
+                // Adicionar apenas campos que foram enviados (não undefined)
+                for (const [campo, valor] of Object.entries(campos)) {
+                    if (valor !== undefined) {
+                        updates.push(`${campo} = $${paramCount}`);
+                        values.push(valor);
+                        paramCount++;
                     }
                 }
                 
-                // REMOVE CAMPOS QUE NÃO DEVEM IR NO UPDATE (como id, tenant_id, etc)
-                delete dadosCompletos.id;
-                delete dadosCompletos.tenant_id;
+                if (updates.length === 0) {
+                    return res.json({ mensagem: 'Nenhum dado para atualizar' });
+                }
                 
-                // CONSTRÓI O UPDATE COM TODOS OS CAMPOS
-                const chaves = Object.keys(dadosCompletos);
-                const setClause = chaves.map((chave, index) => `${chave} = $${index + 1}`).join(', ');
-                const values = chaves.map(chave => dadosCompletos[chave]);
+                // Adicionar tenant_id no final
                 values.push(tenantId);
-
-                const sql = `UPDATE configuracoes_loja SET ${setClause} WHERE tenant_id = $${values.length}`;
+                
+                const sql = `UPDATE configuracoes_loja SET ${updates.join(', ')} WHERE tenant_id = $${paramCount}`;
+                
+                console.log('📝 SQL:', sql);
+                console.log('📊 Valores:', values);
+                
                 await pool.query(sql, values);
                 
-                console.log('✅ Dados preservados e atualizados:', Object.keys(dadosEnviados));
+                // Buscar e retornar os dados atualizados para confirmar
+                const configAtualizada = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
+                
+                res.json({ 
+                    mensagem: '✅ Configurações salvas com sucesso!',
+                    dados: configAtualizada.rows[0],
+                    campos_atualizados: updates.map(u => u.split(' ')[0])
+                });
+                
             } else {
-                // INSERT DINÂMICO (Primeira vez)
-                const campos = [...colunasPermitidas.filter(c => dadosEnviados[c] !== undefined), 'tenant_id'];
-                const placeholders = campos.map((_, i) => `$${i + 1}`).join(', ');
-                const values = campos.map(c => c === 'tenant_id' ? tenantId : dadosEnviados[c]);
-
-                const sql = `INSERT INTO configuracoes_loja (${campos.join(', ')}) VALUES (${placeholders})`;
+                // INSERT para primeira vez
+                const campos = [];
+                const placeholders = [];
+                const values = [];
+                let paramCount = 1;
+                
+                const camposInsert = {
+                    nome_loja: dadosEnviados.nome_loja,
+                    slogan: dadosEnviados.slogan,
+                    horario_funcionamento: dadosEnviados.horario_funcionamento,
+                    endereco_completo: dadosEnviados.endereco_completo,
+                    whatsapp: dadosEnviados.whatsapp,
+                    cep_loja: dadosEnviados.cep_loja,
+                    km_maximo_entrega: dadosEnviados.km_maximo_entrega,
+                    mensagem_km_excedido: dadosEnviados.mensagem_km_excedido,
+                    cor_principal: dadosEnviados.cor_principal,
+                    taxa_por_km: dadosEnviados.taxa_por_km,
+                    taxa_minima: dadosEnviados.taxa_minima,
+                    frete_gratis_ativo: dadosEnviados.frete_gratis_ativo,
+                    frete_gratis_acima: dadosEnviados.frete_gratis_acima,
+                    mensagem_banner_ativo: dadosEnviados.mensagem_banner_ativo,
+                    mensagem_banner: dadosEnviados.mensagem_banner,
+                    mensagem_banner_cor: dadosEnviados.mensagem_banner_cor,
+                    mensagem_banner_texto: dadosEnviados.mensagem_banner_texto,
+                    mensagem_banner_icone: dadosEnviados.mensagem_banner_icone,
+                    logo_url: dadosEnviados.logo_url,
+                    horarios: dadosEnviados.horarios,
+                    horarios_delivery: dadosEnviados.horarios_delivery
+                };
+                
+                for (const [campo, valor] of Object.entries(camposInsert)) {
+                    if (valor !== undefined) {
+                        campos.push(campo);
+                        placeholders.push(`$${paramCount}`);
+                        values.push(valor);
+                        paramCount++;
+                    }
+                }
+                
+                campos.push('tenant_id');
+                placeholders.push(`$${paramCount}`);
+                values.push(tenantId);
+                
+                const sql = `INSERT INTO configuracoes_loja (${campos.join(', ')}) VALUES (${placeholders.join(', ')})`;
+                
                 await pool.query(sql, values);
+                
+                res.json({ 
+                    mensagem: '✅ Configurações iniciais salvas com sucesso!' 
+                });
             }
-
-            res.json({ 
-                mensagem: 'Configurações salvas com sucesso!',
-                campos_atualizados: Object.keys(dadosEnviados)
-            });
+            
         } catch(e) { 
-            console.error("❌ ERRO NO CONTROLLER:", e);
+            console.error("❌ ERRO CRÍTICO:", e);
             res.status(500).json({ erro: e.message }); 
         }
     }
