@@ -8,6 +8,13 @@ let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = fa
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
 
+// Função Segura para ler JSON do banco sem rebentar o código
+function parseJSONSeguro(texto) {
+    if (!texto) return {};
+    if (typeof texto === 'object') return texto;
+    try { return JSON.parse(texto); } catch (e) { return {}; }
+}
+
 window.onload = async () => {
     await carregarConfiguracoes();
     await carregarTudoDoBanco(); 
@@ -18,13 +25,17 @@ async function carregarConfiguracoes() {
         const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
         configuracoesLoja = await res.json();
         
+        // 1. TEXTO RESUMO (Consertado)
         document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'Nossa Loja';
         document.getElementById('slogan').textContent = configuracoesLoja.slogan || '';
-        document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || 'Consulte os horários'}`;
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
+        
+        const textHorario = configuracoesLoja.horario_funcionamento || 'Consulte os horários';
+        document.getElementById('horario').innerHTML = `🕒 ${textHorario}`;
+        
         if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
 
-        // APLICAÇÃO DA MENSAGEM PERSONALIZADA (Com base nas chaves definitivas)
+        // 2. MENSAGEM PERSONALIZADA
         const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true';
         const textoMsg = configuracoesLoja.mensagem_banner;
         
@@ -48,10 +59,10 @@ async function carregarConfiguracoes() {
     } catch (e) { console.error('Erro configs', e); }
 }
 
+// 3. MOTOR DE HORÁRIOS BLINDADO
 function obterStatusHorariosEmTempoReal() {
-    let hLoja = {}; let hDel = {};
-    if (configuracoesLoja.horarios) { try { hLoja = JSON.parse(configuracoesLoja.horarios); } catch(e){} }
-    if (configuracoesLoja.horarios_delivery) { try { hDel = JSON.parse(configuracoesLoja.horarios_delivery); } catch(e){} }
+    let hLoja = parseJSONSeguro(configuracoesLoja.horarios);
+    let hDel = parseJSONSeguro(configuracoesLoja.horarios_delivery);
     return { loja: analisarHorarios(hLoja), delivery: analisarHorarios(hDel) };
 }
 
@@ -226,7 +237,7 @@ async function renderizarGruposComplementos(gruposVinculados) {
         complementosSelecionados[g.id] = []; let itens = [];
         try { const r = await fetch(`${API_URL}/grupo-complementos/${g.id}/itens`); if(r.ok) itens = await r.json(); } catch(e){}
         if(itens.length === 0) continue;
-        let rTxt = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'; let rCls = g.obrigatorio ? 'badge-obrig' : 'badge-opc'; let lTxt = g.limite_selecao > 1 ? `Escolha até ${g.limite_selecao} opções` : `Escolha 1 option`;
+        let rTxt = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'; let rCls = g.obrigatorio ? 'badge-obrig' : 'badge-opc'; let lTxt = g.limite_selecao > 1 ? `Escolha até ${g.limite_selecao} opções` : `Escolha 1 opção`;
         html += `<div class="grupo-comp" id="grupo_${g.id}"><div class="grupo-comp-header"><div><div class="grupo-comp-titulo">${g.nome}</div><div class="grupo-comp-desc">${lTxt}</div></div><span class="${rCls}" id="badge_${g.id}">${rTxt}</span></div>`;
         itens.forEach(i => {
             if(i.disponivel===false) return;

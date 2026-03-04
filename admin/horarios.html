@@ -23,22 +23,17 @@
         .config-section h2 { color: #333; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
-        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        
-        /* DESIGN PREMIUM DOS HORÁRIOS */
         .horario-card { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid; }
         .horario-card.loja { border-color: #ffcdd2; background: #fffafb; }
         .horario-card.delivery { border-color: #bbdefb; background: #f8fbff; }
         .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .horario-row:last-child { border-bottom: none; }
         .dia-nome { width: 40px; font-weight: 600; color: #555; font-size: 14px; }
         .time-input { width: 90px !important; padding: 8px !important; text-align: center; }
-        
-        /* TOGGLE SWITCH ESTILO IOS */
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin: 0 10px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
@@ -95,7 +90,7 @@
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar</div>`; }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro</div>`; }
         }
 
         function exibirFormulario() {
@@ -109,7 +104,7 @@
 
                         <div class="grid-2">
                             <div class="horario-card loja">
-                                <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA (Retirada)</h3>
+                                <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA</h3>
                                 <div id="horariosLojaContainer"></div>
                             </div>
                             <div class="horario-card delivery">
@@ -118,18 +113,16 @@
                             </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Todos os Horários</button>
+                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Horários</button>
                 </form>
             `;
-            
             document.getElementById('configContainer').innerHTML = html;
             
             let hLoja = {}; let hDel = {};
             try { hLoja = typeof configuracoes.horarios === 'string' ? JSON.parse(configuracoes.horarios) : (configuracoes.horarios || {}); } catch(e){}
             try { hDel = typeof configuracoes.horarios_delivery === 'string' ? JSON.parse(configuracoes.horarios_delivery) : (configuracoes.horarios_delivery || {}); } catch(e){}
             
-            renderizarGridHorarios('Loja', hLoja);
-            renderizarGridHorarios('Delivery', hDel);
+            renderizarGridHorarios('Loja', hLoja); renderizarGridHorarios('Delivery', hDel);
         }
 
         function renderizarGridHorarios(tipo, dBanco) {
@@ -137,7 +130,7 @@
             container.innerHTML = diasSemana.map(dia => {
                 const prefix = tipo.toLowerCase();
                 let diaAtivo = true;
-                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true'); }
+                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true' || dBanco[dia.id].ativo === true); }
                 const diaAbre = dBanco && dBanco[dia.id] && dBanco[dia.id].abertura ? dBanco[dia.id].abertura : '18:00';
                 const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
 
@@ -167,6 +160,7 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
+            // PACOTE EXCLUSIVO PARA HORÁRIOS: O backend não tocará nas outras informações!
             const configData = {
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
@@ -178,7 +172,7 @@
                 if (res.ok) mostrarMensagem('success', '✅ Horários salvos com sucesso!'); 
                 else mostrarMensagem('error', '❌ Erro ao salvar.');
             } catch (error) { mostrarMensagem('error', '❌ Erro de conexão.'); } 
-            finally { btn.textContent = '💾 Salvar Todos os Horários'; btn.disabled = false; }
+            finally { btn.textContent = '💾 Salvar Horários'; btn.disabled = false; }
         }
 
         carregarHorarios();
