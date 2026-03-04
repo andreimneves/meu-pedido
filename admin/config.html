@@ -80,7 +80,9 @@
     </div>
 
     <script>
-        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+            ? 'http://localhost:10000/api'
+            : 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         
         let configuracoes = {};
@@ -102,19 +104,18 @@
 
         async function carregarConfiguracoes() {
             try {
-                // Força o navegador a ler do banco de dados ignorando o cache
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 configuracoes = await response.json();
                 exibirFormulario();
             } catch (error) {
-                document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar configurações: ${error.message}</div>`;
+                document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar: ${error.message}</div>`;
             }
         }
 
         function exibirFormulario() {
             const freteGratisAtivo = String(configuracoes.frete_gratis_ativo) === 'true' || configuracoes.frete_gratis_ativo == 1;
-            const bannerAtivo = String(configuracoes.mensagem_ativa) === 'true' || configuracoes.mensagem_ativa == 1 || String(configuracoes.mensagem_banner_ativo) === 'true';
+            const bannerAtivo = String(configuracoes.mensagem_ativa) === 'true' || configuracoes.mensagem_ativa == 1;
 
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
@@ -139,49 +140,21 @@
 
                     <div class="config-section">
                         <h2>🚚 Configurações de Frete (Radar por KM)</h2>
-                        <div class="info-box">O sistema usará o CEP da sua loja como ponto de partida (Raio Zero) para verificar a distância real do cliente.</div>
                         <div class="grid-2">
-                            <div class="form-group">
-                                <label>CEP da Loja (Ponto de Partida) *</label>
-                                <input type="text" id="cep_loja" value="${configuracoes.cep_loja || ''}" placeholder="Ex: 97000-000">
-                            </div>
-                            <div class="form-group">
-                                <label>Limite Máximo para Entrega (KM) *</label>
-                                <input type="number" id="km_maximo_entrega" step="0.1" min="0" value="${configuracoes.km_maximo_entrega || 15}">
-                            </div>
-                            <div class="form-group">
-                                <label>Taxa de Entrega Inicial / Padrão (R$)</label>
-                                <input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}">
-                            </div>
-                            <div class="form-group">
-                                <label>Adicional por KM Percorrido (R$)</label>
-                                <input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}">
-                                <small>Calculado proporcionalmente à distância exata.</small>
-                            </div>
+                            <div class="form-group"><label>CEP da Loja (Ponto Zero) *</label><input type="text" id="cep_loja" value="${configuracoes.cep_loja || ''}"></div>
+                            <div class="form-group"><label>Limite Máximo (KM) *</label><input type="number" id="km_maximo_entrega" step="0.1" min="0" value="${configuracoes.km_maximo_entrega || 15}"></div>
+                            <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
+                            <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
                         </div>
-                        
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-                            <h3 style="margin-bottom: 15px; font-size: 16px;">🎁 Frete Grátis</h3>
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}>
-                                <label for="frete_gratis_ativo">Ativar frete grátis</label>
-                            </div>
-                            <div class="form-group">
-                                <label>Frete Grátis Acima de R$</label>
-                                <input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}">
-                            </div>
+                            <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
+                            <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
                         </div>
                     </div>
 
                     <div class="config-section">
                         <h2>⏰ Horários de Loja e Delivery</h2>
-                        <div class="info-box">Controle independente. Desmarcar o "Aberto" num dia desliga a loja/delivery naquele exato dia!</div>
-                        
-                        <div class="form-group" style="margin-bottom: 25px;">
-                            <label>Texto Resumo de Horários (Aparece no topo do App)</label>
-                            <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
-                        </div>
-
+                        <div class="form-group" style="margin-bottom: 25px;"><label>Texto Resumo de Horários (Aparece no topo do App)</label><input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}"></div>
                         <div class="grid-2" style="gap: 30px;">
                             <div style="background:#fff5f5; padding:15px; border-radius:8px; border:1px solid #ffcdd2;">
                                 <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA (Retirada)</h3>
@@ -196,28 +169,12 @@
 
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="banner_ativo" ${bannerAtivo ? 'checked' : ''}>
-                            <label for="banner_ativo">Ativar mensagem no topo do cardápio</label>
-                        </div>
-                        <div class="form-group">
-                            <label>Texto da Mensagem</label>
-                            <textarea id="banner_mensagem" rows="2">${configuracoes.mensagem_banner || configuracoes.mensagem_texto || configuracoes.mensagem_personalizada || ''}</textarea>
-                        </div>
-
+                        <div class="checkbox-group"><input type="checkbox" id="mensagem_ativa" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
+                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_texto || configuracoes.mensagem_banner || configuracoes.mensagem_personalizada || ''}</textarea></div>
                         <div class="grid-2">
-                            <div class="form-group">
-                                <label>Ícone (emoji)</label>
-                                <input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}" maxlength="2">
-                            </div>
-                            <div class="form-group">
-                                <label>Cor de Fundo</label>
-                                <input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}">
-                            </div>
-                            <div class="form-group">
-                                <label>Cor do Texto</label>
-                                <input type="color" id="banner_cor_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}">
-                            </div>
+                            <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
+                            <div class="form-group"><label>Cor de Fundo</label><input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
+                            <div class="form-group"><label>Cor do Texto</label><input type="color" id="banner_cor_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}"></div>
                         </div>
                     </div>
 
@@ -226,25 +183,31 @@
             `;
             
             document.getElementById('configContainer').innerHTML = html;
-            renderizarGridHorarios('Loja', configuracoes.horarios);
-            renderizarGridHorarios('Delivery', configuracoes.horarios_delivery);
+            
+            // LER HORÁRIOS: Se tiver configuracoes.horarios em string, parseia.
+            let hMesclado = {};
+            if (configuracoes.horarios) {
+                hMesclado = typeof configuracoes.horarios === 'string' ? JSON.parse(configuracoes.horarios) : configuracoes.horarios;
+            }
+            
+            // Retrocompatibilidade (caso o banco não esteja no formato novo)
+            let hLoja = hMesclado.loja || hMesclado; 
+            let hDel = hMesclado.delivery || hMesclado;
+
+            renderizarGridHorarios('Loja', hLoja);
+            renderizarGridHorarios('Delivery', hDel);
         }
 
-        function renderizarGridHorarios(tipo, dadosBanco) {
+        function renderizarGridHorarios(tipo, dBanco) {
             const container = document.getElementById(`horarios${tipo}Container`);
-            let h = {};
-            if (dadosBanco) h = typeof dadosBanco === 'string' ? JSON.parse(dadosBanco) : dadosBanco;
-
             container.innerHTML = diasSemana.map(dia => {
                 const prefix = tipo.toLowerCase();
-                // AQUI ESTÁ A CORREÇÃO DE LEITURA (Ignora strings de "false" do banco)
                 let diaAtivo = true;
-                if (h && h[dia.id] && h[dia.id].ativo !== undefined) {
-                    diaAtivo = (h[dia.id].ativo === true || String(h[dia.id].ativo) === 'true');
+                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) {
+                    diaAtivo = (String(dBanco[dia.id].ativo) === 'true' || dBanco[dia.id].ativo === true);
                 }
-
-                const diaAbre = h && h[dia.id] && h[dia.id].abertura ? h[dia.id].abertura : '18:00';
-                const diaFecha = h && h[dia.id] && h[dia.id].fechamento ? h[dia.id].fechamento : '23:59';
+                const diaAbre = dBanco && dBanco[dia.id] && dBanco[dia.id].abertura ? dBanco[dia.id].abertura : '18:00';
+                const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
 
                 return `
                     <div class="horario-row" style="font-size:12px; padding:6px 0;">
@@ -260,30 +223,18 @@
             }).join('');
         }
 
-        async function uploadLogo(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const formData = new FormData(); formData.append('imagem', file);
-            try {
-                const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
-                const data = await res.json();
-                if (data.sucesso) {
-                    document.getElementById('logo_url').value = data.arquivo.url;
-                    document.getElementById('logoPreview').src = data.arquivo.url;
-                    document.getElementById('logoPreview').classList.add('ativo');
-                }
-            } catch (e) { mostrarMensagem('error', "Erro de upload"); }
-        }
-
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral');
             btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
+            // EMPACOTAR OS DOIS HORÁRIOS NUM SÓ OBJETO PARA GARANTIR QUE O BANCO ACEITA
             const objHorariosLoja = {}; const objHorariosDelivery = {};
             diasSemana.forEach(dia => {
                 objHorariosLoja[dia.id] = { ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, abertura: document.getElementById(`loja_abre_${dia.id}`).value, fechamento: document.getElementById(`loja_fecha_${dia.id}`).value };
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
+
+            const horariosUnificados = { loja: objHorariosLoja, delivery: objHorariosDelivery };
 
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
@@ -300,16 +251,13 @@
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
                 
-                mensagem_banner_ativo: document.getElementById('banner_ativo').checked,
-                mensagem_ativa: document.getElementById('banner_ativo').checked,
-                mensagem_banner: document.getElementById('banner_mensagem').value,
-                mensagem_texto: document.getElementById('banner_mensagem').value,
+                mensagem_ativa: document.getElementById('mensagem_ativa').checked,
+                mensagem_texto: document.getElementById('mensagem_texto').value,
                 mensagem_banner_icone: document.getElementById('banner_icone').value,
                 mensagem_banner_cor: document.getElementById('banner_cor_fundo').value,
                 mensagem_banner_texto: document.getElementById('banner_cor_texto').value,
 
-                horarios: JSON.stringify(objHorariosLoja),
-                horarios_delivery: JSON.stringify(objHorariosDelivery)
+                horarios: JSON.stringify(horariosUnificados) // Tudo salvo numa coluna só!
             };
 
             try {
