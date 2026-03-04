@@ -12,29 +12,39 @@
         .admin-header h1 { font-size: 24px; font-weight: 600; }
         .user-info { display: flex; align-items: center; gap: 20px; }
         .logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
-        .logout:hover { background: rgba(255,255,255,0.3); }
         .admin-container { display: flex; min-height: calc(100vh - 70px); }
         .admin-sidebar { width: 250px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px 0; }
         .admin-sidebar ul { list-style: none; }
         .admin-sidebar li { margin-bottom: 5px; }
         .admin-sidebar a { display: block; padding: 12px 20px; color: #333; text-decoration: none; transition: all 0.3s; border-left: 3px solid transparent; }
-        .admin-sidebar a:hover { background: #f8f8f8; border-left-color: #C83232; color: #C83232; }
         .admin-sidebar a.active { background: #f0f0f0; border-left-color: #C83232; color: #C83232; font-weight: 500; }
         .admin-content { flex: 1; padding: 30px; background: #f9f9f9; }
-        .admin-content h1 { font-size: 28px; color: #333; margin-bottom: 30px; }
         .config-section { background: white; border-radius: 10px; padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .config-section h2 { color: #333; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #C83232; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
-        .btn-save:hover { background: #388E3C; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; }
-        .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        
+        /* DESIGN PREMIUM DOS HORÁRIOS */
+        .horario-card { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid; }
+        .horario-card.loja { border-color: #ffcdd2; background: #fffafb; }
+        .horario-card.delivery { border-color: #bbdefb; background: #f8fbff; }
+        .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .horario-row:last-child { border-bottom: none; }
+        .dia-nome { width: 40px; font-weight: 600; color: #555; font-size: 14px; }
+        .time-input { width: 90px !important; padding: 8px !important; text-align: center; }
+        
+        /* TOGGLE SWITCH ESTILO IOS */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin: 0 10px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #4CAF50; }
+        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 <body>
@@ -68,7 +78,7 @@
         const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         let configuracoes = {};
-        const diasSemana = [{ id: 'domingo', nome: 'Domingo' }, { id: 'segunda', nome: 'Segunda-feira' }, { id: 'terca', nome: 'Terça-feira' }, { id: 'quarta', nome: 'Quarta-feira' }, { id: 'quinta', nome: 'Quinta-feira' }, { id: 'sexta', nome: 'Sexta-feira' }, { id: 'sabado', nome: 'Sábado' }];
+        const diasSemana = [{ id: 'domingo', nome: 'Dom' }, { id: 'segunda', nome: 'Seg' }, { id: 'terca', nome: 'Ter' }, { id: 'quarta', nome: 'Qua' }, { id: 'quinta', nome: 'Qui' }, { id: 'sexta', nome: 'Sex' }, { id: 'sabado', nome: 'Sáb' }];
 
         if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
         function logout() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
@@ -83,36 +93,32 @@
         async function carregarHorarios() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar: ${error.message}</div>`; }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar</div>`; }
         }
 
         function exibirFormulario() {
             const html = `
                 <form id="horariosForm" onsubmit="event.preventDefault(); salvarHorarios()">
                     <div class="config-section">
-                        <h2>⏰ Quadro Geral de Horários</h2>
-                        <div class="info-box">Controle independente. Desmarcar o "Aberto" num dia desliga a loja/delivery naquele exato dia!</div>
-                        
+                        <h2>Texto de Resumo (Aparece no App)</h2>
                         <div class="form-group" style="margin-bottom: 25px;">
-                            <label>Texto Resumo de Horários (Aparece no topo do App)</label>
                             <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
                         </div>
 
-                        <div class="grid-2" style="gap: 30px;">
-                            <div style="background:#fff5f5; padding:15px; border-radius:8px; border:1px solid #ffcdd2;">
+                        <div class="grid-2">
+                            <div class="horario-card loja">
                                 <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA (Retirada)</h3>
                                 <div id="horariosLojaContainer"></div>
                             </div>
-                            <div style="background:#e3f2fd; padding:15px; border-radius:8px; border:1px solid #bbdefb;">
+                            <div class="horario-card delivery">
                                 <h3 style="font-size:15px; color:#1565c0; margin-bottom:15px; text-align:center;">🛵 HORÁRIOS DO DELIVERY</h3>
                                 <div id="horariosDeliveryContainer"></div>
                             </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Horários</button>
+                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Todos os Horários</button>
                 </form>
             `;
             
@@ -136,13 +142,16 @@
                 const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
 
                 return `
-                    <div class="horario-row" style="font-size:12px; padding:6px 0;">
-                        <div class="dia-nome" style="width:60px;">${dia.nome.substring(0,3)}</div>
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="checkbox" id="${prefix}_ativo_${dia.id}" style="width:16px;height:16px;" ${diaAtivo ? 'checked' : ''}>
-                            <input type="time" id="${prefix}_abre_${dia.id}" value="${diaAbre}" class="form-control" style="width:80px; padding:6px;">
-                            <span>às</span>
-                            <input type="time" id="${prefix}_fecha_${dia.id}" value="${diaFecha}" class="form-control" style="width:80px; padding:6px;">
+                    <div class="horario-row">
+                        <div class="dia-nome">${dia.nome}</div>
+                        <label class="switch">
+                            <input type="checkbox" id="${prefix}_ativo_${dia.id}" ${diaAtivo ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="time" id="${prefix}_abre_${dia.id}" value="${diaAbre}" class="time-input">
+                            <span style="color:#666; font-size:13px;">às</span>
+                            <input type="time" id="${prefix}_fecha_${dia.id}" value="${diaFecha}" class="time-input">
                         </div>
                     </div>
                 `;
@@ -158,7 +167,6 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // Envia APENAS os dados relacionados a horários
             const configData = {
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
@@ -170,7 +178,7 @@
                 if (res.ok) mostrarMensagem('success', '✅ Horários salvos com sucesso!'); 
                 else mostrarMensagem('error', '❌ Erro ao salvar.');
             } catch (error) { mostrarMensagem('error', '❌ Erro de conexão.'); } 
-            finally { btn.textContent = '💾 Salvar Horários'; btn.disabled = false; }
+            finally { btn.textContent = '💾 Salvar Todos os Horários'; btn.disabled = false; }
         }
 
         carregarHorarios();

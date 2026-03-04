@@ -30,7 +30,11 @@
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #C83232; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
         .btn-save:hover { background: #388E3C; }
+        
+        /* CORREÇÃO DO BOTÃO DE UPLOAD (ESCONDER O NATIVO) */
         .upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #fafafa; margin-bottom: 15px; }
+        .upload-area input[type="file"] { display: none !important; opacity: 0 !important; width: 0 !important; height: 0 !important; }
+        
         .logo-preview-container { text-align: center; margin: 15px 0; }
         .logo-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #ddd; padding: 3px; display: none; margin: 0 auto; }
         .logo-preview.ativo { display: block; }
@@ -62,10 +66,10 @@
         </div>
         
         <div class="admin-content">
-            <h1>⚙️ Configurações da Loja</h1>
+            <h1>⚙️ Configurações Gerais</h1>
             <div id="successMessage" class="success-message"></div>
             <div id="errorMessage" class="error-message"></div>
-            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando configurações...</div></div>
+            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando...</div></div>
         </div>
     </div>
 
@@ -87,10 +91,9 @@
         async function carregarConfiguracoes() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar: ${error.message}</div>`; }
+            } catch (error) {}
         }
 
         function exibirFormulario() {
@@ -105,7 +108,8 @@
                         <div class="form-group">
                             <label>Logo da Loja</label>
                             <div class="upload-area" onclick="document.getElementById('logoInput').click()">
-                                <input type="file" id="logoInput" accept="image/*" onchange="uploadLogo(event)"><span>📸 Clique para selecionar a logo da loja</span>
+                                <input type="file" id="logoInput" accept="image/*" onchange="uploadLogo(event)">
+                                <span style="display:block; margin-top:5px;">📸 Clique aqui para selecionar a logo</span>
                             </div>
                             <input type="hidden" id="logo_url" value="${configuracoes.logo_url || ''}">
                             <div class="logo-preview-container"><img id="logoPreview" class="logo-preview ${configuracoes.logo_url ? 'ativo' : ''}" src="${configuracoes.logo_url || ''}"></div>
@@ -125,7 +129,6 @@
                             <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
                             <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
                         </div>
-                        <input type="hidden" id="mensagem_km_excedido" value="${configuracoes.mensagem_km_excedido || ''}">
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
                             <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
                             <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
@@ -133,8 +136,8 @@
                     </div>
 
                     <div class="config-section">
-                        <h2>📝 Mensagem Personalizada</h2>
-                        <div class="checkbox-group"><input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
+                        <h2>📝 Mensagem Personalizada (Aparece no Topo do App)</h2>
+                        <div class="checkbox-group"><input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem de destaque</label></div>
                         <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_banner" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
                         <div class="grid-2">
                             <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="mensagem_banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
@@ -146,7 +149,6 @@
                     <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Configurações Gerais</button>
                 </form>
             `;
-            
             document.getElementById('configContainer').innerHTML = html;
         }
 
@@ -156,13 +158,12 @@
             try {
                 const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData }); const data = await res.json();
                 if (data.sucesso) { document.getElementById('logo_url').value = data.arquivo.url; document.getElementById('logoPreview').src = data.arquivo.url; document.getElementById('logoPreview').classList.add('ativo'); }
-            } catch (e) { mostrarMensagem('error', "Erro de upload"); }
+            } catch (e) {}
         }
 
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
-            // Envia apenas o que esta página controla. O backend manterá os horários intactos!
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -172,12 +173,10 @@
                 cor_principal: document.getElementById('cor_principal').value,
                 cep_loja: document.getElementById('cep_loja').value,
                 km_maximo_entrega: parseFloat(document.getElementById('km_maximo_entrega').value) || 15,
-                mensagem_km_excedido: document.getElementById('mensagem_km_excedido').value,
                 taxa_minima: parseFloat(document.getElementById('taxa_minima').value) || 0,
                 taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 0,
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
-                
                 mensagem_banner_ativo: document.getElementById('mensagem_banner_ativo').checked,
                 mensagem_banner: document.getElementById('mensagem_banner').value,
                 mensagem_banner_icone: document.getElementById('mensagem_banner_icone').value,
@@ -189,7 +188,7 @@
                 const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
                 else mostrarMensagem('error', '❌ Erro ao salvar.');
-            } catch (error) { mostrarMensagem('error', '❌ Erro de conexão.'); } 
+            } catch (error) {} 
             finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
 
