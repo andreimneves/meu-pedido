@@ -40,7 +40,6 @@
         .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #C83232; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; }
-        .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -57,6 +56,7 @@
                 <li><a href="categorias.html">📁 Categorias</a></li>
                 <li><a href="pedidos.html">📋 Pedidos</a></li>
                 <li><a href="config.html" class="active">⚙️ Configurações</a></li>
+                <li><a href="horarios.html">🕒 Horários</a></li>
                 <li><a href="complementos.html">🧩 Complementos</a></li>
             </ul>
         </div>
@@ -73,10 +73,10 @@
         const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         let configuracoes = {};
-        const diasSemana = [{ id: 'domingo', nome: 'Domingo' }, { id: 'segunda', nome: 'Segunda-feira' }, { id: 'terca', nome: 'Terça-feira' }, { id: 'quarta', nome: 'Quarta-feira' }, { id: 'quinta', nome: 'Quinta-feira' }, { id: 'sexta', nome: 'Sexta-feira' }, { id: 'sabado', nome: 'Sábado' }];
 
         if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
         function logout() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
+        
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
@@ -133,21 +133,6 @@
                     </div>
 
                     <div class="config-section">
-                        <h2>⏰ Horários de Loja e Delivery</h2>
-                        <div class="form-group" style="margin-bottom: 25px;"><label>Texto Resumo de Horários (Aparece no topo do App)</label><input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}"></div>
-                        <div class="grid-2" style="gap: 30px;">
-                            <div style="background:#fff5f5; padding:15px; border-radius:8px; border:1px solid #ffcdd2;">
-                                <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA (Retirada)</h3>
-                                <div id="horariosLojaContainer"></div>
-                            </div>
-                            <div style="background:#e3f2fd; padding:15px; border-radius:8px; border:1px solid #bbdefb;">
-                                <h3 style="font-size:15px; color:#1565c0; margin-bottom:15px; text-align:center;">🛵 HORÁRIOS DO DELIVERY</h3>
-                                <div id="horariosDeliveryContainer"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
                         <div class="checkbox-group"><input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
                         <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_banner" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
@@ -158,41 +143,11 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Todas as Configurações</button>
+                    <button type="submit" class="btn-save" id="btnSalvarGeral">💾 Salvar Configurações Gerais</button>
                 </form>
             `;
             
             document.getElementById('configContainer').innerHTML = html;
-            
-            let hLoja = {}; let hDel = {};
-            try { hLoja = typeof configuracoes.horarios === 'string' ? JSON.parse(configuracoes.horarios) : (configuracoes.horarios || {}); } catch(e){}
-            try { hDel = typeof configuracoes.horarios_delivery === 'string' ? JSON.parse(configuracoes.horarios_delivery) : (configuracoes.horarios_delivery || {}); } catch(e){}
-            
-            renderizarGridHorarios('Loja', hLoja);
-            renderizarGridHorarios('Delivery', hDel);
-        }
-
-        function renderizarGridHorarios(tipo, dBanco) {
-            const container = document.getElementById(`horarios${tipo}Container`);
-            container.innerHTML = diasSemana.map(dia => {
-                const prefix = tipo.toLowerCase();
-                let diaAtivo = true;
-                if (dBanco && dBanco[dia.id] && dBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dBanco[dia.id].ativo) === 'true'); }
-                const diaAbre = dBanco && dBanco[dia.id] && dBanco[dia.id].abertura ? dBanco[dia.id].abertura : '18:00';
-                const diaFecha = dBanco && dBanco[dia.id] && dBanco[dia.id].fechamento ? dBanco[dia.id].fechamento : '23:59';
-
-                return `
-                    <div class="horario-row" style="font-size:12px; padding:6px 0;">
-                        <div class="dia-nome" style="width:60px;">${dia.nome.substring(0,3)}</div>
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="checkbox" id="${prefix}_ativo_${dia.id}" style="width:16px;height:16px;" ${diaAtivo ? 'checked' : ''}>
-                            <input type="time" id="${prefix}_abre_${dia.id}" value="${diaAbre}" class="form-control" style="width:80px; padding:6px;">
-                            <span>às</span>
-                            <input type="time" id="${prefix}_fecha_${dia.id}" value="${diaFecha}" class="form-control" style="width:80px; padding:6px;">
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
 
         async function uploadLogo(event) {
@@ -207,18 +162,11 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
-            const objHorariosLoja = {}; const objHorariosDelivery = {};
-            diasSemana.forEach(dia => {
-                objHorariosLoja[dia.id] = { ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, abertura: document.getElementById(`loja_abre_${dia.id}`).value, fechamento: document.getElementById(`loja_fecha_${dia.id}`).value };
-                objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
-            });
-
-            // ENVIANDO NOME POR NOME IGUAL AO BACKEND SEM MARGEM PARA ERRO
+            // Envia apenas o que esta página controla. O backend manterá os horários intactos!
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
-                horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 whatsapp: document.getElementById('whatsapp').value,
                 endereco_completo: document.getElementById('endereco_completo').value,
                 cor_principal: document.getElementById('cor_principal').value,
@@ -230,16 +178,11 @@
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
                 
-                // MENSAGEM PERSONALIZADA BLINDADA
                 mensagem_banner_ativo: document.getElementById('mensagem_banner_ativo').checked,
                 mensagem_banner: document.getElementById('mensagem_banner').value,
                 mensagem_banner_icone: document.getElementById('mensagem_banner_icone').value,
                 mensagem_banner_cor: document.getElementById('mensagem_banner_cor').value,
-                mensagem_banner_texto: document.getElementById('mensagem_banner_texto').value,
-                
-                // HORÁRIOS BLINDADOS
-                horarios: JSON.stringify(objHorariosLoja),
-                horarios_delivery: JSON.stringify(objHorariosDelivery)
+                mensagem_banner_texto: document.getElementById('mensagem_banner_texto').value
             };
 
             try {
@@ -247,7 +190,7 @@
                 if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
                 else mostrarMensagem('error', '❌ Erro ao salvar.');
             } catch (error) { mostrarMensagem('error', '❌ Erro de conexão.'); } 
-            finally { btn.textContent = '💾 Salvar Todas as Configurações'; btn.disabled = false; }
+            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
 
         carregarConfiguracoes();
