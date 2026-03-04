@@ -21,8 +21,10 @@ const configController = {
             const { subdominio } = req.params;
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
-            const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantQuery.rows[0].id]);
-            if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantQuery.rows[0].id });
+            
+            const tenantId = tenantQuery.rows[0].id;
+            const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
+            if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantId });
             res.json(configQuery.rows[0]);
         } catch (error) { res.status(500).json({ erro: error.message }); }
     },
@@ -35,34 +37,34 @@ const configController = {
             
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
-            const tenantId = tenantQuery.rows[0].id;
             
+            const tenantId = tenantQuery.rows[0].id;
             const existe = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
             const atual = existe.rows.length > 0 ? existe.rows[0] : {};
 
-            // MESCLAGEM INTELIGENTE: Só sobrepõe se o frontend enviou o dado.
+            // MESCLAGEM BLINDADA
             const obj = {
-                nome_loja: d.nome_loja !== undefined ? d.nome_loja : (atual.nome_loja || ''),
-                slogan: d.slogan !== undefined ? d.slogan : (atual.slogan || ''),
-                horario_funcionamento: d.horario_funcionamento !== undefined ? d.horario_funcionamento : (atual.horario_funcionamento || 'Seg a Dom: 18h às 23h'),
-                endereco_completo: d.endereco_completo !== undefined ? d.endereco_completo : (atual.endereco_completo || ''),
-                whatsapp: d.whatsapp !== undefined ? d.whatsapp : (atual.whatsapp || ''),
-                cep_loja: d.cep_loja !== undefined ? d.cep_loja : (atual.cep_loja || ''),
-                km_maximo_entrega: d.km_maximo_entrega !== undefined ? d.km_maximo_entrega : (atual.km_maximo_entrega || 15),
-                mensagem_km_excedido: d.mensagem_km_excedido !== undefined ? d.mensagem_km_excedido : (atual.mensagem_km_excedido || ''),
-                cor_principal: d.cor_principal !== undefined ? d.cor_principal : (atual.cor_principal || '#C83232'),
-                taxa_por_km: d.taxa_por_km !== undefined ? d.taxa_por_km : (atual.taxa_por_km || 0),
-                taxa_minima: d.taxa_minima !== undefined ? d.taxa_minima : (atual.taxa_minima || 0),
-                frete_gratis_ativo: d.frete_gratis_ativo !== undefined ? d.frete_gratis_ativo : (atual.frete_gratis_ativo || false),
-                frete_gratis_acima: d.frete_gratis_acima !== undefined ? d.frete_gratis_acima : (atual.frete_gratis_acima || 0),
-                mensagem_banner_ativo: d.mensagem_banner_ativo !== undefined ? d.mensagem_banner_ativo : (atual.mensagem_banner_ativo || false),
-                mensagem_banner: d.mensagem_banner !== undefined ? d.mensagem_banner : (atual.mensagem_banner || ''),
-                mensagem_banner_cor: d.mensagem_banner_cor !== undefined ? d.mensagem_banner_cor : (atual.mensagem_banner_cor || '#FFF3E0'),
-                mensagem_banner_texto: d.mensagem_banner_texto !== undefined ? d.mensagem_banner_texto : (atual.mensagem_banner_texto || '#E65100'),
-                mensagem_banner_icone: d.mensagem_banner_icone !== undefined ? d.mensagem_banner_icone : (atual.mensagem_banner_icone || '📢'),
-                logo_url: d.logo_url !== undefined ? d.logo_url : (atual.logo_url || ''),
-                horarios: d.horarios !== undefined ? d.horarios : (atual.horarios || '{}'),
-                horarios_delivery: d.horarios_delivery !== undefined ? d.horarios_delivery : (atual.horarios_delivery || '{}')
+                nome_loja: d.hasOwnProperty('nome_loja') ? d.nome_loja : (atual.nome_loja || ''),
+                slogan: d.hasOwnProperty('slogan') ? d.slogan : (atual.slogan || ''),
+                horario_funcionamento: d.hasOwnProperty('horario_funcionamento') ? d.horario_funcionamento : (atual.horario_funcionamento || 'Seg a Dom: 18h às 23h'),
+                endereco_completo: d.hasOwnProperty('endereco_completo') ? d.endereco_completo : (atual.endereco_completo || ''),
+                whatsapp: d.hasOwnProperty('whatsapp') ? d.whatsapp : (atual.whatsapp || ''),
+                cep_loja: d.hasOwnProperty('cep_loja') ? d.cep_loja : (atual.cep_loja || ''),
+                km_maximo_entrega: d.hasOwnProperty('km_maximo_entrega') ? d.km_maximo_entrega : (atual.km_maximo_entrega || 15),
+                mensagem_km_excedido: d.hasOwnProperty('mensagem_km_excedido') ? d.mensagem_km_excedido : (atual.mensagem_km_excedido || ''),
+                cor_principal: d.hasOwnProperty('cor_principal') ? d.cor_principal : (atual.cor_principal || '#C83232'),
+                taxa_por_km: d.hasOwnProperty('taxa_por_km') ? d.taxa_por_km : (atual.taxa_por_km || 0),
+                taxa_minima: d.hasOwnProperty('taxa_minima') ? d.taxa_minima : (atual.taxa_minima || 0),
+                frete_gratis_ativo: d.hasOwnProperty('frete_gratis_ativo') ? d.frete_gratis_ativo : (atual.frete_gratis_ativo || false),
+                frete_gratis_acima: d.hasOwnProperty('frete_gratis_acima') ? d.frete_gratis_acima : (atual.frete_gratis_acima || 0),
+                mensagem_banner_ativo: d.hasOwnProperty('mensagem_banner_ativo') ? d.mensagem_banner_ativo : (atual.mensagem_banner_ativo || false),
+                mensagem_banner: d.hasOwnProperty('mensagem_banner') ? d.mensagem_banner : (atual.mensagem_banner || ''),
+                mensagem_banner_cor: d.hasOwnProperty('mensagem_banner_cor') ? d.mensagem_banner_cor : (atual.mensagem_banner_cor || '#FFF3E0'),
+                mensagem_banner_texto: d.hasOwnProperty('mensagem_banner_texto') ? d.mensagem_banner_texto : (atual.mensagem_banner_texto || '#E65100'),
+                mensagem_banner_icone: d.hasOwnProperty('mensagem_banner_icone') ? d.mensagem_banner_icone : (atual.mensagem_banner_icone || '📢'),
+                logo_url: d.hasOwnProperty('logo_url') ? d.logo_url : (atual.logo_url || ''),
+                horarios: d.hasOwnProperty('horarios') ? d.horarios : (atual.horarios || '{}'),
+                horarios_delivery: d.hasOwnProperty('horarios_delivery') ? d.horarios_delivery : (atual.horarios_delivery || '{}')
             };
 
             if (existe.rows.length > 0) {

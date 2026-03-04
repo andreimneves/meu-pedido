@@ -24,10 +24,9 @@
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
-        .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; font-weight: 500; }
+        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
+        .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
-        .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; color: #0d47a1; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .horario-card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid; }
         .horario-card.loja { border-color: #ffcdd2; background: #fffafb; }
@@ -106,7 +105,6 @@
                 <form id="horariosForm" onsubmit="event.preventDefault(); salvarHorarios()">
                     <div class="config-section">
                         <h2>Texto de Resumo (Aparece no App)</h2>
-                        <div class="info-box">ℹ️ Esta é a frase curta que os clientes verão no topo do App.</div>
                         <div class="form-group" style="margin-bottom: 25px;">
                             <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
                         </div>
@@ -169,7 +167,6 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // ENVIA SÓ OS 3 CAMPOS. O Backend vai manter o resto!
             const configData = {
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
@@ -177,24 +174,11 @@
             };
 
             try {
-                // Rota Original Estável! Sem 404!
                 const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
-                if (res.ok) mostrarMensagem('success', '✅ Horários salvos com sucesso!');
-                else mostrarMensagem('error', `❌ Falha ao salvar.`);
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
-            finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
-        }
-
-            try {
-                // A ROTA FÍSICA SEPARADA (IMPOSSÍVEL APAGAR O RESTO)
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/horarios`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
                     carregarHorarios();
-                } else {
-                    const err = await res.json();
-                    mostrarMensagem('error', `❌ Falha: ${err.erro}`);
-                }
+                } else { mostrarMensagem('error', `❌ Falha ao salvar.`); }
             } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); } 
             finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
         }

@@ -1,5 +1,3 @@
-// frontend/script.js - MOTOR DE AGENDAMENTO INTELIGENTE
-
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
@@ -7,18 +5,18 @@ let produtos = [], gruposComplementosGlobal = [], itensComplementosGlobal = [], 
 let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = false;
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
-let tipoAgendamentoAtual = 'delivery'; // Controla qual painel de horas ler
-
-window.onload = async () => {
-    await carregarConfiguracoes();
-    await carregarTudoDoBanco(); 
-};
+let modoAgendamento = false;
 
 function parseJSONSeguro(texto) {
     if (!texto) return {};
     if (typeof texto === 'object') return texto;
     try { return JSON.parse(texto) || {}; } catch (e) { return {}; }
 }
+
+window.onload = async () => {
+    await carregarConfiguracoes();
+    await carregarTudoDoBanco(); 
+};
 
 async function carregarConfiguracoes() {
     try {
@@ -28,28 +26,20 @@ async function carregarConfiguracoes() {
         document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'Nossa Loja';
         document.getElementById('slogan').textContent = configuracoesLoja.slogan || '';
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
-        
-        // RECUPERA O TEXTO DE RESUMO DE HORÁRIOS
-        const textHorario = configuracoesLoja.horario_funcionamento || 'Consulte os horários';
-        document.getElementById('horario').innerHTML = `🕒 ${textHorario}`;
+        document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || 'Consulte os horários'}`;
         
         if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
 
-        // APLICAÇÃO DA MENSAGEM PERSONALIZADA LÁ NO TOPO
         const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true';
         const textoMsg = configuracoesLoja.mensagem_banner;
         
         if (isMsgAtiva && textoMsg && textoMsg.trim() !== '') { 
             const msgDiv = document.getElementById('mensagemPersonalizada');
             if(msgDiv) {
-                const corFundo = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
-                const corTexto = configuracoesLoja.mensagem_banner_texto || '#E65100';
-                const icone = configuracoesLoja.mensagem_banner_icone || '📢';
-                
-                msgDiv.style.backgroundColor = corFundo;
-                msgDiv.style.color = corTexto;
-                msgDiv.style.borderLeftColor = corTexto;
-                msgDiv.innerHTML = `<span style="font-size:16px;">${icone}</span> <span>${textoMsg}</span>`; 
+                msgDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
+                msgDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                msgDiv.style.borderLeftColor = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                msgDiv.innerHTML = `<span style="font-size:16px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span> <span>${textoMsg}</span>`; 
                 msgDiv.style.display = 'flex'; 
             }
         }
@@ -61,9 +51,6 @@ async function carregarConfiguracoes() {
     } catch (e) { console.error('Erro configs', e); }
 }
 
-// ==========================================
-// 1. MOTOR DE AVALIAÇÃO DE HORÁRIOS (Tempo Real)
-// ==========================================
 function obterStatusHorariosEmTempoReal() {
     let hLoja = parseJSONSeguro(configuracoesLoja.horarios);
     let hDel = parseJSONSeguro(configuracoesLoja.horarios_delivery);
@@ -72,7 +59,6 @@ function obterStatusHorariosEmTempoReal() {
 
 function analisarHorarios(mapaHorarios) {
     if (!mapaHorarios || Object.keys(mapaHorarios).length === 0) return { abertaAgora: true }; 
-    
     const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
     const agora = new Date();
     const diaAtual = diasSemana[agora.getDay()];
@@ -97,13 +83,21 @@ function analisarHorarios(mapaHorarios) {
         if (fF < aF) { if (horaAtualFloat >= aF) abertaAgora = true; } 
         else { if (horaAtualFloat >= aF && horaAtualFloat <= fF) abertaAgora = true; }
     }
-
     return { abertaAgora };
 }
 
-// ==========================================
-// 2. GERADOR DE BLOCOS DE AGENDAMENTO (Estilo IFood)
-// ==========================================
+window.mostrarAgendamento = function() {
+    document.getElementById('avisoDelivery').style.display = 'none';
+    document.getElementById('agendamentoFields').style.display = 'block';
+    modoAgendamento = true;
+    
+    const hoje = new Date();
+    const dataMin = hoje.toISOString().split('T')[0];
+    document.getElementById('dataAgendamento').min = dataMin;
+    document.getElementById('dataAgendamento').value = '';
+    document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data primeiro</option>';
+}
+
 window.carregarHorariosPorData = function() {
     const dataSelecionada = document.getElementById('dataAgendamento').value;
     const select = document.getElementById('horarioAgendamento');
@@ -113,56 +107,45 @@ window.carregarHorariosPorData = function() {
         return;
     }
 
-    // Isola o fuso horário para bater certo
     const data = new Date(dataSelecionada + 'T12:00:00');
-    const diaSemanaIdx = data.getDay();
-    const mapaDias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const nomeDiaStr = mapaDias[diaSemanaIdx];
+    const diasSemanaMap = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const diaNomeDB = diasSemanaMap[data.getDay()];
 
-    // Lê a configuração correta dependendo do que o cliente clicou
-    let horariosObj = tipoAgendamentoAtual === 'delivery' 
-        ? parseJSONSeguro(configuracoesLoja.horarios_delivery) 
-        : parseJSONSeguro(configuracoesLoja.horarios);
+    const isDelivery = document.getElementById('deliveryOption').checked;
+    const jsonStr = isDelivery ? configuracoesLoja.horarios_delivery : configuracoesLoja.horarios;
+    const mapaHorarios = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (jsonStr || {});
+    
+    const horarioDia = mapaHorarios[diaNomeDB];
 
-    const horarioDia = horariosObj[nomeDiaStr];
-
-    // Verifica se você deixou a chaveta "Verde" (Ativo) no painel admin
     if (!horarioDia || (String(horarioDia.ativo) !== 'true' && horarioDia.ativo !== true)) {
         select.innerHTML = '<option value="">❌ Fechado neste dia</option>';
         return;
     }
 
-    let [abreH, abreM] = (horarioDia.abertura || '18:00').split(':').map(Number);
-    let [fechaH, fechaM] = (horarioDia.fechamento || '23:59').split(':').map(Number);
+    const [horaAbertura, minAbertura] = (horarioDia.abertura || '18:00').split(':').map(Number);
+    let [horaFechamento, minFechamento] = (horarioDia.fechamento || '23:59').split(':').map(Number);
+    if (horaFechamento < horaAbertura) horaFechamento += 24; 
 
-    if (fechaH < abreH) fechaH += 24; // Lógica da Madrugada
+    let aberturaTotal = horaAbertura * 60 + (minAbertura || 0);
+    const fechamentoTotal = horaFechamento * 60 + (minFechamento || 0);
 
-    let aberturaTotal = abreH * 60 + (abreM || 0);
-    let fechamentoTotal = fechaH * 60 + (fechaM || 0);
-
-    // Se o cliente escolheu HOJE, esconde as horas do passado
     const hoje = new Date();
-    const isHoje = data.toDateString() === hoje.toDateString();
-
-    if (isHoje) {
+    if (data.toDateString() === hoje.toDateString()) {
         const minutosAgora = hoje.getHours() * 60 + hoje.getMinutes();
-        if (minutosAgora > aberturaTotal) {
-            aberturaTotal = Math.ceil(minutosAgora / 60) * 60; // Pula para a próxima hora cheia
-        }
+        if (minutosAgora > aberturaTotal) aberturaTotal = Math.ceil(minutosAgora / 60) * 60;
     }
 
-    // Gera os bloquinhos de 1h em 1h
     const periodos = [];
     for (let minutos = aberturaTotal; minutos < fechamentoTotal; minutos += 60) {
-        let inicioH = Math.floor(minutos / 60) % 24;
-        let inicioM = minutos % 60;
-        let fimH = Math.floor((minutos + 60) / 60) % 24;
-        let fimM = (minutos + 60) % 60;
+        const horaInicio = Math.floor(minutos / 60) % 24;
+        const minInicio = minutos % 60;
+        const horaFim = Math.floor((minutos + 60) / 60) % 24;
+        const minFim = (minutos + 60) % 60;
 
-        const inicioF = `${inicioH.toString().padStart(2, '0')}:${inicioM.toString().padStart(2, '0')}`;
-        const fimF = `${fimH.toString().padStart(2, '0')}:${fimM.toString().padStart(2, '0')}`;
+        const inicioFormatado = `${horaInicio.toString().padStart(2, '0')}:${minInicio.toString().padStart(2, '0')}`;
+        const fimFormatado = `${horaFim.toString().padStart(2, '0')}:${minFim.toString().padStart(2, '0')}`;
 
-        periodos.push(`${inicioF} às ${fimF}`);
+        periodos.push({ inicio: inicioFormatado, fim: fimFormatado, label: `${inicioFormatado} - ${fimFormatado}` });
     }
 
     if (periodos.length === 0) {
@@ -170,18 +153,18 @@ window.carregarHorariosPorData = function() {
         return;
     }
 
-    select.innerHTML = '<option value="">⏰ Escolha o período</option>';
-    periodos.forEach(p => {
+    select.innerHTML = '<option value="">Selecione um horário</option>';
+    const nomesExibicao = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const nomeDia = nomesExibicao[data.getDay()];
+    const dataFormatada = data.toLocaleDateString('pt-BR');
+
+    periodos.forEach(periodo => {
         const option = document.createElement('option');
-        option.value = p; // Guarda só as horas
-        option.textContent = p;
+        option.value = `${dataSelecionada}|${periodo.inicio}|${periodo.fim}`;
+        option.textContent = `${nomeDia}, ${dataFormatada}, entre ${periodo.label}`;
         select.appendChild(option);
     });
 }
-
-// ==========================================
-// OUTRAS FUNÇÕES E INTEGRAÇÕES
-// ==========================================
 
 function calcularDistanciaGeo(lat1, lon1, lat2, lon2) {
     const R = 6371; 
@@ -197,18 +180,15 @@ window.calcularFretePorCEP = async function() {
     const cepCliente = cepInput.replace(/\D/g, '');
     if(cepCliente.length !== 8) { document.getElementById('cepInfo').innerHTML = '❌ CEP Inválido'; return; }
     
-    document.getElementById('cepInfo').innerHTML = '🔄 Consultando Satélite...';
+    document.getElementById('cepInfo').innerHTML = '🔄 Calculando...';
     try {
-        const resCli = await fetch(`https://cep.awesomeapi.com.br/json/${cepCliente}`);
+        const resCli = await fetch(`https://viacep.com.br/ws/${cepCliente}/json/`);
         const dadosCli = await resCli.json();
         
-        if(dadosCli.status === 404 || !dadosCli.lat) {
-            document.getElementById('cepInfo').innerHTML = '❌ CEP não mapeado. Fale via WhatsApp.';
-            dentroAreaEntrega = false; return;
-        }
+        if(dadosCli.erro) throw new Error('CEP não encontrado');
 
-        document.getElementById('clienteEndereco').value = dadosCli.address || '';
-        document.getElementById('clienteBairro').value = dadosCli.district || '';
+        document.getElementById('clienteEndereco').value = dadosCli.logradouro || '';
+        document.getElementById('clienteBairro').value = dadosCli.bairro || '';
 
         if (!coordsLoja.lat && configuracoesLoja.cep_loja) {
             const resLoja = await fetch(`https://cep.awesomeapi.com.br/json/${configuracoesLoja.cep_loja.replace(/\D/g, '')}`);
@@ -216,8 +196,11 @@ window.calcularFretePorCEP = async function() {
             if(dadosLoja.lat) coordsLoja = {lat: parseFloat(dadosLoja.lat), lng: parseFloat(dadosLoja.lng)};
         }
 
-        if (coordsLoja.lat && coordsLoja.lng) {
-            const kmReal = calcularDistanciaGeo(coordsLoja.lat, coordsLoja.lng, parseFloat(dadosCli.lat), parseFloat(dadosCli.lng));
+        const resCliCoords = await fetch(`https://cep.awesomeapi.com.br/json/${cepCliente}`);
+        const dadosCliCoords = await resCliCoords.json();
+
+        if (coordsLoja.lat && coordsLoja.lng && dadosCliCoords.lat) {
+            const kmReal = calcularDistanciaGeo(coordsLoja.lat, coordsLoja.lng, parseFloat(dadosCliCoords.lat), parseFloat(dadosCliCoords.lng));
             const kmMax = parseFloat(configuracoesLoja.km_maximo_entrega) || 15;
 
             if (kmReal > kmMax) {
@@ -240,7 +223,7 @@ window.calcularFretePorCEP = async function() {
 
         dentroAreaEntrega = true;
         const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0);
-        const freeAtivo = String(configuracoesLoja.frete_gratis_ativo) === 'true' || configuracoesLoja.frete_gratis_ativo == 1;
+        const freeAtivo = String(configuracoesLoja.frete_gratis_ativo) === 'true' || configuracoesLoja.frete_gratis_ativo === true;
         const freeAcima = parseFloat(configuracoesLoja.frete_gratis_acima) || 0;
 
         if (freeAtivo && freeAcima > 0 && sub >= freeAcima) {
@@ -254,7 +237,7 @@ window.calcularFretePorCEP = async function() {
             document.getElementById('freteInfo').style.background = '#e8f5e9'; document.getElementById('freteInfo').style.color = '#333';
         }
         calcularSubtotalGeral();
-    } catch(e) { document.getElementById('cepInfo').innerHTML = '❌ Falha de satélite.'; }
+    } catch(e) { document.getElementById('cepInfo').innerHTML = '❌ Erro de busca.'; }
 }
 
 async function carregarTudoDoBanco() {
@@ -352,163 +335,82 @@ window.abrirCarrinho = function() {
     document.getElementById('cartModal').style.display = 'block'; document.body.style.overflow = 'hidden';
 }
 
-// ===== MOSTRAR AGENDAMENTO (Lógica do DOCX) =====
-window.mostrarAgendamento = function() {
-    document.getElementById('avisoDelivery').style.display = 'none';
-    document.getElementById('agendamentoFields').style.display = 'block';
-    
-    // Configurar data mínima (hoje)
-    const hoje = new Date();
-    const dataMin = hoje.toISOString().split('T')[0];
-    document.getElementById('dataAgendamento').min = dataMin;
-    document.getElementById('dataAgendamento').value = '';
-    document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data primeiro</option>';
-}
-
-// ===== GERAR OPÇÕES DE HORÁRIOS POR DATA (Lógica do DOCX adaptada ao novo DB) =====
-window.carregarHorariosPorData = function() {
-    const dataSelecionada = document.getElementById('dataAgendamento').value;
-    const select = document.getElementById('horarioAgendamento');
-
-    if (!dataSelecionada) {
-        select.innerHTML = '<option value="">Selecione uma data primeiro</option>';
-        return;
-    }
-
-    const data = new Date(dataSelecionada + 'T12:00:00'); // Evitar problemas de fuso
-    const diasSemanaMap = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const diaNomeDB = diasSemanaMap[data.getDay()];
-
-    const isDelivery = document.getElementById('deliveryOption').checked;
-    const jsonStr = isDelivery ? configuracoesLoja.horarios_delivery : configuracoesLoja.horarios;
-    const mapaHorarios = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (jsonStr || {});
-    
-    const horarioDia = mapaHorarios[diaNomeDB];
-
-    if (!horarioDia || (String(horarioDia.ativo) !== 'true' && horarioDia.ativo !== true)) {
-        select.innerHTML = '<option value="">❌ Fechado neste dia</option>';
-        return;
-    }
-
-    // Gerar períodos de 1 hora entre abertura e fechamento (Lógica exata do seu DOCX)
-    const [horaAbertura, minAbertura] = (horarioDia.abertura || '18:00').split(':').map(Number);
-    let [horaFechamento, minFechamento] = (horarioDia.fechamento || '23:59').split(':').map(Number);
-    if (horaFechamento < horaAbertura) horaFechamento += 24; // Madrugada
-
-    let aberturaTotal = horaAbertura * 60 + (minAbertura || 0);
-    const fechamentoTotal = horaFechamento * 60 + (minFechamento || 0);
-
-    const hoje = new Date();
-    if (data.toDateString() === hoje.toDateString()) {
-        const minutosAgora = hoje.getHours() * 60 + hoje.getMinutes();
-        if (minutosAgora > aberturaTotal) aberturaTotal = Math.ceil(minutosAgora / 60) * 60;
-    }
-
-    const periodos = [];
-    for (let minutos = aberturaTotal; minutos < fechamentoTotal; minutos += 60) {
-        const horaInicio = Math.floor(minutos / 60) % 24;
-        const minInicio = minutos % 60;
-        const horaFim = Math.floor((minutos + 60) / 60) % 24;
-        const minFim = (minutos + 60) % 60;
-
-        const inicioFormatado = `${horaInicio.toString().padStart(2, '0')}:${minInicio.toString().padStart(2, '0')}`;
-        const fimFormatado = `${horaFim.toString().padStart(2, '0')}:${minFim.toString().padStart(2, '0')}`;
-
-        periodos.push({ inicio: inicioFormatado, fim: fimFormatado, label: `${inicioFormatado} - ${fimFormatado}` });
-    }
-
-    if (periodos.length === 0) {
-        select.innerHTML = '<option value="">❌ Horários encerrados para hoje</option>';
-        return;
-    }
-
-    select.innerHTML = '<option value="">Selecione um horário</option>';
-    const nomesExibicao = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const nomeDia = nomesExibicao[data.getDay()];
-    const dataFormatada = data.toLocaleDateString('pt-BR');
-
-    periodos.forEach(periodo => {
-        const option = document.createElement('option');
-        // Salvando no formato exato do seu DOCX
-        option.value = `${dataSelecionada}|${periodo.inicio}|${periodo.fim}`;
-        option.textContent = `${nomeDia}, ${dataFormatada}, entre ${periodo.label}`;
-        select.appendChild(option);
-    });
-}
-
-// ===== TOGGLE DELIVERY =====
 window.toggleDelivery = function(isDelivery) {
     if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
+
     document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
     document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
     
-    // Lógica do DOCX: Resetar o modal de agendamento sempre que troca o tipo
     document.getElementById('agendamentoFields').style.display = 'none';
-    const avisoDiv = document.getElementById('avisoDelivery');
-    if (avisoDiv) avisoDiv.style.display = 'none';
-    document.querySelector('.whatsapp-btn').innerHTML = '📲 Enviar Pedido via WhatsApp';
-
-    // Pega o status do "Cérebro"
-    let mapa = isDelivery ? configuracoesLoja.horarios_delivery : configuracoesLoja.horarios;
-    let abertoAgora = true;
-    try {
-        let obj = typeof mapa === 'string' ? JSON.parse(mapa) : (mapa || {});
-        const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-        let configHoje = obj[dias[new Date().getDay()]];
-        if (configHoje && (String(configHoje.ativo) !== 'true' && configHoje.ativo !== true)) abertoAgora = false;
-        else {
-            let [aH, aM] = (configHoje?.abertura || '18:00').split(':').map(Number);
-            let [fH, fM] = (configHoje?.fechamento || '23:59').split(':').map(Number);
-            let agoraMin = new Date().getHours() * 60 + new Date().getMinutes();
-            if (fH < aH) fH += 24;
-            if (agoraMin < (aH*60+aM) || agoraMin > (fH*60+fM)) abertoAgora = false;
-        }
-    } catch(e){}
+    modoAgendamento = false;
+    
+    const statusTempoReal = obterStatusHorariosEmTempoReal();
+    let avisoDiv = document.getElementById('avisoDelivery');
+    let btn = document.querySelector('.whatsapp-btn');
+    
+    if(avisoDiv) avisoDiv.style.display = 'none';
+    btn.disabled = false; btn.style.background = '#25D366'; btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
 
     if (isDelivery) {
         document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP para verificação de distância.'; 
         document.getElementById('freteInfo').className = 'frete-info'; taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
-        if (!abertoAgora) {
-            avisoDiv.innerHTML = `<p style="font-weight: bold; margin-bottom: 10px; color:#0d47a1;">🚫 Delivery fechado no momento.</p><button style="background:#2196F3; color:white; border:none; padding:10px; border-radius:5px; width:100%; cursor:pointer;" onclick="mostrarAgendamento()">📅 Quero agendar entrega</button>`;
-            avisoDiv.style.display = 'block';
-            document.querySelector('.whatsapp-btn').innerHTML = '⚠️ Requer Agendamento';
+        
+        if (!statusTempoReal.delivery.abertaAgora) {
+            if(avisoDiv) {
+                avisoDiv.innerHTML = `
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; border-radius: 6px;">
+                        <p style="font-weight: bold; color: #0d47a1; margin-bottom: 10px;">🚫 Delivery fechado no momento.</p>
+                        <button style="background: #2196F3; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer;" onclick="mostrarAgendamento()">📅 Quero agendar entrega</button>
+                    </div>
+                `;
+                avisoDiv.style.display = 'block';
+            }
+            btn.innerHTML = '⚠️ Requer Agendamento';
         }
-    } else {
+    } else { 
         taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
-        if (!abertoAgora) {
-            avisoDiv.innerHTML = `<p style="font-weight: bold; margin-bottom: 10px; color:#e65100;">🏪 Nossa loja está fechada no momento.</p><button style="background:#ff9800; color:white; border:none; padding:10px; border-radius:5px; width:100%; cursor:pointer;" onclick="mostrarAgendamento()">📅 Quero agendar retirada</button>`;
-            avisoDiv.style.display = 'block';
-            document.querySelector('.whatsapp-btn').innerHTML = '⚠️ Requer Agendamento';
+        
+        if (!statusTempoReal.loja.abertaAgora) {
+            if(avisoDiv) {
+                avisoDiv.innerHTML = `
+                    <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; border-radius: 6px;">
+                        <p style="font-weight: bold; color: #e65100; margin-bottom: 10px;">🏪 Nossa loja está fechada no momento.</p>
+                        <button style="background: #ff9800; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer;" onclick="mostrarAgendamento()">📅 Quero agendar retirada</button>
+                    </div>
+                `;
+                avisoDiv.style.display = 'block';
+            }
+            btn.innerHTML = '⚠️ Requer Agendamento';
         }
     }
     calcularSubtotalGeral();
 }
 
-// ==========================================
-// 3. O CORAÇÃO DO PEDIDO (INJETANDO A DATA)
-// ==========================================
+window.fecharCarrinho = function() { document.getElementById('cartModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+window.removerDoCarrinho = function(idx) { carrinho.splice(idx, 1); atualizarRodapeCarrinho(); if(carrinho.length>0) abrirCarrinho(); }
+function calcularSubtotalGeral() {
+    const sub = carrinho.reduce((s, i) => s + i.precoTotalLinha, 0); document.getElementById('cartSubtotal').textContent = sub.toFixed(2);
+    document.getElementById('cartTotalFinal').textContent = (sub + (document.getElementById('deliveryOption').checked ? taxaFrete : 0)).toFixed(2);
+}
+
 window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
     const statusTempoReal = obterStatusHorariosEmTempoReal();
     let strAgendamento = "";
-    let msgAgendamentoNoWpp = "";
     
-    // Verificador de Agendamento Obrigatório
-    if (tipo === 'delivery' && !statusTempoReal.delivery.abertaAgora) {
-        const dataAg = document.getElementById('dataAgendamento')?.value;
-        const horAg = document.getElementById('horarioAgendamento')?.value;
-        if (!dataAg || !horAg) return alert("⚠️ Selecione a Data e o Horário do Agendamento!");
-        const dataForm = new Date(dataAg + 'T12:00:00').toLocaleDateString('pt-BR');
-        strAgendamento = `${dataForm} - ${horAg}`;
-        msgAgendamentoNoWpp = `\n📅 *Entrega Agendada para:* ${strAgendamento}\n`;
-    } else if (tipo === 'pickup' && !statusTempoReal.loja.abertaAgora) {
-        const dataAg = document.getElementById('dataAgendamento')?.value;
-        const horAg = document.getElementById('horarioAgendamento')?.value;
-        if (!dataAg || !horAg) return alert("⚠️ Selecione a Data e o Horário do Agendamento!");
-        const dataForm = new Date(dataAg + 'T12:00:00').toLocaleDateString('pt-BR');
-        strAgendamento = `${dataForm} - ${horAg}`;
-        msgAgendamentoNoWpp = `\n📅 *Retirada Agendada para:* ${strAgendamento}\n`;
+    if (modoAgendamento || (tipo === 'delivery' && !statusTempoReal.delivery.abertaAgora) || (tipo === 'pickup' && !statusTempoReal.loja.abertaAgora)) {
+        const dataAgendamento = document.getElementById('dataAgendamento')?.value;
+        const horarioAgendamento = document.getElementById('horarioAgendamento')?.value;
+
+        if (!dataAgendamento || !horarioAgendamento) {
+            alert('⚠️ Selecione a Data e o Horário para o agendamento!');
+            return;
+        }
+
+        const [dataStr, horaInicio, horaFim] = horarioAgendamento.split('|');
+        const dataFormatada = new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR');
+        strAgendamento = `📅 Agendado para: ${dataFormatada}, entre ${horaInicio} e ${horaFim}`;
     }
     
     if(tipo === 'delivery') {
@@ -525,7 +427,7 @@ window.finalizarPedido = async function() {
 
     let dadosPedido = {
         cliente_nome: nome, cliente_telefone: tel, tipo_entrega: tipo, taxa_entrega: tipo === 'delivery' ? taxaFrete : 0, subtotal: sub, total: totalFinal, 
-        observacoes: strAgendamento ? `[AGENDADO PARA] ${strAgendamento}` : '',
+        observacoes: strAgendamento ? `[AGENDADO] ${strAgendamento}` : '',
         itens: carrinho.map(i => {
             let n = i.nome; if(i.complementos.length>0) n += ' (+ ' + i.complementos.map(c=>c.nome).join(', ') + ')';
             if(i.observacao) n += ` [Obs: ${i.observacao}]`;
@@ -546,7 +448,7 @@ window.finalizarPedido = async function() {
     } catch(e) {}
 
     let msg = `🍽️ *NOVO PEDIDO${idPedidoReal}*\n━━━━━━━━━━━━━━━━\n`;
-    if(msgAgendamentoNoWpp) msg += `${msgAgendamentoNoWpp}━━━━━━━━━━━━━━━━\n`;
+    if(strAgendamento) msg += `*${strAgendamento}*\n━━━━━━━━━━━━━━━━\n`;
     msg += `👤 *Cliente:* ${nome}\n📱 *Tel:* ${tel}\n\n🛍️ *RESUMO:*\n\n`;
     carrinho.forEach(i => {
         msg += `*${i.quantidade}x ${i.nome}* (R$ ${i.precoTotalLinha.toFixed(2)})\n`;

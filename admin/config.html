@@ -119,7 +119,6 @@
                             <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
                             <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
                         </div>
-                        <input type="hidden" id="mensagem_km_excedido" value="${configuracoes.mensagem_km_excedido || ''}">
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
                             <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
                             <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
@@ -155,7 +154,6 @@
         window.salvarConfiguracoes = async function() {
             const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
             
-            // ENVIA SÓ AS CONFIGS. O Backend não tocará nos horários.
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -177,21 +175,9 @@
             };
 
             try {
-                // Rota Original Estável! Sem 404!
                 const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
                 else mostrarMensagem('error', '❌ Erro ao salvar.');
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
-            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
-        }
-
-            try {
-                // A ROTA FÍSICA SEPARADA (IMPOSSÍVEL APAGAR OS HORÁRIOS)
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/geral`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
-                if (res.ok) {
-                    mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
-                    carregarConfiguracoes();
-                } else { mostrarMensagem('error', '❌ Erro ao salvar.'); }
             } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
             finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
         }
