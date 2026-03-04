@@ -59,7 +59,7 @@
             <h1>⚙️ Configurações Gerais</h1>
             <div id="successMessage" class="success-message"></div>
             <div id="errorMessage" class="error-message"></div>
-            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando...</div></div>
+            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">Carregando configurações...</div></div>
         </div>
     </div>
 
@@ -75,15 +75,18 @@
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
             if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 3000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 3000); }
+            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 5000); }
         }
 
+        // Esta função busca na "porta antiga" (porque os dados vêm de lá para leitura)
         async function carregarConfiguracoes() {
             try {
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) {}
+            } catch (error) {
+                document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`;
+            }
         }
 
         function exibirFormulario() {
@@ -119,6 +122,7 @@
                             <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
                             <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
                         </div>
+                        <input type="hidden" id="mensagem_km_excedido" value="${configuracoes.mensagem_km_excedido || ''}">
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
                             <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
                             <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
@@ -175,12 +179,25 @@
             };
 
             try {
-                // APONTA PARA A ROTA GERAL
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/geral`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
-                if (res.ok) mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
-                else mostrarMensagem('error', '❌ Erro ao salvar.');
-            } catch (error) {} 
-            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
+                // COMUNICANDO COM A NOVA "PORTA VIRTUAL" QUE CRIAMOS NO SERVIDOR (config-geral)
+                const res = await fetch(`${API_URL}/config-geral/${SUBDOMINIO}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(configData) 
+                });
+                
+                if (res.ok) {
+                    mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
+                } else {
+                    const erroResp = await res.json();
+                    mostrarMensagem('error', `❌ Erro do Servidor: ${erroResp.erro || res.statusText}`);
+                }
+            } catch (error) { 
+                mostrarMensagem('error', '❌ Erro de Conexão com a Internet.'); 
+            } finally { 
+                btn.textContent = '💾 Salvar Configurações Gerais'; 
+                btn.disabled = false; 
+            }
         }
 
         carregarConfiguracoes();

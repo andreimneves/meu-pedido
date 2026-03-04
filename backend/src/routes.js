@@ -1,4 +1,3 @@
-// backend/src/routes.js
 const express = require('express');
 const router = express.Router();
 
@@ -6,16 +5,16 @@ const produtoController = require('./controllers/produtoController');
 const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
-const configController = require('./controllers/configController'); // IMPORTAMOS O CONFIG
+const configController = require('./controllers/configController'); 
 
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
 // ==========================================
-// AS 3 ROTAS DE CONFIGURAÇÃO (SEPARADAS!)
+// AS 3 ROTAS DE CONFIGURAÇÃO (BLINDADAS E ÚNICAS)
 // ==========================================
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio/geral', safe(configController.atualizarGeral));       // Rota 1: Configurações
-router.put('/config/:subdominio/horarios', safe(configController.atualizarHorarios)); // Rota 2: Horários
+router.put('/config-geral/:subdominio', safe(configController.atualizarGeral));       // Porta 1: Só Configurações
+router.put('/config-horarios/:subdominio', safe(configController.atualizarHorarios)); // Porta 2: Só Horários
 
 // ==========================================
 // CATEGORIAS

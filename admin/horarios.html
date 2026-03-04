@@ -25,7 +25,6 @@
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
-        .btn-save:hover { background: #388E3C; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; font-weight: 500; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
         .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; color: #0d47a1; }
@@ -86,8 +85,8 @@
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
-            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 4000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 4000); }
+            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 5000); }
+            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 8000); }
         }
 
         function parseJSONSeguro(texto) {
@@ -179,11 +178,16 @@
             };
 
             try {
-                // APONTA PARA A ROTA EXCLUSIVA DE HORÁRIOS
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}/horarios`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
-                if (res.ok) mostrarMensagem('success', '✅ Horários salvos com absoluto sucesso!');
-                else mostrarMensagem('error', `❌ Erro do Servidor`);
-            } catch (error) { mostrarMensagem('error', '❌ Falha de Conexão.'); } 
+                // ROTA EXCLUSIVA E BLINDADA: /config-horarios/dlcrepes
+                const res = await fetch(`${API_URL}/config-horarios/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                if (res.ok) {
+                    mostrarMensagem('success', '✅ Horários salvos com sucesso!');
+                } else {
+                    let erroTxt = 'Erro Desconhecido';
+                    try { const errObj = await res.json(); erroTxt = errObj.erro || res.statusText; } catch(e) { erroTxt = res.statusText; }
+                    mostrarMensagem('error', `❌ Falha: ${erroTxt}`);
+                }
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); } 
             finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
         }
 
