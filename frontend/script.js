@@ -1,4 +1,4 @@
-// frontend/script.js - BLINDAGEM MÁXIMA
+// frontend/script.js
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
@@ -7,13 +7,6 @@ let produtos = [], gruposComplementosGlobal = [], itensComplementosGlobal = [], 
 let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = false;
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
-
-// Função à prova de falhas para ler JSON do banco
-function safeParse(str) {
-    if (!str) return null;
-    if (typeof str === 'object') return str;
-    try { return JSON.parse(str); } catch (e) { return null; }
-}
 
 window.onload = async () => {
     await carregarConfiguracoes();
@@ -32,8 +25,8 @@ async function carregarConfiguracoes() {
         if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
 
         // APLICAÇÃO PERFEITA DA MENSAGEM PERSONALIZADA
-        const isMsgAtiva = String(configuracoesLoja.mensagem_ativa) === 'true' || String(configuracoesLoja.mensagem_banner_ativo) === 'true' || configuracoesLoja.mensagem_ativa == 1;
-        const textoMsg = configuracoesLoja.mensagem_texto || configuracoesLoja.mensagem_banner || configuracoesLoja.mensagem_personalizada;
+        const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true' || configuracoesLoja.mensagem_banner_ativo == 1;
+        const textoMsg = configuracoesLoja.mensagem_banner;
         
         if (isMsgAtiva && textoMsg && textoMsg.trim() !== '') { 
             const msgDiv = document.getElementById('mensagemPersonalizada');
@@ -56,8 +49,9 @@ async function carregarConfiguracoes() {
 }
 
 function obterStatusHorariosEmTempoReal() {
-    let hLoja = safeParse(configuracoesLoja.horarios);
-    let hDel = safeParse(configuracoesLoja.horarios_delivery);
+    let hLoja = {}; let hDel = {};
+    if (configuracoesLoja.horarios) { try { hLoja = JSON.parse(configuracoesLoja.horarios); } catch(e){} }
+    if (configuracoesLoja.horarios_delivery) { try { hDel = JSON.parse(configuracoesLoja.horarios_delivery); } catch(e){} }
     return { loja: analisarHorarios(hLoja), delivery: analisarHorarios(hDel) };
 }
 
@@ -286,7 +280,7 @@ window.abrirCarrinho = function() {
         
         const isDeliveryChecked = document.getElementById('deliveryOption').checked;
         window.toggleDelivery(isDeliveryChecked);
-    } catch (e) { console.error("Erro seguro no carrinho", e); }
+    } catch (e) { console.error("Erro no carrinho", e); }
     document.getElementById('cartModal').style.display = 'block'; document.body.style.overflow = 'hidden';
 }
 
@@ -297,6 +291,7 @@ window.toggleDelivery = function(isDelivery) {
     document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
     
     const statusTempoReal = obterStatusHorariosEmTempoReal();
+    
     let msgBox = document.getElementById('statusLojaMensagem');
     let agenBox = document.getElementById('agendamentoContainer');
     let select = document.getElementById('agendamentoSelect');
@@ -362,7 +357,7 @@ window.finalizarPedido = async function() {
     if(tipo === 'delivery') {
         nome = document.getElementById('clienteNome').value.trim(); tel = document.getElementById('clienteTelefone').value.trim();
         if(!nome || !tel || !document.getElementById('clienteEndereco').value || !document.getElementById('clienteNumero').value) return alert('Preencha todos os dados de entrega!');
-        if(!dentroAreaEntrega) return alert('Desculpe, este endereço está fora da área de entrega ou o CEP não foi calculado.');
+        if(!dentroAreaEntrega) return alert('Desculpe, este endereço está fora da área de entrega calculada.');
     } else {
         nome = document.getElementById('pickupNome').value.trim(); tel = document.getElementById('pickupTelefone').value.trim();
         if(!nome || !tel) return alert('Preencha seu nome e WhatsApp!');

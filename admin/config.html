@@ -31,6 +31,7 @@
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
         .btn-save:hover { background: #388E3C; }
         .upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #fafafa; margin-bottom: 15px; }
+        .logo-preview-container { text-align: center; margin: 15px 0; }
         .logo-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #ddd; padding: 3px; display: none; margin: 0 auto; }
         .logo-preview.ativo { display: block; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
@@ -45,10 +46,7 @@
 <body>
     <div class="admin-header">
         <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
-        <div class="user-info">
-            <span>👤 DL Crepes e Lanches</span>
-            <button class="logout" onclick="logout()">🚪 Sair</button>
-        </div>
+        <div class="user-info"><span>👤 DL Crepes e Lanches</span><button class="logout" onclick="logout()">🚪 Sair</button></div>
     </div>
     
     <div class="admin-container">
@@ -92,12 +90,12 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro: ${error.message}</div>`; }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">❌ Erro ao carregar: ${error.message}</div>`; }
         }
 
         function exibirFormulario() {
             const freteGratisAtivo = String(configuracoes.frete_gratis_ativo) === 'true' || configuracoes.frete_gratis_ativo == 1;
-            const bannerAtivo = String(configuracoes.mensagem_banner_ativo) === 'true' || String(configuracoes.mensagem_ativa) === 'true' || configuracoes.mensagem_ativa == 1;
+            const bannerAtivo = String(configuracoes.mensagem_banner_ativo) === 'true' || configuracoes.mensagem_banner_ativo == 1;
 
             const html = `
                 <form id="configForm" onsubmit="event.preventDefault(); salvarConfiguracoes()">
@@ -151,7 +149,7 @@
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada</h2>
                         <div class="checkbox-group"><input type="checkbox" id="mensagem_ativa" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem no topo do cardápio</label></div>
-                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_texto || configuracoes.mensagem_banner || configuracoes.mensagem_personalizada || ''}</textarea></div>
+                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_texto" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
                         <div class="grid-2">
                             <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
                             <div class="form-group"><label>Cor de Fundo</label><input type="color" id="banner_cor_fundo" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
@@ -214,11 +212,12 @@
                 objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // AQUI RESOLVEMOS OS IDS CORRETOS!
+            // ENVIANDO NOME POR NOME IGUAL AO BACKEND
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
                 slogan: document.getElementById('slogan').value,
+                horario_funcionamento: document.getElementById('horario_funcionamento').value, // <--- AGORA SALVA CORRETAMENTE!
                 whatsapp: document.getElementById('whatsapp').value,
                 endereco_completo: document.getElementById('endereco_completo').value,
                 cor_principal: document.getElementById('cor_principal').value,
@@ -228,11 +227,13 @@
                 taxa_por_km: parseFloat(document.getElementById('taxa_por_km').value) || 0,
                 frete_gratis_ativo: document.getElementById('frete_gratis_ativo').checked,
                 frete_gratis_acima: parseFloat(document.getElementById('frete_gratis_acima').value) || 0,
-                mensagem_ativa: document.getElementById('mensagem_ativa').checked,
-                mensagem_texto: document.getElementById('mensagem_texto').value,
+                
+                mensagem_banner_ativo: document.getElementById('mensagem_ativa').checked, // <--- NOMES ALINHADOS
+                mensagem_banner: document.getElementById('mensagem_texto').value,
                 mensagem_banner_icone: document.getElementById('banner_icone').value,
                 mensagem_banner_cor: document.getElementById('banner_cor_fundo').value,
                 mensagem_banner_texto: document.getElementById('banner_cor_texto').value,
+                
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
