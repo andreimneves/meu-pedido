@@ -24,23 +24,17 @@
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-        .form-group input:focus { border-color: #C83232; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
-        .btn-save:hover { background: #388E3C; }
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; font-weight: 500; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
         .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px; margin: 10px 0 20px; font-size: 13px; border-radius: 4px; color: #0d47a1; }
-        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .horario-card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid; }
         .horario-card.loja { border-color: #ffcdd2; background: #fffafb; }
         .horario-card.delivery { border-color: #bbdefb; background: #f8fbff; }
         .horario-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .horario-row:last-child { border-bottom: none; }
         .dia-nome { width: 50px; font-weight: 600; color: #555; font-size: 14px; text-transform: capitalize; }
-        .time-input { width: 95px !important; padding: 8px !important; text-align: center; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
-        
-        /* BOTÃO SWITCH */
+        .time-input { width: 95px !important; padding: 8px !important; text-align: center; }
         .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0 10px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
@@ -72,24 +66,16 @@
             <h1>🕒 Gestão de Horários</h1>
             <div id="successMessage" class="success-message"></div>
             <div id="errorMessage" class="error-message"></div>
-            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">⏳ Carregando sistema de horários...</div></div>
+            <div id="configContainer"><div style="text-align:center; padding:40px; color:#666;">⏳ Carregando horários...</div></div>
         </div>
     </div>
 
     <script>
         const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
-        let configuracoes = {}; // MEMÓRIA DE SEGURANÇA (Guarda a Logo e Mensagens para não apagar)
+        let configuracoes = {};
         
-        const diasSemana = [
-            { id: 'domingo', nome: 'Dom' }, 
-            { id: 'segunda', nome: 'Seg' }, 
-            { id: 'terca', nome: 'Ter' }, 
-            { id: 'quarta', nome: 'Qua' }, 
-            { id: 'quinta', nome: 'Qui' }, 
-            { id: 'sexta', nome: 'Sex' }, 
-            { id: 'sabado', nome: 'Sáb' }
-        ];
+        const diasSemana = [{ id: 'domingo', nome: 'Dom' }, { id: 'segunda', nome: 'Seg' }, { id: 'terca', nome: 'Ter' }, { id: 'quarta', nome: 'Qua' }, { id: 'quinta', nome: 'Qui' }, { id: 'sexta', nome: 'Sex' }, { id: 'sabado', nome: 'Sáb' }];
 
         if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
         window.logout = function() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
@@ -98,26 +84,21 @@
             const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
             success.style.display = 'none'; error.style.display = 'none';
             if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 4000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 5000); }
+            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 4000); }
         }
 
-        // Função de blindagem na leitura do banco de dados
         function parseJSONSeguro(texto) {
             if (!texto) return {};
             if (typeof texto === 'object') return texto;
-            try { return JSON.parse(texto) || {}; } catch (e) { return {}; }
+            try { return JSON.parse(texto); } catch (e) { return {}; }
         }
 
         async function carregarHorarios() {
             try {
-                // Traz a "Carga Completa" para a memória do navegador
                 const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
-                if (!response.ok) throw new Error("Falha na comunicação.");
                 configuracoes = await response.json();
                 exibirFormulario();
-            } catch (error) { 
-                document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red; font-weight:bold;">❌ Erro de conexão com o banco de dados.</div>`; 
-            }
+            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red; font-weight:bold;">❌ Erro ao carregar</div>`; }
         }
 
         function exibirFormulario() {
@@ -125,7 +106,7 @@
                 <form id="horariosForm" onsubmit="event.preventDefault(); salvarHorarios()">
                     <div class="config-section">
                         <h2>Texto de Resumo (Aparece no App)</h2>
-                        <div class="info-box">ℹ️ Esta é a frase curta que os clientes verão no topo do App ao lado do ícone do relógio.</div>
+                        <div class="info-box">ℹ️ Esta é a frase curta que os clientes verão no topo do App.</div>
                         <div class="form-group" style="margin-bottom: 25px;">
                             <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
                         </div>
@@ -133,7 +114,7 @@
                         <h2>Controle Automático Diário</h2>
                         <div class="grid-2">
                             <div class="horario-card loja">
-                                <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA (Retirada)</h3>
+                                <h3 style="font-size:15px; color:#c62828; margin-bottom:15px; text-align:center;">🏪 HORÁRIOS DA LOJA</h3>
                                 <div id="horariosLojaContainer"></div>
                             </div>
                             <div class="horario-card delivery">
@@ -148,29 +129,20 @@
             
             document.getElementById('configContainer').innerHTML = html;
             
-            // Extrai os horários limpos da memória
             let hLoja = parseJSONSeguro(configuracoes.horarios);
             let hDel = parseJSONSeguro(configuracoes.horarios_delivery);
-            
-            renderizarGridHorarios('Loja', hLoja); 
-            renderizarGridHorarios('Delivery', hDel);
+            renderizarGridHorarios('Loja', hLoja); renderizarGridHorarios('Delivery', hDel);
         }
 
         function renderizarGridHorarios(tipo, dadosDoBanco) {
             const container = document.getElementById(`horarios${tipo}Container`);
             container.innerHTML = diasSemana.map(dia => {
-                const prefix = tipo.toLowerCase(); // "loja" ou "delivery"
-                
-                // Avalia se o botão vem ligado do banco de dados
+                const prefix = tipo.toLowerCase();
                 let diaAtivo = true;
-                if (dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].ativo !== undefined) { 
-                    diaAtivo = (String(dadosDoBanco[dia.id].ativo) === 'true' || dadosDoBanco[dia.id].ativo === true); 
-                }
-                
+                if (dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dadosDoBanco[dia.id].ativo) === 'true' || dadosDoBanco[dia.id].ativo === true); }
                 const diaAbre = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].abertura ? dadosDoBanco[dia.id].abertura : '18:00';
                 const diaFecha = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].fechamento ? dadosDoBanco[dia.id].fechamento : '23:59';
 
-                // Gera o Switch e os Inputs com IDs únicos
                 return `
                     <div class="horario-row">
                         <div class="dia-nome">${dia.nome}</div>
@@ -189,58 +161,33 @@
         }
 
         window.salvarHorarios = async function() {
-            const btn = document.getElementById('btnSalvarGeral'); 
-            btn.innerHTML = '⏳ Salvando Horários...'; 
-            btn.disabled = true;
+            const btn = document.getElementById('btnSalvarGeral'); btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
             
-            const objHorariosLoja = {}; 
-            const objHorariosDelivery = {};
-            
-            // Varredura cirúrgica das caixas de input
+            const objHorariosLoja = {}; const objHorariosDelivery = {};
             diasSemana.forEach(dia => {
-                // Loja
-                objHorariosLoja[dia.id] = { 
-                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, 
-                    abertura: document.getElementById(`loja_abre_${dia.id}`).value, 
-                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value 
-                };
-                // Delivery
-                objHorariosDelivery[dia.id] = { 
-                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, 
-                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value, 
-                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value 
-                };
+                objHorariosLoja[dia.id] = { ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, abertura: document.getElementById(`loja_abre_${dia.id}`).value, fechamento: document.getElementById(`loja_fecha_${dia.id}`).value };
+                objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
             });
 
-            // MAGIA ABSOLUTA: O ...configuracoes pega tudo o que estava no banco (Logo, Mensagem) e injeta neste pacote, para o servidor não apagar nada!
+            // ENVIAMOS APENAS OS HORÁRIOS! O Backend manterá a Mensagem Intacta.
             const configData = {
-                ...configuracoes, 
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
 
             try {
-                // Comunicação segura com a rota principal que nós sabemos que funciona
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(configData) 
-                });
-                
+                // ROTA PADRÃO - Sem erros 404
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
                 if (res.ok) {
-                    mostrarMensagem('success', '✅ Horários gravados com sucesso! Verifique no App.');
-                    // Recarrega os dados em memória para garantir que estão super atualizados
-                    await carregarHorarios();
+                    mostrarMensagem('success', '✅ Horários salvos com sucesso!');
+                    carregarHorarios(); // Refresh
                 } else {
-                    mostrarMensagem('error', `❌ Falha ao gravar os dados.`);
+                    const err = await res.json();
+                    mostrarMensagem('error', `❌ Falha: ${err.erro}`);
                 }
-            } catch (error) { 
-                mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); 
-            } finally { 
-                btn.innerHTML = '💾 Salvar Alterações de Horário'; 
-                btn.disabled = false; 
-            }
+            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão.'); } 
+            finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
         }
 
         carregarHorarios();

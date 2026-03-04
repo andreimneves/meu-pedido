@@ -1,4 +1,4 @@
-// frontend/script.js
+// frontend/script.js - MOTOR DE AGENDAMENTO INTELIGENTE
 
 const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
@@ -7,49 +7,51 @@ let produtos = [], gruposComplementosGlobal = [], itensComplementosGlobal = [], 
 let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = false;
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
-
-// Função Segura para ler JSON do banco sem rebentar o código
-function parseJSONSeguro(texto) {
-    if (!texto) return {};
-    if (typeof texto === 'object') return texto;
-    try { return JSON.parse(texto); } catch (e) { return {}; }
-}
+let tipoAgendamentoAtual = 'delivery'; // Controla qual painel de horas ler
 
 window.onload = async () => {
     await carregarConfiguracoes();
     await carregarTudoDoBanco(); 
 };
 
+function parseJSONSeguro(texto) {
+    if (!texto) return {};
+    if (typeof texto === 'object') return texto;
+    try { return JSON.parse(texto) || {}; } catch (e) { return {}; }
+}
+
 async function carregarConfiguracoes() {
     try {
         const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
         configuracoesLoja = await res.json();
         
-        // 1. TEXTO RESUMO (Consertado)
         document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'Nossa Loja';
         document.getElementById('slogan').textContent = configuracoesLoja.slogan || '';
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
         
+        // RECUPERA O TEXTO DE RESUMO DE HORÁRIOS
         const textHorario = configuracoesLoja.horario_funcionamento || 'Consulte os horários';
         document.getElementById('horario').innerHTML = `🕒 ${textHorario}`;
         
         if (configuracoesLoja.logo_url) { document.getElementById('logoImagem').src = configuracoesLoja.logo_url; document.getElementById('logoImagem').style.display = 'block'; document.getElementById('logoPlaceholder').style.display = 'none'; }
 
-        // 2. MENSAGEM PERSONALIZADA
+        // APLICAÇÃO DA MENSAGEM PERSONALIZADA LÁ NO TOPO
         const isMsgAtiva = String(configuracoesLoja.mensagem_banner_ativo) === 'true';
         const textoMsg = configuracoesLoja.mensagem_banner;
         
         if (isMsgAtiva && textoMsg && textoMsg.trim() !== '') { 
             const msgDiv = document.getElementById('mensagemPersonalizada');
-            const corFundo = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
-            const corTexto = configuracoesLoja.mensagem_banner_texto || '#E65100';
-            const icone = configuracoesLoja.mensagem_banner_icone || '📢';
-            
-            msgDiv.style.backgroundColor = corFundo;
-            msgDiv.style.color = corTexto;
-            msgDiv.style.borderLeftColor = corTexto;
-            msgDiv.innerHTML = `<span style="font-size:16px;">${icone}</span> <span>${textoMsg}</span>`; 
-            msgDiv.style.display = 'flex'; 
+            if(msgDiv) {
+                const corFundo = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
+                const corTexto = configuracoesLoja.mensagem_banner_texto || '#E65100';
+                const icone = configuracoesLoja.mensagem_banner_icone || '📢';
+                
+                msgDiv.style.backgroundColor = corFundo;
+                msgDiv.style.color = corTexto;
+                msgDiv.style.borderLeftColor = corTexto;
+                msgDiv.innerHTML = `<span style="font-size:16px;">${icone}</span> <span>${textoMsg}</span>`; 
+                msgDiv.style.display = 'flex'; 
+            }
         }
 
         if (configuracoesLoja.cep_loja) {
@@ -59,7 +61,9 @@ async function carregarConfiguracoes() {
     } catch (e) { console.error('Erro configs', e); }
 }
 
-// 3. MOTOR DE HORÁRIOS BLINDADO
+// ==========================================
+// 1. MOTOR DE AVALIAÇÃO DE HORÁRIOS (Tempo Real)
+// ==========================================
 function obterStatusHorariosEmTempoReal() {
     let hLoja = parseJSONSeguro(configuracoesLoja.horarios);
     let hDel = parseJSONSeguro(configuracoesLoja.horarios_delivery);
@@ -67,7 +71,7 @@ function obterStatusHorariosEmTempoReal() {
 }
 
 function analisarHorarios(mapaHorarios) {
-    if (!mapaHorarios || Object.keys(mapaHorarios).length === 0) return { abertaAgora: true, proximosHorarios: [] }; 
+    if (!mapaHorarios || Object.keys(mapaHorarios).length === 0) return { abertaAgora: true }; 
     
     const diasSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
     const agora = new Date();
@@ -79,52 +83,105 @@ function analisarHorarios(mapaHorarios) {
     let configHoje = mapaHorarios[diaAtual];
     let configOntem = mapaHorarios[diaOntem];
 
-    if (configOntem && (configOntem.ativo === true || String(configOntem.ativo) === 'true')) {
+    if (configOntem && (String(configOntem.ativo) === 'true' || configOntem.ativo === true)) {
         let [abreH] = configOntem.abertura.split(':').map(Number);
         let [fechaH, fechaM] = configOntem.fechamento.split(':').map(Number);
         if (fechaH < abreH && horaAtualFloat <= (fechaH + fechaM/60)) abertaAgora = true;
     }
 
-    if (!abertaAgora && configHoje && (configHoje.ativo === true || String(configHoje.ativo) === 'true')) {
+    if (!abertaAgora && configHoje && (String(configHoje.ativo) === 'true' || configHoje.ativo === true)) {
         let [abreH, abreM] = configHoje.abertura.split(':').map(Number);
         let [fechaH, fechaM] = configHoje.fechamento.split(':').map(Number);
         let aF = abreH + abreM/60; let fF = fechaH + fechaM/60;
         
-        if (fF < aF) { 
-            if (horaAtualFloat >= aF) abertaAgora = true;
-        } else { 
-            if (horaAtualFloat >= aF && horaAtualFloat <= fF) abertaAgora = true;
-        }
+        if (fF < aF) { if (horaAtualFloat >= aF) abertaAgora = true; } 
+        else { if (horaAtualFloat >= aF && horaAtualFloat <= fF) abertaAgora = true; }
     }
 
-    let proximos = [];
-    for(let i=0; i<4; i++) {
-        let diaAlvo = new Date(agora); diaAlvo.setDate(agora.getDate() + i);
-        let diaStr = diasSemana[diaAlvo.getDay()];
-        let cfg = mapaHorarios[diaStr];
-        
-        if (cfg && (cfg.ativo === true || String(cfg.ativo) === 'true')) {
-            let [abreH] = cfg.abertura.split(':').map(Number);
-            let [fechaH] = cfg.fechamento.split(':').map(Number);
-            let endH = fechaH < abreH ? fechaH + 24 : fechaH;
-            
-            let startH = abreH;
-            if (i === 0) { 
-                let horaRedonda = agora.getHours();
-                if (horaRedonda >= endH && fechaH >= abreH) continue; 
-                startH = Math.max(abreH, horaRedonda + 1); 
-            }
-
-            for(let h = startH; h < endH; h++) {
-                let displayH = h % 24; let displayNext = (h + 1) % 24;
-                let dataForm = diaAlvo.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-                let labelDia = (i===0) ? "Hoje" : (i===1) ? "Amanhã" : diaStr.charAt(0).toUpperCase() + diaStr.slice(1);
-                proximos.push(`${labelDia} (${dataForm}) - ${String(displayH).padStart(2,'0')}:00 às ${String(displayNext).padStart(2,'0')}:00`);
-            }
-        }
-    }
-    return { abertaAgora, proximosHorarios: proximos };
+    return { abertaAgora };
 }
+
+// ==========================================
+// 2. GERADOR DE BLOCOS DE AGENDAMENTO (Estilo IFood)
+// ==========================================
+window.carregarHorariosPorData = function() {
+    const dataSelecionada = document.getElementById('dataAgendamento').value;
+    const select = document.getElementById('horarioAgendamento');
+
+    if (!dataSelecionada) {
+        select.innerHTML = '<option value="">Selecione uma data primeiro</option>';
+        return;
+    }
+
+    // Isola o fuso horário para bater certo
+    const data = new Date(dataSelecionada + 'T12:00:00');
+    const diaSemanaIdx = data.getDay();
+    const mapaDias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const nomeDiaStr = mapaDias[diaSemanaIdx];
+
+    // Lê a configuração correta dependendo do que o cliente clicou
+    let horariosObj = tipoAgendamentoAtual === 'delivery' 
+        ? parseJSONSeguro(configuracoesLoja.horarios_delivery) 
+        : parseJSONSeguro(configuracoesLoja.horarios);
+
+    const horarioDia = horariosObj[nomeDiaStr];
+
+    // Verifica se você deixou a chaveta "Verde" (Ativo) no painel admin
+    if (!horarioDia || (String(horarioDia.ativo) !== 'true' && horarioDia.ativo !== true)) {
+        select.innerHTML = '<option value="">❌ Fechado neste dia</option>';
+        return;
+    }
+
+    let [abreH, abreM] = (horarioDia.abertura || '18:00').split(':').map(Number);
+    let [fechaH, fechaM] = (horarioDia.fechamento || '23:59').split(':').map(Number);
+
+    if (fechaH < abreH) fechaH += 24; // Lógica da Madrugada
+
+    let aberturaTotal = abreH * 60 + (abreM || 0);
+    let fechamentoTotal = fechaH * 60 + (fechaM || 0);
+
+    // Se o cliente escolheu HOJE, esconde as horas do passado
+    const hoje = new Date();
+    const isHoje = data.toDateString() === hoje.toDateString();
+
+    if (isHoje) {
+        const minutosAgora = hoje.getHours() * 60 + hoje.getMinutes();
+        if (minutosAgora > aberturaTotal) {
+            aberturaTotal = Math.ceil(minutosAgora / 60) * 60; // Pula para a próxima hora cheia
+        }
+    }
+
+    // Gera os bloquinhos de 1h em 1h
+    const periodos = [];
+    for (let minutos = aberturaTotal; minutos < fechamentoTotal; minutos += 60) {
+        let inicioH = Math.floor(minutos / 60) % 24;
+        let inicioM = minutos % 60;
+        let fimH = Math.floor((minutos + 60) / 60) % 24;
+        let fimM = (minutos + 60) % 60;
+
+        const inicioF = `${inicioH.toString().padStart(2, '0')}:${inicioM.toString().padStart(2, '0')}`;
+        const fimF = `${fimH.toString().padStart(2, '0')}:${fimM.toString().padStart(2, '0')}`;
+
+        periodos.push(`${inicioF} às ${fimF}`);
+    }
+
+    if (periodos.length === 0) {
+        select.innerHTML = '<option value="">❌ Horários encerrados para hoje</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">⏰ Escolha o período</option>';
+    periodos.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p; // Guarda só as horas
+        option.textContent = p;
+        select.appendChild(option);
+    });
+}
+
+// ==========================================
+// OUTRAS FUNÇÕES E INTEGRAÇÕES
+// ==========================================
 
 function calcularDistanciaGeo(lat1, lon1, lat2, lon2) {
     const R = 6371; 
@@ -295,6 +352,9 @@ window.abrirCarrinho = function() {
     document.getElementById('cartModal').style.display = 'block'; document.body.style.overflow = 'hidden';
 }
 
+// ==========================================
+// CONTROLE DE DELIVERY E ACIONAMENTO DO AGENDAMENTO
+// ==========================================
 window.toggleDelivery = function(isDelivery) {
     if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
 
@@ -302,42 +362,58 @@ window.toggleDelivery = function(isDelivery) {
     document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
     
     const statusTempoReal = obterStatusHorariosEmTempoReal();
-    let msgBox = document.getElementById('statusLojaMensagem');
-    let agenBox = document.getElementById('agendamentoContainer');
-    let select = document.getElementById('agendamentoSelect');
+    
+    let avisoDiv = document.getElementById('avisoDelivery'); 
+    let agenBox = document.getElementById('agendamentoFields'); 
     let btn = document.querySelector('.whatsapp-btn');
     
-    msgBox.style.display = 'none'; agenBox.style.display = 'none'; select.innerHTML = '';
+    if(avisoDiv) avisoDiv.style.display = 'none';
+    if(agenBox) agenBox.style.display = 'none';
+    
     btn.disabled = false; btn.style.background = '#25D366'; btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
+
+    // Resetar o Calendário para a data de Hoje
+    const dtInput = document.getElementById('dataAgendamento');
+    if(dtInput) {
+        const hojeLocal = new Date();
+        dtInput.min = hojeLocal.toISOString().split('T')[0];
+        dtInput.value = '';
+    }
+    const hrInput = document.getElementById('horarioAgendamento');
+    if(hrInput) hrInput.innerHTML = '<option value="">Selecione uma data primeiro</option>';
 
     if (isDelivery) {
         document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP para verificação de distância.'; 
         document.getElementById('freteInfo').className = 'frete-info'; taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
         
         if (!statusTempoReal.delivery.abertaAgora) {
-            msgBox.innerHTML = `🛵 <strong>Estamos fora do horário de delivery no momento.</strong><br>Por favor, agende a sua entrega abaixo ou altere para "Retirada".`;
-            msgBox.style.display = 'block'; msgBox.style.background = '#e3f2fd'; msgBox.style.color = '#0d47a1'; msgBox.style.borderLeft = '4px solid #2196F3';
-            
-            if (statusTempoReal.delivery.proximosHorarios.length > 0) {
-                select.innerHTML = statusTempoReal.delivery.proximosHorarios.map(o => `<option value="${o}">${o}</option>`).join('');
-                agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Entrega';
-            } else {
-                btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Delivery Indisponível';
+            if(avisoDiv) {
+                avisoDiv.innerHTML = `
+                    <div style="background: #e3f2fd; color: #0d47a1; border-left: 4px solid #2196F3; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 13px;">
+                        <strong>🛵 Delivery fechado no momento.</strong><br>Agende a sua entrega abaixo ou altere para "Retirada".
+                    </div>
+                `;
+                avisoDiv.style.display = 'block';
             }
+            if(agenBox) agenBox.style.display = 'block';
+            btn.innerHTML = '📲 Agendar Entrega';
+            tipoAgendamentoAtual = 'delivery'; // Informa o gerador de horas qual painel ler
         }
     } else { // Retirada
         taxaFrete = 0; dentroAreaEntrega = false; document.getElementById('cepInfo').innerHTML=''; 
         
         if (!statusTempoReal.loja.abertaAgora) {
-            msgBox.innerHTML = `🏪 <strong>Nossa loja está fechada no momento.</strong><br>Mas você pode fazer o seu pedido agora e agendar a retirada para o próximo horário de funcionamento!`;
-            msgBox.style.display = 'block'; msgBox.style.background = '#fff3e0'; msgBox.style.color = '#e65100'; msgBox.style.borderLeft = '4px solid #ff9800';
-            
-            if (statusTempoReal.loja.proximosHorarios.length > 0) {
-                select.innerHTML = statusTempoReal.loja.proximosHorarios.map(o => `<option value="${o}">${o}</option>`).join('');
-                agenBox.style.display = 'block'; btn.innerHTML = '📲 Agendar Retirada';
-            } else {
-                btn.disabled = true; btn.style.background = '#999'; btn.innerHTML = '🚫 Loja Indisponível';
+            if(avisoDiv) {
+                avisoDiv.innerHTML = `
+                    <div style="background: #fff3e0; color: #e65100; border-left: 4px solid #ff9800; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 13px;">
+                        <strong>🏪 Nossa loja está fechada no momento.</strong><br>Você pode agendar a sua retirada logo abaixo!
+                    </div>
+                `;
+                avisoDiv.style.display = 'block';
             }
+            if(agenBox) agenBox.style.display = 'block';
+            btn.innerHTML = '📲 Agendar Retirada';
+            tipoAgendamentoAtual = 'loja';
         }
     }
     calcularSubtotalGeral();
@@ -350,18 +426,31 @@ function calcularSubtotalGeral() {
     document.getElementById('cartTotalFinal').textContent = (sub + (document.getElementById('deliveryOption').checked ? taxaFrete : 0)).toFixed(2);
 }
 
+// ==========================================
+// 3. O CORAÇÃO DO PEDIDO (INJETANDO A DATA)
+// ==========================================
 window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
     const statusTempoReal = obterStatusHorariosEmTempoReal();
     let strAgendamento = "";
+    let msgAgendamentoNoWpp = "";
     
+    // Verificador de Agendamento Obrigatório
     if (tipo === 'delivery' && !statusTempoReal.delivery.abertaAgora) {
-        strAgendamento = document.getElementById('agendamentoSelect').value;
-        if (!strAgendamento) return alert("Por favor, selecione um horário válido para o agendamento da entrega.");
+        const dataAg = document.getElementById('dataAgendamento')?.value;
+        const horAg = document.getElementById('horarioAgendamento')?.value;
+        if (!dataAg || !horAg) return alert("⚠️ Selecione a Data e o Horário do Agendamento!");
+        const dataForm = new Date(dataAg + 'T12:00:00').toLocaleDateString('pt-BR');
+        strAgendamento = `${dataForm} - ${horAg}`;
+        msgAgendamentoNoWpp = `\n📅 *Entrega Agendada para:* ${strAgendamento}\n`;
     } else if (tipo === 'pickup' && !statusTempoReal.loja.abertaAgora) {
-        strAgendamento = document.getElementById('agendamentoSelect').value;
-        if (!strAgendamento) return alert("Por favor, selecione um horário válido para o agendamento da retirada.");
+        const dataAg = document.getElementById('dataAgendamento')?.value;
+        const horAg = document.getElementById('horarioAgendamento')?.value;
+        if (!dataAg || !horAg) return alert("⚠️ Selecione a Data e o Horário do Agendamento!");
+        const dataForm = new Date(dataAg + 'T12:00:00').toLocaleDateString('pt-BR');
+        strAgendamento = `${dataForm} - ${horAg}`;
+        msgAgendamentoNoWpp = `\n📅 *Retirada Agendada para:* ${strAgendamento}\n`;
     }
     
     if(tipo === 'delivery') {
@@ -378,7 +467,7 @@ window.finalizarPedido = async function() {
 
     let dadosPedido = {
         cliente_nome: nome, cliente_telefone: tel, tipo_entrega: tipo, taxa_entrega: tipo === 'delivery' ? taxaFrete : 0, subtotal: sub, total: totalFinal, 
-        observacoes: strAgendamento ? `AGENDADO PARA: ${strAgendamento}` : '',
+        observacoes: strAgendamento ? `[AGENDADO PARA] ${strAgendamento}` : '',
         itens: carrinho.map(i => {
             let n = i.nome; if(i.complementos.length>0) n += ' (+ ' + i.complementos.map(c=>c.nome).join(', ') + ')';
             if(i.observacao) n += ` [Obs: ${i.observacao}]`;
@@ -399,7 +488,7 @@ window.finalizarPedido = async function() {
     } catch(e) {}
 
     let msg = `🍽️ *NOVO PEDIDO${idPedidoReal}*\n━━━━━━━━━━━━━━━━\n`;
-    if(strAgendamento) msg += `⏰ *AGENDADO PARA:* ${strAgendamento}\n━━━━━━━━━━━━━━━━\n`;
+    if(msgAgendamentoNoWpp) msg += `${msgAgendamentoNoWpp}━━━━━━━━━━━━━━━━\n`;
     msg += `👤 *Cliente:* ${nome}\n📱 *Tel:* ${tel}\n\n🛍️ *RESUMO:*\n\n`;
     carrinho.forEach(i => {
         msg += `*${i.quantidade}x ${i.nome}* (R$ ${i.precoTotalLinha.toFixed(2)})\n`;
