@@ -174,7 +174,7 @@
             };
 
             try {
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                const res = await fetch(`${API_URL}/config-horarios/${SUBDOMINIO}`, {method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData)});
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
                     carregarHorarios();

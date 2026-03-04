@@ -9,9 +9,12 @@ const configController = require('./controllers/configController');
 
 const safe = (fn) => fn || ((req, res) => res.status(501).json({erro: "Função não implementada no controlador."}));
 
-// A ROTA ÚNICA E SEGURA DE CONFIGURAÇÕES
+// ==========================================
+// AS ROTAS TOTALMENTE ISOLADAS E INDEPENDENTES
+// ==========================================
 router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes)); 
+router.put('/config-geral/:subdominio', safe(configController.atualizarGeral));       // Porta exclusiva para Configurações
+router.put('/config-horarios/:subdominio', safe(configController.atualizarHorarios)); // Porta exclusiva para Horários
 
 // CATEGORIAS
 router.get('/categorias', safe(categoriaController.listar));
