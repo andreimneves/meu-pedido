@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 
 async function garantirColunas() {
+    // A vacina: Cria TODAS as colunas que podem estar a faltar no banco de dados Neon
     const colunas = [
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS horario_funcionamento VARCHAR(255);",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS horarios TEXT;",
@@ -9,9 +10,24 @@ async function garantirColunas() {
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner TEXT;",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_cor VARCHAR(50) DEFAULT '#FFF3E0';",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_texto VARCHAR(50) DEFAULT '#E65100';",
-        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_icone VARCHAR(20) DEFAULT '📢';"
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_icone VARCHAR(20) DEFAULT '📢';",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS frete_gratis_ativo BOOLEAN DEFAULT false;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS frete_gratis_acima NUMERIC DEFAULT 0;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS taxa_minima NUMERIC DEFAULT 0;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS taxa_por_km NUMERIC DEFAULT 0;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS km_maximo_entrega NUMERIC DEFAULT 15;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_km_excedido TEXT;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS cor_principal VARCHAR(50) DEFAULT '#C83232';",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS logo_url TEXT;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS endereco_completo TEXT;",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20);",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS cep_loja VARCHAR(20);",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS slogan VARCHAR(255);",
+        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS nome_loja VARCHAR(255);"
     ];
-    for (let sql of colunas) { await pool.query(sql).catch(e => {}); }
+    for (let sql of colunas) { 
+        try { await pool.query(sql); } catch(e) { console.log("Aviso DB:", e.message); }
+    }
 }
 
 const configController = {
@@ -22,6 +38,7 @@ const configController = {
             const { subdominio } = req.params;
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
+            
             const tenantId = tenantQuery.rows[0].id;
             const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
             if (configQuery.rows.length === 0) return res.json({ tenant_id: tenantId });
@@ -35,13 +52,14 @@ const configController = {
             await garantirColunas();
             const { subdominio } = req.params;
             const d = req.body;
+            
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
             const tenantId = tenantQuery.rows[0].id;
+            
             const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
 
             if (existe.rows.length > 0) {
-                // ATUALIZA SÓ CONFIGURAÇÕES, IGNORA HORÁRIOS
                 await pool.query(
                     `UPDATE configuracoes_loja SET
                         nome_loja=$1, slogan=$2, endereco_completo=$3, whatsapp=$4, cep_loja=$5, km_maximo_entrega=$6, 
@@ -59,7 +77,10 @@ const configController = {
                 );
             }
             res.json({ mensagem: 'Configurações salvas com sucesso!' });
-        } catch(e) { res.status(500).json({ erro: e.message }); }
+        } catch(e) { 
+            console.error("ERRO SQL Config:", e);
+            res.status(500).json({ erro: e.message }); 
+        }
     },
 
     // 3. FUNÇÃO EXCLUSIVA DE HORÁRIOS
@@ -68,13 +89,14 @@ const configController = {
             await garantirColunas();
             const { subdominio } = req.params;
             const d = req.body;
+            
             const tenantQuery = await pool.query('SELECT id FROM tenants WHERE subdominio = $1', [subdominio]);
             if (tenantQuery.rows.length === 0) return res.status(404).json({ erro: 'Loja não encontrada' });
             const tenantId = tenantQuery.rows[0].id;
+            
             const existe = await pool.query('SELECT id FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
 
             if (existe.rows.length > 0) {
-                // ATUALIZA SÓ HORÁRIOS, IGNORA CONFIGURAÇÕES
                 await pool.query(
                     `UPDATE configuracoes_loja SET horario_funcionamento=$1, horarios=$2, horarios_delivery=$3 WHERE tenant_id=$4`,
                     [d.horario_funcionamento||'Seg a Dom: 18h às 23h', d.horarios||'{}', d.horarios_delivery||'{}', tenantId]
@@ -86,7 +108,10 @@ const configController = {
                 );
             }
             res.json({ mensagem: 'Horários salvos com sucesso!' });
-        } catch(e) { res.status(500).json({ erro: e.message }); }
+        } catch(e) { 
+            console.error("ERRO SQL Horarios:", e);
+            res.status(500).json({ erro: e.message }); 
+        }
     }
 };
 module.exports = configController;
