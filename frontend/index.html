@@ -398,30 +398,21 @@
             } catch (e) { console.error('Erro configs', e); }
         }
 
-        // ===== VERIFICAÇÃO DE DISPONIBILIDADE (CORRIGIDA) =====
-            async function verificarDisponibilidade(tipo) {
-                try {
-                    const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tipo: tipo })
-                    });
-                    
-                    if (!response.ok) {
-                        console.warn('Resposta não OK, usando fallback');
-                        return { disponivel: true, pode_agendar: true };
-                    }
-                    
-                    const data = await response.json();
-                    console.log('📊 Disponibilidade:', data);
-                    return data;
-                    
-                } catch (error) {
-                    console.error('Erro ao verificar disponibilidade:', error);
-                    // Fallback: considera disponível para não travar o pedido
-                    return { disponivel: true, pode_agendar: true };
-                }
+// ===== VERIFICAÇÃO DE DISPONIBILIDADE (USANDO ROTA DE HORÁRIOS) =====
+        async function verificarDisponibilidade(tipo) {
+            try {
+                const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo })
+                });
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Erro:', error);
+                return { disponivel: true, pode_agendar: true };
             }
+        }
 
         // ==========================================
         // CARDÁPIO

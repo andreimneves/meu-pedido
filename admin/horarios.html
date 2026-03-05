@@ -74,10 +74,10 @@
         <div class="admin-sidebar">
             <ul>
                 <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
                 <li><a href="pedidos.html">📋 Pedidos</a></li>
                 <li><a href="config.html">⚙️ Configurações</a></li>
-                <li><a href="categorias.html">📁 Categorias</a></li>
-                <li><a href="produtos.html">📦 Produtos</a></li>
                 <li><a href="complementos.html">🧩 Complementos</a></li>
                 <li><a href="horarios.html" class="active">🕒 Horários</a></li>
             </ul>
@@ -195,41 +195,97 @@
             }
         }
         
-        // ===== CARREGAR HORÁRIOS =====
+// ===== CARREGAR HORÁRIOS =====
         async function carregarHorarios() {
-            console.log('🔄 Carregando horários...');
-            
             try {
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
-                
-                if (!response.ok) {
-                    throw new Error(`Erro HTTP: ${response.status}`);
-                }
-                
                 const data = await response.json();
-                console.log('✅ Horários carregados:', data);
                 
-                horariosLoja = parseJSONSeguro(data.horarios);
-                horariosDelivery = parseJSONSeguro(data.horarios_delivery);
+                console.log('✅ Horários carregados:', data);
                 
                 document.getElementById('horario_funcionamento').value = 
                     data.horario_funcionamento || 'Seg a Dom: 18h às 23h';
                 
-                renderizarHorarios();
+                // Renderizar loja
+                if (data.loja) {
+                    diasSemana.forEach(dia => {
+                        const config = data.loja[dia.id] || { ativo: true, abertura: '18:00', fechamento: '23:00' };
+                        document.getElementById(`loja_ativo_${dia.id}`).checked = config.ativo;
+                        document.getElementById(`loja_abre_${dia.id}`).value = config.abertura;
+                        document.getElementById(`loja_fecha_${dia.id}`).value = config.fechamento;
+                    });
+                }
+                
+                // Renderizar delivery
+                if (data.delivery) {
+                    diasSemana.forEach(dia => {
+                        const config = data.delivery[dia.id] || { ativo: true, abertura: '18:00', fechamento: '23:00' };
+                        document.getElementById(`delivery_ativo_${dia.id}`).checked = config.ativo;
+                        document.getElementById(`delivery_abre_${dia.id}`).value = config.abertura;
+                        document.getElementById(`delivery_fecha_${dia.id}`).value = config.fechamento;
+                    });
+                }
+                
                 atualizarPreview();
                 
             } catch (error) {
-                console.error('❌ Erro ao carregar horários:', error);
-                mostrarMensagem('error', 'Erro ao carregar horários. Usando valores padrão.');
+                console.error('❌ Erro:', error);
+                mostrarMensagem('error', 'Erro ao carregar horários');
+            }
+        }
+
+        // ===== SALVAR HORÁRIOS =====
+        window.salvarHorarios = async function() {
+            const btn = document.getElementById('btnSalvar');
+            btn.innerHTML = '⏳ Salvando...';
+            btn.disabled = true;
+            
+            // Construir objeto loja
+            const loja = {};
+            const delivery = {};
+            
+            diasSemana.forEach(dia => {
+                loja[dia.id] = {
+                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked,
+                    abertura: document.getElementById(`loja_abre_${dia.id}`).value,
+                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value
+                };
                 
-                // Dados padrão
-                horariosLoja = {};
-                horariosDelivery = {};
-                diasSemana.forEach(dia => {
-                    horariosLoja[dia.id] = { ativo: true, abertura: '18:00', fechamento: '23:00' };
-                    horariosDelivery[dia.id] = { ativo: true, abertura: '18:00', fechamento: '23:00' };
+                delivery[dia.id] = {
+                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked,
+                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value,
+                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value
+                };
+            });
+            
+            const dados = {
+                loja,
+                delivery,
+                horario_funcionamento: document.getElementById('horario_funcionamento').value
+            };
+            
+            console.log('📤 Enviando:', dados);
+            
+            try {
+                const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
                 });
-                renderizarHorarios();
+                
+                const resultado = await response.json();
+                
+                if (response.ok) {
+                    mostrarMensagem('success', '✅ Horários salvos!');
+                } else {
+                    mostrarMensagem('error', `❌ Erro: ${resultado.erro}`);
+                }
+                
+            } catch (error) {
+                mostrarMensagem('error', '❌ Erro de conexão');
+            } finally {
+                btn.innerHTML = '💾 Salvar Todos os Horários';
+                btn.disabled = false;
             }
         }
         
@@ -264,7 +320,7 @@
         }
         
         // ===== TABS =====
-        function abrirTab(tab) {
+        window.abrirTab = function(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
@@ -273,7 +329,7 @@
         }
         
         // ===== COPIAR HORÁRIOS =====
-        function copiarHorarios(origem) {
+        window.copiarHorarios = function(origem) {
             if (origem === 'loja') {
                 diasSemana.forEach(dia => {
                     const ativo = document.getElementById(`loja_ativo_${dia.id}`).checked;
@@ -301,7 +357,7 @@
         }
         
         // ===== RESETAR HORÁRIOS =====
-        function resetarHorarios() {
+        window.resetarHorarios = function() {
             if (!confirm('Resetar todos os horários para o padrão (18h às 23h todos os dias)?')) return;
             
             diasSemana.forEach(dia => {
@@ -347,16 +403,11 @@
             document.getElementById('previewHoje').innerHTML = html;
         }
         
-        // ===== SALVAR HORÁRIOS (VERSÃO CORRIGIDA) =====
+        // ===== SALVAR HORÁRIOS =====
         window.salvarHorarios = async function() {
             console.log('🚀 FUNÇÃO salvarHorarios EXECUTADA');
             
             const btn = document.getElementById('btnSalvar');
-            if (!btn) {
-                console.error('❌ Botão não encontrado!');
-                return;
-            }
-            
             const textoOriginal = btn.innerHTML;
             btn.innerHTML = '⏳ Salvando...';
             btn.disabled = true;
@@ -367,36 +418,24 @@
             const objDelivery = {};
             
             diasSemana.forEach(dia => {
-                // Loja
-                const lojaAtivo = document.getElementById(`loja_ativo_${dia.id}`);
-                const lojaAbre = document.getElementById(`loja_abre_${dia.id}`);
-                const lojaFecha = document.getElementById(`loja_fecha_${dia.id}`);
-                
                 objLoja[dia.id] = {
-                    ativo: lojaAtivo ? lojaAtivo.checked : true,
-                    abertura: lojaAbre ? lojaAbre.value : '18:00',
-                    fechamento: lojaFecha ? lojaFecha.value : '23:00'
+                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked,
+                    abertura: document.getElementById(`loja_abre_${dia.id}`).value,
+                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value
                 };
                 
-                // Delivery
-                const delAtivo = document.getElementById(`delivery_ativo_${dia.id}`);
-                const delAbre = document.getElementById(`delivery_abre_${dia.id}`);
-                const delFecha = document.getElementById(`delivery_fecha_${dia.id}`);
-                
                 objDelivery[dia.id] = {
-                    ativo: delAtivo ? delAtivo.checked : true,
-                    abertura: delAbre ? delAbre.value : '18:00',
-                    fechamento: delFecha ? delFecha.value : '23:00'
+                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked,
+                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value,
+                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value
                 };
             });
             
-            const horarioFuncionamento = document.getElementById('horario_funcionamento');
-            
-            // IMPORTANTE: Enviar como strings JSON
+            // ENVIAR COMO STRINGS JSON
             const dados = {
                 horarios: JSON.stringify(objLoja),
                 horarios_delivery: JSON.stringify(objDelivery),
-                horario_funcionamento: horarioFuncionamento ? horarioFuncionamento.value : 'Seg a Dom: 18h às 23h'
+                horario_funcionamento: document.getElementById('horario_funcionamento').value
             };
             
             console.log('📤 Dados a serem enviados:', dados);
@@ -415,10 +454,10 @@
                 
                 console.log('📥 Status da resposta:', response.status);
                 
-                let resultado;
                 const responseText = await response.text();
                 console.log('📥 Resposta bruta:', responseText);
                 
+                let resultado;
                 try {
                     resultado = JSON.parse(responseText);
                 } catch (e) {
@@ -430,7 +469,7 @@
                 
                 if (response.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
-                    await carregarHorarios(); // Recarregar para confirmar
+                    await carregarHorarios();
                 } else {
                     mostrarMensagem('error', `❌ Erro: ${resultado.erro || 'Erro desconhecido'}`);
                 }
@@ -452,11 +491,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Página carregada, iniciando...');
             carregarHorarios();
-            
-            // Expor funções globalmente
-            window.abrirTab = abrirTab;
-            window.copiarHorarios = copiarHorarios;
-            window.resetarHorarios = resetarHorarios;
         });
     </script>
 </body>
