@@ -11,12 +11,14 @@
         .admin-header { background: linear-gradient(135deg, #C83232, #A02828); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .admin-header h1 { font-size: 24px; font-weight: 600; }
         .user-info { display: flex; align-items: center; gap: 20px; }
-        .logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .logout:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
         .admin-container { display: flex; min-height: calc(100vh - 70px); }
         .admin-sidebar { width: 250px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px 0; }
         .admin-sidebar ul { list-style: none; }
         .admin-sidebar li { margin-bottom: 5px; }
-        .admin-sidebar a { display: block; padding: 12px 20px; color: #333; text-decoration: none; transition: all 0.3s; border-left: 3px solid transparent; }
+        .admin-sidebar a { display: block; padding: 12px 20px; color: #333; text-decoration: none; font-size: 15px; transition: all 0.3s; border-left: 3px solid transparent; }
+        .admin-sidebar a:hover { background: #f8f8f8; border-left-color: #C83232; color: #C83232; }
         .admin-sidebar a.active { background: #f0f0f0; border-left-color: #C83232; color: #C83232; font-weight: 500; }
         .admin-content { flex: 1; padding: 30px; background: #f9f9f9; }
         
@@ -24,23 +26,28 @@
         .config-section h2 { color: #333; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
+        .form-group input:focus { outline: none; border-color: #C83232; }
+        .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
         .btn-save:hover { background: #388E3C; }
         .btn-save:disabled { background: #ccc; cursor: not-allowed; }
         
-        .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
-        .success-message { background: #4CAF50; } .error-message { background: #f44336; }
+        .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .success-message { background: #4CAF50; } 
+        .error-message { background: #f44336; }
         
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 500; color: #666; border-radius: 5px 5px 0 0; }
-        .tab-btn:hover { background: #f0f0f0; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 500; color: #666; border-radius: 5px 5px 0 0; transition: all 0.3s; }
+        .tab-btn:hover { background: #f0f0f0; color: #C83232; }
         .tab-btn.active { background: #C83232; color: white; }
-        .tab-content { display: none; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .tab-content.active { display: block; }
         
         .horario-grid { display: flex; flex-direction: column; gap: 10px; }
-        .horario-row { display: flex; align-items: center; gap: 15px; padding: 12px; background: #f9f9f9; border-radius: 8px; }
+        .horario-row { display: flex; align-items: center; gap: 15px; padding: 12px; background: #f9f9f9; border-radius: 8px; transition: all 0.3s; border: 1px solid transparent; }
+        .horario-row:hover { border-color: #C83232; box-shadow: 0 2px 8px rgba(200,50,50,0.1); }
         .dia-nome { width: 100px; font-weight: 600; color: #333; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -48,17 +55,20 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #4CAF50; }
         input:checked + .slider:before { transform: translateX(26px); }
-        .time-input { width: 80px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
+        .time-input { width: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 14px; transition: border 0.3s; }
+        .time-input:focus { outline: none; border-color: #C83232; }
         
         .copy-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .copy-btn { background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; }
-        .copy-btn:hover { background: #1976D2; }
+        .copy-btn { background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
+        .copy-btn:hover { background: #1976D2; transform: translateY(-2px); }
         .copy-btn.reset { background: #ff9800; }
         .copy-btn.reset:hover { background: #f57c00; }
         
-        .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #0d47a1; }
+        .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #0d47a1; line-height: 1.5; }
         .preview-box { background: #f0f0f0; padding: 20px; border-radius: 10px; margin-top: 20px; }
-        .preview-card { background: white; border-radius: 10px; padding: 15px; max-width: 300px; margin: 0 auto; }
+        .preview-card { background: white; border-radius: 10px; padding: 15px; max-width: 300px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #C83232; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -91,47 +101,66 @@
             
             <div class="config-section">
                 <div class="copy-buttons">
-                    <button class="copy-btn" onclick="copiarHorarios('loja')">📋 Copiar da Loja para Delivery</button>
-                    <button class="copy-btn" onclick="copiarHorarios('delivery')">📋 Copiar do Delivery para Loja</button>
-                    <button class="copy-btn reset" onclick="resetarHorarios()">🔄 Resetar para Padrão</button>
+                    <button class="copy-btn" onclick="copiarHorarios('loja')">
+                        <span>📋</span> Copiar da Loja para Delivery
+                    </button>
+                    <button class="copy-btn" onclick="copiarHorarios('delivery')">
+                        <span>📋</span> Copiar do Delivery para Loja
+                    </button>
+                    <button class="copy-btn reset" onclick="resetarHorarios()">
+                        <span>🔄</span> Resetar para Padrão
+                    </button>
                 </div>
                 
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="abrirTab('loja')">🏪 Horários da Loja</button>
-                    <button class="tab-btn" onclick="abrirTab('delivery')">🛵 Horários do Delivery</button>
+                    <button class="tab-btn active" onclick="abrirTab('loja')">
+                        <span>🏪</span> Horários da Loja
+                    </button>
+                    <button class="tab-btn" onclick="abrirTab('delivery')">
+                        <span>🛵</span> Horários do Delivery
+                    </button>
                 </div>
                 
                 <div class="info-box">
-                    ⏰ Configure os horários de funcionamento. Marque como fechado (switch desligado) nos dias que não funcionar.
-                    Horários que passam da meia-noite (ex: 18:00 às 02:00) são automaticamente reconhecidos.
+                    <strong>⏰ Configure os horários de funcionamento:</strong><br>
+                    • Marque como fechado (switch desligado) nos dias que não funcionar<br>
+                    • Horários que passam da meia-noite (ex: 18:00 às 02:00) são automaticamente reconhecidos<br>
+                    • Use o formato HH:MM (24 horas)
                 </div>
                 
                 <div id="tab-loja" class="tab-content active">
-                    <h3 style="margin-bottom: 20px;">🏪 Horários de Funcionamento da Loja (Retirada)</h3>
+                    <h3 style="margin-bottom: 20px; color: #C83232;">🏪 Horários de Funcionamento da Loja (Retirada)</h3>
                     <div id="horariosLojaContainer" class="horario-grid"></div>
                 </div>
                 
                 <div id="tab-delivery" class="tab-content">
-                    <h3 style="margin-bottom: 20px;">🛵 Horários de Delivery (Entrega)</h3>
+                    <h3 style="margin-bottom: 20px; color: #C83232;">🛵 Horários de Delivery (Entrega)</h3>
                     <div id="horariosDeliveryContainer" class="horario-grid"></div>
                 </div>
                 
-                <div style="margin-top: 30px;">
+                <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                     <div class="form-group">
-                        <label>📝 Texto resumido que aparece no app (ex: Seg a Dom: 18h às 23h)</label>
-                        <input type="text" id="horario_funcionamento" placeholder="Seg a Dom: 18h às 23h">
+                        <label>📝 Texto resumido que aparece no app</label>
+                        <input type="text" id="horario_funcionamento" placeholder="Ex: Seg a Dom: 18h às 23h" value="Seg a Dom: 18h às 23h">
+                        <small style="color: #666; display: block; margin-top: 5px;">Este texto será exibido no topo do cardápio</small>
                     </div>
                 </div>
                 
-                <button class="btn-save" id="btnSalvar" onclick="salvarHorarios()">💾 Salvar Todos os Horários</button>
+                <button class="btn-save" id="btnSalvar" onclick="salvarHorarios()">
+                    💾 Salvar Todos os Horários
+                </button>
             </div>
             
             <div class="config-section">
                 <h2>📱 Preview no App</h2>
                 <div class="preview-box">
                     <div class="preview-card">
-                        <div style="color: #C83232; font-weight: bold; margin-bottom: 10px;">🕒 Horários de Hoje:</div>
-                        <div id="previewHoje">Carregando...</div>
+                        <div style="color: #C83232; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <span>🕒</span> Horários de Hoje:
+                        </div>
+                        <div id="previewHoje" style="line-height: 1.8;">
+                            Carregando...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -144,17 +173,14 @@
         const SUBDOMINIO = 'dlcrepes';
         
         const diasSemana = [
-            { id: 'domingo', nome: 'Domingo' },
             { id: 'segunda', nome: 'Segunda-feira' },
             { id: 'terca', nome: 'Terça-feira' },
             { id: 'quarta', nome: 'Quarta-feira' },
             { id: 'quinta', nome: 'Quinta-feira' },
             { id: 'sexta', nome: 'Sexta-feira' },
-            { id: 'sabado', nome: 'Sábado' }
+            { id: 'sabado', nome: 'Sábado' },
+            { id: 'domingo', nome: 'Domingo' }
         ];
-        
-        let horariosLoja = {};
-        let horariosDelivery = {};
         
         // ===== VERIFICAÇÃO DE LOGIN =====
         if (!localStorage.getItem('adminLogado')) {
@@ -174,70 +200,253 @@
             error.style.display = 'none';
             
             if (tipo === 'success') {
-                success.textContent = texto;
+                success.innerHTML = `✅ ${texto}`;
                 success.style.display = 'block';
-                setTimeout(() => success.style.display = 'none', 3000);
+                setTimeout(() => {
+                    success.style.animation = 'slideDown 0.3s reverse';
+                    setTimeout(() => success.style.display = 'none', 300);
+                }, 3000);
             } else {
-                error.textContent = texto;
+                error.innerHTML = `❌ ${texto}`;
                 error.style.display = 'block';
-                setTimeout(() => error.style.display = 'none', 5000);
+                setTimeout(() => {
+                    error.style.animation = 'slideDown 0.3s reverse';
+                    setTimeout(() => error.style.display = 'none', 300);
+                }, 5000);
             }
         }
         
-        function parseJSONSeguro(texto) {
-            if (!texto) return {};
-            if (typeof texto === 'object') return texto;
-            try {
-                return JSON.parse(texto) || {};
-            } catch (e) {
-                console.error('Erro ao parsear JSON:', e);
-                return {};
-            }
-        }
-        
-// ===== CARREGAR HORÁRIOS =====
+        // ===== CARREGAR HORÁRIOS =====
         async function carregarHorarios() {
+            console.log('🔄 Carregando horários...');
+            
             try {
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
-                const data = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const data = await response.json();
                 console.log('✅ Horários carregados:', data);
                 
+                // Preencher campo resumido
                 document.getElementById('horario_funcionamento').value = 
                     data.horario_funcionamento || 'Seg a Dom: 18h às 23h';
                 
-                // Renderizar loja
+                // Preencher horários da loja
                 if (data.loja) {
                     diasSemana.forEach(dia => {
                         const config = data.loja[dia.id] || { ativo: true, abertura: '18:00', fechamento: '23:00' };
-                        document.getElementById(`loja_ativo_${dia.id}`).checked = config.ativo;
-                        document.getElementById(`loja_abre_${dia.id}`).value = config.abertura;
-                        document.getElementById(`loja_fecha_${dia.id}`).value = config.fechamento;
+                        const ativoCheck = document.getElementById(`loja_ativo_${dia.id}`);
+                        const abreInput = document.getElementById(`loja_abre_${dia.id}`);
+                        const fechaInput = document.getElementById(`loja_fecha_${dia.id}`);
+                        
+                        if (ativoCheck) ativoCheck.checked = config.ativo;
+                        if (abreInput) abreInput.value = config.abertura;
+                        if (fechaInput) fechaInput.value = config.fechamento;
                     });
                 }
                 
-                // Renderizar delivery
+                // Preencher horários do delivery
                 if (data.delivery) {
                     diasSemana.forEach(dia => {
                         const config = data.delivery[dia.id] || { ativo: true, abertura: '18:00', fechamento: '23:00' };
-                        document.getElementById(`delivery_ativo_${dia.id}`).checked = config.ativo;
-                        document.getElementById(`delivery_abre_${dia.id}`).value = config.abertura;
-                        document.getElementById(`delivery_fecha_${dia.id}`).value = config.fechamento;
+                        const ativoCheck = document.getElementById(`delivery_ativo_${dia.id}`);
+                        const abreInput = document.getElementById(`delivery_abre_${dia.id}`);
+                        const fechaInput = document.getElementById(`delivery_fecha_${dia.id}`);
+                        
+                        if (ativoCheck) ativoCheck.checked = config.ativo;
+                        if (abreInput) abreInput.value = config.abertura;
+                        if (fechaInput) fechaInput.value = config.fechamento;
                     });
                 }
                 
                 atualizarPreview();
                 
             } catch (error) {
-                console.error('❌ Erro:', error);
-                mostrarMensagem('error', 'Erro ao carregar horários');
+                console.error('❌ Erro ao carregar horários:', error);
+                mostrarMensagem('error', 'Erro ao carregar horários. Usando valores padrão.');
+                
+                // Valores padrão
+                diasSemana.forEach(dia => {
+                    // Loja
+                    const lojaAtivo = document.getElementById(`loja_ativo_${dia.id}`);
+                    const lojaAbre = document.getElementById(`loja_abre_${dia.id}`);
+                    const lojaFecha = document.getElementById(`loja_fecha_${dia.id}`);
+                    
+                    if (lojaAtivo) lojaAtivo.checked = true;
+                    if (lojaAbre) lojaAbre.value = '18:00';
+                    if (lojaFecha) lojaFecha.value = '23:00';
+                    
+                    // Delivery
+                    const delAtivo = document.getElementById(`delivery_ativo_${dia.id}`);
+                    const delAbre = document.getElementById(`delivery_abre_${dia.id}`);
+                    const delFecha = document.getElementById(`delivery_fecha_${dia.id}`);
+                    
+                    if (delAtivo) delAtivo.checked = true;
+                    if (delAbre) delAbre.value = '18:00';
+                    if (delFecha) delFecha.value = '23:00';
+                });
+                
+                atualizarPreview();
             }
         }
-
+        
+        // ===== RENDERIZAR GRIDS =====
+        function renderizarGrids() {
+            const lojaContainer = document.getElementById('horariosLojaContainer');
+            const deliveryContainer = document.getElementById('horariosDeliveryContainer');
+            
+            // Renderizar Loja
+            lojaContainer.innerHTML = diasSemana.map(dia => `
+                <div class="horario-row">
+                    <div class="dia-nome">${dia.nome}</div>
+                    <label class="switch">
+                        <input type="checkbox" id="loja_ativo_${dia.id}" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="time" id="loja_abre_${dia.id}" value="18:00" class="time-input">
+                        <span>às</span>
+                        <input type="time" id="loja_fecha_${dia.id}" value="23:00" class="time-input">
+                    </div>
+                </div>
+            `).join('');
+            
+            // Renderizar Delivery
+            deliveryContainer.innerHTML = diasSemana.map(dia => `
+                <div class="horario-row">
+                    <div class="dia-nome">${dia.nome}</div>
+                    <label class="switch">
+                        <input type="checkbox" id="delivery_ativo_${dia.id}" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="time" id="delivery_abre_${dia.id}" value="18:00" class="time-input">
+                        <span>às</span>
+                        <input type="time" id="delivery_fecha_${dia.id}" value="23:00" class="time-input">
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // ===== TABS =====
+        window.abrirTab = function(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[onclick="abrirTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+        
+        // ===== COPIAR HORÁRIOS =====
+        window.copiarHorarios = function(origem) {
+            if (origem === 'loja') {
+                diasSemana.forEach(dia => {
+                    const ativo = document.getElementById(`loja_ativo_${dia.id}`).checked;
+                    const abre = document.getElementById(`loja_abre_${dia.id}`).value;
+                    const fecha = document.getElementById(`loja_fecha_${dia.id}`).value;
+                    
+                    document.getElementById(`delivery_ativo_${dia.id}`).checked = ativo;
+                    document.getElementById(`delivery_abre_${dia.id}`).value = abre;
+                    document.getElementById(`delivery_fecha_${dia.id}`).value = fecha;
+                });
+                mostrarMensagem('success', 'Horários da Loja copiados para Delivery');
+            } else {
+                diasSemana.forEach(dia => {
+                    const ativo = document.getElementById(`delivery_ativo_${dia.id}`).checked;
+                    const abre = document.getElementById(`delivery_abre_${dia.id}`).value;
+                    const fecha = document.getElementById(`delivery_fecha_${dia.id}`).value;
+                    
+                    document.getElementById(`loja_ativo_${dia.id}`).checked = ativo;
+                    document.getElementById(`loja_abre_${dia.id}`).value = abre;
+                    document.getElementById(`loja_fecha_${dia.id}`).value = fecha;
+                });
+                mostrarMensagem('success', 'Horários do Delivery copiados para Loja');
+            }
+            atualizarPreview();
+        }
+        
+        // ===== RESETAR HORÁRIOS =====
+        window.resetarHorarios = function() {
+            if (!confirm('Resetar todos os horários para o padrão (18h às 23h todos os dias)?')) return;
+            
+            diasSemana.forEach(dia => {
+                ['loja', 'delivery'].forEach(tipo => {
+                    document.getElementById(`${tipo}_ativo_${dia.id}`).checked = true;
+                    document.getElementById(`${tipo}_abre_${dia.id}`).value = '18:00';
+                    document.getElementById(`${tipo}_fecha_${dia.id}`).value = '23:00';
+                });
+            });
+            
+            document.getElementById('horario_funcionamento').value = 'Seg a Dom: 18h às 23h';
+            mostrarMensagem('success', 'Horários resetados para padrão');
+            atualizarPreview();
+        }
+        
+        // ===== ATUALIZAR PREVIEW =====
+        function atualizarPreview() {
+            const hoje = new Date().getDay();
+            const diasMap = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+            const diaHoje = diasMap[hoje];
+            
+            // Mapear ID do dia para o nome correto
+            const diaIdMap = {
+                'segunda': 'segunda',
+                'terca': 'terca',
+                'quarta': 'quarta',
+                'quinta': 'quinta',
+                'sexta': 'sexta',
+                'sabado': 'sabado',
+                'domingo': 'domingo'
+            };
+            
+            const diaId = Object.keys(diaIdMap).find(key => diaIdMap[key] === diaHoje) || 'segunda';
+            
+            const lojaAtiva = document.getElementById(`loja_ativo_${diaId}`)?.checked || true;
+            const deliveryAtiva = document.getElementById(`delivery_ativo_${diaId}`)?.checked || true;
+            
+            let html = '';
+            
+            if (lojaAtiva) {
+                const abre = document.getElementById(`loja_abre_${diaId}`)?.value || '18:00';
+                const fecha = document.getElementById(`loja_fecha_${diaId}`)?.value || '23:00';
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 5px 0;">
+                    <span style="font-size: 18px;">🏪</span>
+                    <span><strong>Loja:</strong> ${abre} às ${fecha}</span>
+                </div>`;
+            } else {
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 5px 0; color: #f44336;">
+                    <span style="font-size: 18px;">🏪</span>
+                    <span><strong>Loja:</strong> Fechada hoje</span>
+                </div>`;
+            }
+            
+            if (deliveryAtiva) {
+                const abre = document.getElementById(`delivery_abre_${diaId}`)?.value || '18:00';
+                const fecha = document.getElementById(`delivery_fecha_${diaId}`)?.value || '23:00';
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 5px 0;">
+                    <span style="font-size: 18px;">🛵</span>
+                    <span><strong>Delivery:</strong> ${abre} às ${fecha}</span>
+                </div>`;
+            } else {
+                html += `<div style="display: flex; align-items: center; gap: 8px; padding: 5px 0; color: #f44336;">
+                    <span style="font-size: 18px;">🛵</span>
+                    <span><strong>Delivery:</strong> Fechado hoje</span>
+                </div>`;
+            }
+            
+            document.getElementById('previewHoje').innerHTML = html;
+        }
+        
         // ===== SALVAR HORÁRIOS =====
         window.salvarHorarios = async function() {
+            console.log('🚀 Salvando horários...');
+            
             const btn = document.getElementById('btnSalvar');
-            btn.innerHTML = '⏳ Salvando...';
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> Salvando...';
             btn.disabled = true;
             
             // Construir objeto loja
@@ -264,185 +473,9 @@
                 horario_funcionamento: document.getElementById('horario_funcionamento').value
             };
             
-            console.log('📤 Enviando:', dados);
+            console.log('📤 Enviando dados:', JSON.stringify(dados, null, 2));
             
             try {
-                const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dados)
-                });
-                
-                const resultado = await response.json();
-                
-                if (response.ok) {
-                    mostrarMensagem('success', '✅ Horários salvos!');
-                } else {
-                    mostrarMensagem('error', `❌ Erro: ${resultado.erro}`);
-                }
-                
-            } catch (error) {
-                mostrarMensagem('error', '❌ Erro de conexão');
-            } finally {
-                btn.innerHTML = '💾 Salvar Todos os Horários';
-                btn.disabled = false;
-            }
-        }
-        
-        // ===== RENDERIZAR HORÁRIOS =====
-        function renderizarHorarios() {
-            renderizarGrid('loja', horariosLoja);
-            renderizarGrid('delivery', horariosDelivery);
-        }
-        
-        function renderizarGrid(tipo, dados) {
-            const container = document.getElementById(`horarios${tipo.charAt(0).toUpperCase() + tipo.slice(1)}Container`);
-            
-            container.innerHTML = diasSemana.map(dia => {
-                const config = dados[dia.id] || { ativo: true, abertura: '18:00', fechamento: '23:00' };
-                const ativo = String(config.ativo) === 'true' || config.ativo === true;
-                
-                return `
-                    <div class="horario-row">
-                        <div class="dia-nome">${dia.nome}</div>
-                        <label class="switch">
-                            <input type="checkbox" id="${tipo}_ativo_${dia.id}" ${ativo ? 'checked' : ''}>
-                            <span class="slider"></span>
-                        </label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="time" id="${tipo}_abre_${dia.id}" value="${config.abertura || '18:00'}" class="time-input">
-                            <span>às</span>
-                            <input type="time" id="${tipo}_fecha_${dia.id}" value="${config.fechamento || '23:00'}" class="time-input">
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // ===== TABS =====
-        window.abrirTab = function(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            document.querySelector(`[onclick="abrirTab('${tab}')"]`).classList.add('active');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-        }
-        
-        // ===== COPIAR HORÁRIOS =====
-        window.copiarHorarios = function(origem) {
-            if (origem === 'loja') {
-                diasSemana.forEach(dia => {
-                    const ativo = document.getElementById(`loja_ativo_${dia.id}`).checked;
-                    const abre = document.getElementById(`loja_abre_${dia.id}`).value;
-                    const fecha = document.getElementById(`loja_fecha_${dia.id}`).value;
-                    
-                    document.getElementById(`delivery_ativo_${dia.id}`).checked = ativo;
-                    document.getElementById(`delivery_abre_${dia.id}`).value = abre;
-                    document.getElementById(`delivery_fecha_${dia.id}`).value = fecha;
-                });
-                mostrarMensagem('success', '✅ Horários da Loja copiados para Delivery');
-            } else {
-                diasSemana.forEach(dia => {
-                    const ativo = document.getElementById(`delivery_ativo_${dia.id}`).checked;
-                    const abre = document.getElementById(`delivery_abre_${dia.id}`).value;
-                    const fecha = document.getElementById(`delivery_fecha_${dia.id}`).value;
-                    
-                    document.getElementById(`loja_ativo_${dia.id}`).checked = ativo;
-                    document.getElementById(`loja_abre_${dia.id}`).value = abre;
-                    document.getElementById(`loja_fecha_${dia.id}`).value = fecha;
-                });
-                mostrarMensagem('success', '✅ Horários do Delivery copiados para Loja');
-            }
-            atualizarPreview();
-        }
-        
-        // ===== RESETAR HORÁRIOS =====
-        window.resetarHorarios = function() {
-            if (!confirm('Resetar todos os horários para o padrão (18h às 23h todos os dias)?')) return;
-            
-            diasSemana.forEach(dia => {
-                ['loja', 'delivery'].forEach(tipo => {
-                    document.getElementById(`${tipo}_ativo_${dia.id}`).checked = true;
-                    document.getElementById(`${tipo}_abre_${dia.id}`).value = '18:00';
-                    document.getElementById(`${tipo}_fecha_${dia.id}`).value = '23:00';
-                });
-            });
-            
-            document.getElementById('horario_funcionamento').value = 'Seg a Dom: 18h às 23h';
-            mostrarMensagem('success', '✅ Horários resetados para padrão');
-            atualizarPreview();
-        }
-        
-        // ===== ATUALIZAR PREVIEW =====
-        function atualizarPreview() {
-            const hoje = new Date().getDay();
-            const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-            const diaHoje = dias[hoje];
-            
-            const lojaAtiva = document.getElementById(`loja_ativo_${diaHoje}`).checked;
-            const deliveryAtiva = document.getElementById(`delivery_ativo_${diaHoje}`).checked;
-            
-            let html = '';
-            
-            if (lojaAtiva) {
-                const abre = document.getElementById(`loja_abre_${diaHoje}`).value;
-                const fecha = document.getElementById(`loja_fecha_${diaHoje}`).value;
-                html += `<div>🏪 Loja: ${abre} às ${fecha}</div>`;
-            } else {
-                html += `<div>🏪 Loja: <span style="color:#f44336;">Fechada hoje</span></div>`;
-            }
-            
-            if (deliveryAtiva) {
-                const abre = document.getElementById(`delivery_abre_${diaHoje}`).value;
-                const fecha = document.getElementById(`delivery_fecha_${diaHoje}`).value;
-                html += `<div>🛵 Delivery: ${abre} às ${fecha}</div>`;
-            } else {
-                html += `<div>🛵 Delivery: <span style="color:#f44336;">Fechado hoje</span></div>`;
-            }
-            
-            document.getElementById('previewHoje').innerHTML = html;
-        }
-        
-        // ===== SALVAR HORÁRIOS =====
-        window.salvarHorarios = async function() {
-            console.log('🚀 FUNÇÃO salvarHorarios EXECUTADA');
-            
-            const btn = document.getElementById('btnSalvar');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = '⏳ Salvando...';
-            btn.disabled = true;
-            
-            console.log('📝 Coletando dados dos horários...');
-            
-            const objLoja = {};
-            const objDelivery = {};
-            
-            diasSemana.forEach(dia => {
-                objLoja[dia.id] = {
-                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked,
-                    abertura: document.getElementById(`loja_abre_${dia.id}`).value,
-                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value
-                };
-                
-                objDelivery[dia.id] = {
-                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked,
-                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value,
-                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value
-                };
-            });
-            
-            // ENVIAR COMO STRINGS JSON
-            const dados = {
-                horarios: JSON.stringify(objLoja),
-                horarios_delivery: JSON.stringify(objDelivery),
-                horario_funcionamento: document.getElementById('horario_funcionamento').value
-            };
-            
-            console.log('📤 Dados a serem enviados:', dados);
-            
-            try {
-                console.log(`📡 Enviando para: ${API_URL}/horarios/${SUBDOMINIO}`);
-                
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
                     method: 'PUT',
                     headers: { 
@@ -452,35 +485,22 @@
                     body: JSON.stringify(dados)
                 });
                 
-                console.log('📥 Status da resposta:', response.status);
-                
-                const responseText = await response.text();
-                console.log('📥 Resposta bruta:', responseText);
-                
-                let resultado;
-                try {
-                    resultado = JSON.parse(responseText);
-                } catch (e) {
-                    console.error('❌ Erro ao parsear resposta:', e);
-                    resultado = { erro: 'Resposta inválida do servidor' };
-                }
-                
-                console.log('📥 Resposta parseada:', resultado);
+                const resultado = await response.json();
+                console.log('📥 Resposta:', resultado);
                 
                 if (response.ok) {
-                    mostrarMensagem('success', '✅ Horários salvos com sucesso!');
+                    mostrarMensagem('success', 'Horários salvos com sucesso!');
                     await carregarHorarios();
                 } else {
-                    mostrarMensagem('error', `❌ Erro: ${resultado.erro || 'Erro desconhecido'}`);
+                    mostrarMensagem('error', resultado.erro || 'Erro ao salvar horários');
                 }
                 
             } catch (error) {
-                console.error('❌ Erro na requisição:', error);
-                mostrarMensagem('error', `❌ Erro de conexão: ${error.message}`);
+                console.error('❌ Erro:', error);
+                mostrarMensagem('error', 'Erro de conexão ao salvar');
             } finally {
                 btn.innerHTML = textoOriginal;
                 btn.disabled = false;
-                console.log('✅ Processo finalizado');
             }
         }
         
@@ -489,7 +509,8 @@
         
         // ===== INICIAR =====
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Página carregada, iniciando...');
+            console.log('🚀 Página carregada, renderizando grids...');
+            renderizarGrids();
             carregarHorarios();
         });
     </script>
