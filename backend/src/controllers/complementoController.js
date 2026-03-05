@@ -1,79 +1,87 @@
 const pool = require('../config/database');
 
-async function garantirTabelasComplementos() {
-    try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS produtos (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER DEFAULT 1,
-                nome VARCHAR(255) NOT NULL,
-                descricao TEXT,
-                preco NUMERIC(10,2) DEFAULT 0,
-                categoria_nome VARCHAR(255),
-                imagem_url TEXT,
-                ativo BOOLEAN DEFAULT true
-            );
-        `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS grupos_complementos (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER DEFAULT 1,
-                nome VARCHAR(255) NOT NULL,
-                obrigatorio BOOLEAN DEFAULT false,
-                limite_selecao INTEGER DEFAULT 1,
-                ordem INTEGER DEFAULT 0
-            );
-        `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS complementos (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER DEFAULT 1,
-                nome VARCHAR(255) NOT NULL,
-                preco NUMERIC(10,2) DEFAULT 0,
-                categoria_complemento VARCHAR(100) DEFAULT 'geral',
-                disponivel BOOLEAN DEFAULT true,
-                ordem INTEGER DEFAULT 0
-            );
-        `);
+// O "Semáforo": Garante que a criação de tabelas roda apenas UMA VEZ sem atropelos
+let dbInitPromise = null;
 
-        // ==========================================
-        // A LIMPEZA ABSOLUTA DO "FANTASMA"
-        // Apagamos a tabela antiga "grupo_itens" e a de vínculos para recriar do zero com as colunas certas!
-        // ==========================================
-        await pool.query("DROP TABLE IF EXISTS grupo_itens CASCADE;").catch(() => {});
-        await pool.query("DROP TABLE IF EXISTS vinculo_grupo_complemento CASCADE;").catch(() => {});
-        
-        await pool.query(`
-            CREATE TABLE vinculo_grupo_complemento (
-                grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
-                complemento_id INTEGER REFERENCES complementos(id) ON DELETE CASCADE,
-                ordem INTEGER DEFAULT 0,
-                PRIMARY KEY (grupo_id, complemento_id)
-            );
-        `);
+function garantirTabelasComplementos() {
+    if (!dbInitPromise) {
+        dbInitPromise = (async () => {
+            try {
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS produtos (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER DEFAULT 1,
+                        nome VARCHAR(255) NOT NULL,
+                        descricao TEXT,
+                        preco NUMERIC(10,2) DEFAULT 0,
+                        categoria_nome VARCHAR(255),
+                        imagem_url TEXT,
+                        ativo BOOLEAN DEFAULT true
+                    );
+                `);
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS grupos_complementos (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER DEFAULT 1,
+                        nome VARCHAR(255) NOT NULL,
+                        obrigatorio BOOLEAN DEFAULT false,
+                        limite_selecao INTEGER DEFAULT 1,
+                        ordem INTEGER DEFAULT 0
+                    );
+                `);
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS complementos (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER DEFAULT 1,
+                        nome VARCHAR(255) NOT NULL,
+                        preco NUMERIC(10,2) DEFAULT 0,
+                        categoria_complemento VARCHAR(100) DEFAULT 'geral',
+                        disponivel BOOLEAN DEFAULT true,
+                        ordem INTEGER DEFAULT 0
+                    );
+                `);
 
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
-                produto_id INTEGER,
-                grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
-                ordem INTEGER DEFAULT 0,
-                PRIMARY KEY (produto_id, grupo_id)
-            );
-        `);
+                // ==========================================
+                // DESTRUIÇÃO DA TABELA FANTASMA E RECRIAÇÃO LIMPA
+                // ==========================================
+                await pool.query("DROP TABLE IF EXISTS vinculo_grupo_complemento CASCADE;");
+                
+                await pool.query(`
+                    CREATE TABLE vinculo_grupo_complemento (
+                        grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
+                        complemento_id INTEGER REFERENCES complementos(id) ON DELETE CASCADE,
+                        ordem INTEGER DEFAULT 0,
+                        PRIMARY KEY (grupo_id, complemento_id)
+                    );
+                `);
 
-        const vacinaColunas = [
-            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
-            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
-            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
-        ];
-        
-        for (let query of vacinaColunas) { 
-            await pool.query(query).catch(e => {}); 
-        }
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
+                        produto_id INTEGER,
+                        grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
+                        ordem INTEGER DEFAULT 0,
+                        PRIMARY KEY (produto_id, grupo_id)
+                    );
+                `);
 
-    } catch(e) { 
-        console.log("Aviso DB Complementos:", e.message); 
+                const vacinaColunas = [
+                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
+                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
+                    "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
+                ];
+                
+                for (let query of vacinaColunas) { 
+                    await pool.query(query).catch(e => {}); 
+                }
+
+            } catch(e) {
+                console.log("Erro na inicialização do DB:", e.message);
+                dbInitPromise = null; // Se falhar, permite tentar de novo
+                throw e;
+            }
+        })();
     }
+    return dbInitPromise;
 }
 
 const complementoController = {
@@ -109,7 +117,7 @@ const complementoController = {
             
             const result = await pool.query(
                 `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, minimo_selecao=$3, limite_selecao=$4, ordem=$5 WHERE id=$6 RETURNING *`,
-                [nome, obrigatorio, minimo_selecao || 0, limite_selecao, ordem || 0, id]
+                [nome, obrigatorio, minimo_selecao || 0, limite_selecao || 1, ordem || 0, id]
             );
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
             res.json(result.rows[0]);
@@ -168,7 +176,7 @@ const complementoController = {
             await garantirTabelasComplementos();
             const { id } = req.params;
             const vinculos = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', [id]);
-            if (vinculos.rows.length > 0) return res.status(400).json({ erro: 'Este item está a ser usado num grupo. Remova-o do grupo primeiro.' });
+            if (vinculos.rows.length > 0) return res.status(400).json({ erro: 'Este item está sendo usado num grupo. Remova-o do grupo primeiro.' });
             
             const result = await pool.query('DELETE FROM complementos WHERE id = $1 RETURNING *', [id]);
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
@@ -177,7 +185,7 @@ const complementoController = {
     },
 
     // ==========================================
-    // 3. VÍNCULOS ITEM -> GRUPO
+    // 3. VÍNCULOS ITEM -> GRUPO (A CORREÇÃO)
     // ==========================================
     async listarItensDoGrupo(req, res) {
         try {
@@ -205,11 +213,10 @@ const complementoController = {
                     `INSERT INTO vinculo_grupo_complemento (grupo_id, complemento_id) VALUES ($1, $2)`,
                     [grupoId, itemId]
                 );
+                res.json({ mensagem: 'Item vinculado com sucesso!' });
             } else {
                 return res.status(400).json({ erro: 'Esta opção já faz parte do grupo!' });
             }
-            
-            res.json({ mensagem: 'Item vinculado com sucesso!' });
         } catch (error) { 
             res.status(500).json({ erro: error.message }); 
         }

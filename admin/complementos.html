@@ -148,8 +148,8 @@
                     <div class="form-group">
                         <label>Regra de Escolha</label>
                         <select id="grupoObrigatorio" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                            <option value="true">Obrigatório (O cliente tem que escolher algo)</option>
-                            <option value="false">Opcional (O cliente escolhe se quiser)</option>
+                            <option value="true">Obrigatório (Cliente tem que escolher algo)</option>
+                            <option value="false">Opcional (Cliente escolhe se quiser)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -323,10 +323,15 @@
         }
 
         window.salvarGrupo = async function() { 
+            const obrigatorio = document.getElementById('grupoObrigatorio').value === 'true';
+            // Se for obrigatório o mínimo é 1, se não é 0. O Banco guarda essa informação correta agora.
+            const minimo_selecao = obrigatorio ? 1 : 0;
+            
             const grupo = { 
                 tenant_id: 1, 
                 nome: document.getElementById('grupoNome').value, 
-                obrigatorio: document.getElementById('grupoObrigatorio').value === 'true', 
+                obrigatorio: obrigatorio,
+                minimo_selecao: minimo_selecao, 
                 limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1, 
                 ordem: 0 
             }; 
