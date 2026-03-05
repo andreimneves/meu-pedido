@@ -194,14 +194,15 @@
                     <select id="vincularItemSelect" class="form-control" style="flex:1;">
                         <option value="">Carregando opções...</option>
                     </select>
-                    <button class="btn-save" style="margin:0; padding:10px; width:auto;" onclick="salvarVinculoItem()">+ Adicionar</button>
+                    <button class="btn-save" style="margin:0; padding:10px; width:auto;" id="btnAddVincular" onclick="salvarVinculoItem()">+ Adicionar</button>
                 </div>
             </div>
 
             <div style="margin-top: 30px;">
                 <h3 style="font-size: 15px; color:#333; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">📋 Opções já salvas neste grupo:</h3>
                 <div id="itensDoGrupoAtualList" style="max-height: 300px; overflow-y: auto;">
-                    </div>
+                    <p style="text-align:center;">Carregando...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -356,15 +357,22 @@
         }
 
         // ==========================================
-        // VINCULAR ITEM NO GRUPO E ATUALIZAR MODAL
+        // VINCULAR ITEM NO GRUPO (AGORA LÊ DIRETO DO SERVIDOR)
         // ==========================================
         window.abrirVincularItem = async function(gId, gNome) { 
             window.grupoSelecionadoParaVinculo = gId; 
             document.getElementById('vincularGrupoNomeTxt').textContent = gNome; 
             
-            // Popula os itens já salvos neste grupo
-            const itensDoGrupo = window.itensPorGrupo[gId] || [];
             const listaDiv = document.getElementById('itensDoGrupoAtualList');
+            listaDiv.innerHTML = '<p style="color:#999; font-size:13px; text-align:center;">Atualizando lista...</p>';
+
+            // Busca do servidor na hora para ter certeza absoluta
+            try {
+                const resG = await window.fetchDireto(`${API_URL}/grupo-complementos/${gId}/itens`);
+                if (resG.ok) window.itensPorGrupo[gId] = await resG.json();
+            } catch(e){}
+
+            const itensDoGrupo = window.itensPorGrupo[gId] || [];
             if (itensDoGrupo.length === 0) {
                 listaDiv.innerHTML = '<p style="color:#999; font-size:13px; text-align:center;">Nenhuma opção cadastrada neste grupo ainda.</p>';
             } else {
@@ -388,16 +396,24 @@
         window.salvarVinculoItem = async function() { 
             const itemId = document.getElementById('vincularItemSelect').value; 
             if(!itemId) return window.mostrarNotificacao('Selecione uma opção!', 'erro'); 
+            
+            const btn = document.getElementById('btnAddVincular');
+            btn.innerHTML = '⏳...'; btn.disabled = true;
+
             try { 
-                const res = await window.fetchDireto(`${API_URL}/grupos/${window.grupoSelecionadoParaVinculo}/itens/${itemId}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ordem: 0}) }); 
+                const res = await window.fetchDireto(`${API_URL}/grupos/${window.grupoSelecionadoParaVinculo}/itens/${itemId}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) }); 
+                
                 if(res.ok) { 
                     window.mostrarNotificacao('Opção Adicionada!', 'sucesso'); 
                     await window.carregarGrupos(); 
-                    // Refresh automatico no modal
                     window.abrirVincularItem(window.grupoSelecionadoParaVinculo, document.getElementById('vincularGrupoNomeTxt').textContent);
                 } 
-                else { window.mostrarNotificacao('Esta opção já faz parte do grupo.', 'aviso'); } 
-            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
+                else { 
+                    const err = await res.json().catch(()=>({erro: "Erro desconhecido"}));
+                    window.mostrarNotificacao(err.erro, 'erro'); 
+                } 
+            } catch(e) { window.mostrarNotificacao('Erro de conexão com servidor', 'erro'); } 
+            finally { btn.innerHTML = '+ Adicionar'; btn.disabled = false; }
         }
 
         window.removerItemDoGrupo = async function(gId, iId) { 
@@ -407,7 +423,6 @@
                     window.mostrarNotificacao('Opção removida', 'sucesso'); 
                     await window.carregarGrupos(); 
                     
-                    // Se o modal estiver aberto, atualiza a lista de opções automaticamente
                     if (document.getElementById('vincularItemModal').style.display === 'block' && window.grupoSelecionadoParaVinculo === gId) {
                         window.abrirVincularItem(gId, document.getElementById('vincularGrupoNomeTxt').textContent);
                     }

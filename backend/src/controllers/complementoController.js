@@ -39,7 +39,6 @@ async function garantirTabelasComplementos() {
             CREATE TABLE IF NOT EXISTS vinculo_grupo_complemento (
                 grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
                 complemento_id INTEGER REFERENCES complementos(id) ON DELETE CASCADE,
-                ordem INTEGER DEFAULT 0,
                 PRIMARY KEY (grupo_id, complemento_id)
             );
         `);
@@ -52,16 +51,10 @@ async function garantirTabelasComplementos() {
             );
         `);
 
-        // VACINA: Garante que as colunas novas existem sem apagar os dados antigos
+        // Vacina suave (não quebra se der erro)
         const vacinaColunas = [
-            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
             "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
-            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
-            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;",
-            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS categoria_complemento VARCHAR(100) DEFAULT 'geral';",
-            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS preco NUMERIC(10,2) DEFAULT 0;",
-            "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
-            "ALTER TABLE vinculo_produto_grupo ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;"
+            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
         ];
         
         for (let query of vacinaColunas) {
@@ -92,7 +85,7 @@ const complementoController = {
             
             const min = parseInt(minimo_selecao) || 0;
             const lim = parseInt(limite_selecao) || 0;
-            const obrigatorio = min > 0; // Se o mínimo for maior que zero, o grupo torna-se obrigatório!
+            const obrigatorio = min > 0;
 
             const result = await pool.query(
                 `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, minimo_selecao, limite_selecao, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -137,7 +130,7 @@ const complementoController = {
     async listarItens(req, res) {
         try {
             await garantirTabelasComplementos();
-            const result = await pool.query('SELECT * FROM complementos ORDER BY ordem, nome');
+            const result = await pool.query('SELECT * FROM complementos ORDER BY nome');
             res.json(result.rows);
         } catch (error) { res.status(500).json({ erro: error.message }); }
     },
@@ -145,10 +138,10 @@ const complementoController = {
     async criarItem(req, res) {
         try {
             await garantirTabelasComplementos();
-            const { tenant_id, nome, preco, categoria_complemento, disponivel, ordem } = req.body;
+            const { tenant_id, nome, preco, disponivel } = req.body;
             const result = await pool.query(
-                `INSERT INTO complementos (tenant_id, nome, preco, categoria_complemento, disponivel, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                [tenant_id || 1, nome, preco || 0, categoria_complemento || 'geral', disponivel !== false, ordem || 0]
+                `INSERT INTO complementos (tenant_id, nome, preco, disponivel) VALUES ($1, $2, $3, $4) RETURNING *`,
+                [tenant_id || 1, nome, preco || 0, disponivel !== false]
             );
             res.status(201).json(result.rows[0]);
         } catch (error) { res.status(500).json({ erro: error.message }); }
@@ -158,10 +151,10 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const { nome, preco, categoria_complemento, disponivel, ordem } = req.body;
+            const { nome, preco, disponivel } = req.body;
             const result = await pool.query(
-                `UPDATE complementos SET nome=$1, preco=$2, categoria_complemento=$3, disponivel=$4, ordem=$5 WHERE id=$6 RETURNING *`,
-                [nome, preco, categoria_complemento, disponivel, ordem, id]
+                `UPDATE complementos SET nome=$1, preco=$2, disponivel=$3 WHERE id=$4 RETURNING *`,
+                [nome, preco, disponivel, id]
             );
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
             res.json(result.rows[0]);
@@ -182,16 +175,17 @@ const complementoController = {
     },
 
     // ==========================================
-    // 3. VÍNCULOS ITEM -> GRUPO
+    // 3. VÍNCULOS ITEM -> GRUPO (A CORREÇÃO ESTÁ AQUI)
     // ==========================================
     async listarItensDoGrupo(req, res) {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
+            // Lê sem usar coluna 'ordem' para evitar erros de banco de dados
             const result = await pool.query(
-                `SELECT c.*, v.ordem as ordem_vinculo FROM complementos c 
+                `SELECT c.* FROM complementos c 
                  INNER JOIN vinculo_grupo_complemento v ON c.id = v.complemento_id 
-                 WHERE v.grupo_id = $1 ORDER BY v.ordem, c.nome`,
+                 WHERE v.grupo_id = $1 ORDER BY c.nome`,
                 [id]
             );
             res.json(result.rows);
@@ -202,12 +196,24 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { grupoId, itemId } = req.params;
-            await pool.query(
-                `INSERT INTO vinculo_grupo_complemento (grupo_id, complemento_id, ordem) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-                [grupoId, itemId, 0]
-            );
-            res.json({ mensagem: 'Item vinculado ao grupo' });
-        } catch (error) { res.status(500).json({ erro: error.message }); }
+            
+            // Verificação manual em vez de depender de Constraints do SQL
+            const check = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE grupo_id = $1 AND complemento_id = $2', [grupoId, itemId]);
+            
+            if (check.rows.length === 0) {
+                // Insere apenas as 2 colunas que temos a certeza que existem
+                await pool.query(
+                    `INSERT INTO vinculo_grupo_complemento (grupo_id, complemento_id) VALUES ($1, $2)`,
+                    [grupoId, itemId]
+                );
+            } else {
+                return res.status(400).json({ erro: 'Esta opção já faz parte do grupo!' });
+            }
+            
+            res.json({ mensagem: 'Item vinculado com sucesso!' });
+        } catch (error) { 
+            res.status(500).json({ erro: error.message }); 
+        }
     },
 
     async removerItemDoGrupo(req, res) {
