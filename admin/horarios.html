@@ -26,11 +26,15 @@
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #555; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
         .btn-save { background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
+        .btn-save:hover { background: #388E3C; }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
+        
         .success-message, .error-message { color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: none; }
         .success-message { background: #4CAF50; } .error-message { background: #f44336; }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 500; color: #666; border-radius: 5px 5px 0 0; }
+        .tab-btn:hover { background: #f0f0f0; }
         .tab-btn.active { background: #C83232; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -46,11 +50,15 @@
         input:checked + .slider:before { transform: translateX(26px); }
         .time-input { width: 80px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; }
         
-        .copy-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .copy-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .copy-btn { background: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; }
         .copy-btn:hover { background: #1976D2; }
+        .copy-btn.reset { background: #ff9800; }
+        .copy-btn.reset:hover { background: #f57c00; }
         
         .info-box { background: #e3f2fd; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; color: #0d47a1; }
+        .preview-box { background: #f0f0f0; padding: 20px; border-radius: 10px; margin-top: 20px; }
+        .preview-card { background: white; border-radius: 10px; padding: 15px; max-width: 300px; margin: 0 auto; }
     </style>
 </head>
 <body>
@@ -85,7 +93,7 @@
                 <div class="copy-buttons">
                     <button class="copy-btn" onclick="copiarHorarios('loja')">📋 Copiar da Loja para Delivery</button>
                     <button class="copy-btn" onclick="copiarHorarios('delivery')">📋 Copiar do Delivery para Loja</button>
-                    <button class="copy-btn" onclick="resetarHorarios()">🔄 Resetar para Padrão</button>
+                    <button class="copy-btn reset" onclick="resetarHorarios()">🔄 Resetar para Padrão</button>
                 </div>
                 
                 <div class="tabs">
@@ -120,8 +128,8 @@
             
             <div class="config-section">
                 <h2>📱 Preview no App</h2>
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 10px;">
-                    <div style="background: white; border-radius: 10px; padding: 15px; max-width: 300px; margin: 0 auto;">
+                <div class="preview-box">
+                    <div class="preview-card">
                         <div style="color: #C83232; font-weight: bold; margin-bottom: 10px;">🕒 Horários de Hoje:</div>
                         <div id="previewHoje">Carregando...</div>
                     </div>
@@ -131,6 +139,7 @@
     </div>
     
     <script>
+        // ===== CONFIGURAÇÕES =====
         const API_URL = 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         
@@ -147,7 +156,7 @@
         let horariosLoja = {};
         let horariosDelivery = {};
         
-        // Verificar login
+        // ===== VERIFICAÇÃO DE LOGIN =====
         if (!localStorage.getItem('adminLogado')) {
             window.location.href = 'index.html';
         }
@@ -157,6 +166,7 @@
             window.location.href = 'index.html';
         }
         
+        // ===== UTILITÁRIOS =====
         function mostrarMensagem(tipo, texto) {
             const success = document.getElementById('successMessage');
             const error = document.getElementById('errorMessage');
@@ -180,19 +190,24 @@
             try {
                 return JSON.parse(texto) || {};
             } catch (e) {
+                console.error('Erro ao parsear JSON:', e);
                 return {};
             }
         }
         
+        // ===== CARREGAR HORÁRIOS =====
         async function carregarHorarios() {
+            console.log('🔄 Carregando horários...');
+            
             try {
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`);
                 
                 if (!response.ok) {
-                    throw new Error('Erro ao carregar');
+                    throw new Error(`Erro HTTP: ${response.status}`);
                 }
                 
                 const data = await response.json();
+                console.log('✅ Horários carregados:', data);
                 
                 horariosLoja = parseJSONSeguro(data.horarios);
                 horariosDelivery = parseJSONSeguro(data.horarios_delivery);
@@ -204,8 +219,8 @@
                 atualizarPreview();
                 
             } catch (error) {
-                console.error('Erro:', error);
-                mostrarMensagem('error', 'Erro ao carregar horários');
+                console.error('❌ Erro ao carregar horários:', error);
+                mostrarMensagem('error', 'Erro ao carregar horários. Usando valores padrão.');
                 
                 // Dados padrão
                 horariosLoja = {};
@@ -218,6 +233,7 @@
             }
         }
         
+        // ===== RENDERIZAR HORÁRIOS =====
         function renderizarHorarios() {
             renderizarGrid('loja', horariosLoja);
             renderizarGrid('delivery', horariosDelivery);
@@ -247,6 +263,7 @@
             }).join('');
         }
         
+        // ===== TABS =====
         function abrirTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -255,9 +272,9 @@
             document.getElementById(`tab-${tab}`).classList.add('active');
         }
         
+        // ===== COPIAR HORÁRIOS =====
         function copiarHorarios(origem) {
             if (origem === 'loja') {
-                // Copiar da loja para delivery
                 diasSemana.forEach(dia => {
                     const ativo = document.getElementById(`loja_ativo_${dia.id}`).checked;
                     const abre = document.getElementById(`loja_abre_${dia.id}`).value;
@@ -269,7 +286,6 @@
                 });
                 mostrarMensagem('success', '✅ Horários da Loja copiados para Delivery');
             } else {
-                // Copiar do delivery para loja
                 diasSemana.forEach(dia => {
                     const ativo = document.getElementById(`delivery_ativo_${dia.id}`).checked;
                     const abre = document.getElementById(`delivery_abre_${dia.id}`).value;
@@ -284,6 +300,7 @@
             atualizarPreview();
         }
         
+        // ===== RESETAR HORÁRIOS =====
         function resetarHorarios() {
             if (!confirm('Resetar todos os horários para o padrão (18h às 23h todos os dias)?')) return;
             
@@ -300,6 +317,7 @@
             atualizarPreview();
         }
         
+        // ===== ATUALIZAR PREVIEW =====
         function atualizarPreview() {
             const hoje = new Date().getDay();
             const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
@@ -329,67 +347,117 @@
             document.getElementById('previewHoje').innerHTML = html;
         }
         
-        async function salvarHorarios() {
+        // ===== SALVAR HORÁRIOS (VERSÃO CORRIGIDA) =====
+        window.salvarHorarios = async function() {
+            console.log('🚀 FUNÇÃO salvarHorarios EXECUTADA');
+            
             const btn = document.getElementById('btnSalvar');
+            if (!btn) {
+                console.error('❌ Botão não encontrado!');
+                return;
+            }
+            
+            const textoOriginal = btn.innerHTML;
             btn.innerHTML = '⏳ Salvando...';
             btn.disabled = true;
+            
+            console.log('📝 Coletando dados dos horários...');
             
             const objLoja = {};
             const objDelivery = {};
             
             diasSemana.forEach(dia => {
+                // Loja
+                const lojaAtivo = document.getElementById(`loja_ativo_${dia.id}`);
+                const lojaAbre = document.getElementById(`loja_abre_${dia.id}`);
+                const lojaFecha = document.getElementById(`loja_fecha_${dia.id}`);
+                
                 objLoja[dia.id] = {
-                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked,
-                    abertura: document.getElementById(`loja_abre_${dia.id}`).value,
-                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value
+                    ativo: lojaAtivo ? lojaAtivo.checked : true,
+                    abertura: lojaAbre ? lojaAbre.value : '18:00',
+                    fechamento: lojaFecha ? lojaFecha.value : '23:00'
                 };
                 
+                // Delivery
+                const delAtivo = document.getElementById(`delivery_ativo_${dia.id}`);
+                const delAbre = document.getElementById(`delivery_abre_${dia.id}`);
+                const delFecha = document.getElementById(`delivery_fecha_${dia.id}`);
+                
                 objDelivery[dia.id] = {
-                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked,
-                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value,
-                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value
+                    ativo: delAtivo ? delAtivo.checked : true,
+                    abertura: delAbre ? delAbre.value : '18:00',
+                    fechamento: delFecha ? delFecha.value : '23:00'
                 };
             });
             
-            // IMPORTANTE: Enviar como strings JSON, não como objetos
+            const horarioFuncionamento = document.getElementById('horario_funcionamento');
+            
+            // IMPORTANTE: Enviar como strings JSON
             const dados = {
                 horarios: JSON.stringify(objLoja),
                 horarios_delivery: JSON.stringify(objDelivery),
-                horario_funcionamento: document.getElementById('horario_funcionamento').value
+                horario_funcionamento: horarioFuncionamento ? horarioFuncionamento.value : 'Seg a Dom: 18h às 23h'
             };
             
-            console.log('📤 Enviando dados:', dados);
+            console.log('📤 Dados a serem enviados:', dados);
             
             try {
+                console.log(`📡 Enviando para: ${API_URL}/horarios/${SUBDOMINIO}`);
+                
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify(dados)
                 });
                 
-                const resultado = await response.json();
-                console.log('📥 Resposta:', resultado);
+                console.log('📥 Status da resposta:', response.status);
+                
+                let resultado;
+                const responseText = await response.text();
+                console.log('📥 Resposta bruta:', responseText);
+                
+                try {
+                    resultado = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('❌ Erro ao parsear resposta:', e);
+                    resultado = { erro: 'Resposta inválida do servidor' };
+                }
+                
+                console.log('📥 Resposta parseada:', resultado);
                 
                 if (response.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
                     await carregarHorarios(); // Recarregar para confirmar
                 } else {
-                    mostrarMensagem('error', `❌ Erro: ${resultado.erro || 'Erro ao salvar'}`);
+                    mostrarMensagem('error', `❌ Erro: ${resultado.erro || 'Erro desconhecido'}`);
                 }
+                
             } catch (error) {
-                console.error('❌ Erro:', error);
-                mostrarMensagem('error', '❌ Erro de conexão');
+                console.error('❌ Erro na requisição:', error);
+                mostrarMensagem('error', `❌ Erro de conexão: ${error.message}`);
             } finally {
-                btn.innerHTML = '💾 Salvar Todos os Horários';
+                btn.innerHTML = textoOriginal;
                 btn.disabled = false;
+                console.log('✅ Processo finalizado');
             }
         }
         
-        // Atualizar preview quando mudar algo
+        // ===== ATUALIZAR PREVIEW AUTOMATICAMENTE =====
         setInterval(atualizarPreview, 1000);
         
-        // Iniciar
-        carregarHorarios();
+        // ===== INICIAR =====
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Página carregada, iniciando...');
+            carregarHorarios();
+            
+            // Expor funções globalmente
+            window.abrirTab = abrirTab;
+            window.copiarHorarios = copiarHorarios;
+            window.resetarHorarios = resetarHorarios;
+        });
     </script>
 </body>
 </html>

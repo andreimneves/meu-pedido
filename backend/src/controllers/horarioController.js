@@ -1,14 +1,12 @@
 const pool = require('../config/database');
 
 const horarioController = {
-    // ===== BUSCAR HORÁRIOS =====
     async buscarHorarios(req, res) {
         try {
             const { subdominio } = req.params;
             
             console.log('🔍 Buscando horários para:', subdominio);
             
-            // Buscar tenant
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
@@ -20,14 +18,12 @@ const horarioController = {
             
             const tenantId = tenantQuery.rows[0].id;
             
-            // Buscar configurações
             const configQuery = await pool.query(
                 'SELECT horarios, horarios_delivery, horario_funcionamento FROM configuracoes_loja WHERE tenant_id = $1',
                 [tenantId]
             );
             
             if (configQuery.rows.length === 0) {
-                // Retornar objeto vazio se não existir
                 return res.json({
                     horarios: '{}',
                     horarios_delivery: '{}',
@@ -47,16 +43,19 @@ const horarioController = {
         }
     },
 
-    // ===== ATUALIZAR HORÁRIOS (CORRIGIDO) =====
     async atualizarHorarios(req, res) {
         try {
             const { subdominio } = req.params;
             const dados = req.body;
             
-            console.log('📝 Atualizando horários para:', subdominio);
-            console.log('📦 Dados recebidos:', dados);
+            console.log('📝 Recebendo dados para atualização:');
+            console.log('Subdomínio:', subdominio);
+            console.log('Dados completos:', JSON.stringify(dados, null, 2));
             
-            // Buscar tenant
+            if (!dados) {
+                return res.status(400).json({ erro: 'Nenhum dado recebido' });
+            }
+            
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
@@ -68,13 +67,11 @@ const horarioController = {
             
             const tenantId = tenantQuery.rows[0].id;
             
-            // Extrair dados (podem vir como string JSON ou objeto)
             let horarios = dados.horarios;
             let horarios_delivery = dados.horarios_delivery;
             let horario_funcionamento = dados.horario_funcionamento;
             
-            // Se veio como string, manter como string
-            // Se veio como objeto, converter para string
+            // Garantir que são strings
             if (horarios && typeof horarios === 'object') {
                 horarios = JSON.stringify(horarios);
             }
@@ -82,14 +79,17 @@ const horarioController = {
                 horarios_delivery = JSON.stringify(horarios_delivery);
             }
             
-            // Verificar se já existe registro
+            console.log('📦 Processado:');
+            console.log('- horarios:', horarios ? horarios.substring(0, 100) + '...' : 'null');
+            console.log('- horarios_delivery:', horarios_delivery ? horarios_delivery.substring(0, 100) + '...' : 'null');
+            console.log('- horario_funcionamento:', horario_funcionamento);
+            
             const existe = await pool.query(
                 'SELECT id FROM configuracoes_loja WHERE tenant_id = $1',
                 [tenantId]
             );
             
             if (existe.rows.length > 0) {
-                // Construir query dinâmica
                 const updates = [];
                 const values = [];
                 let paramCount = 1;
@@ -115,7 +115,6 @@ const horarioController = {
                 }
                 
                 values.push(tenantId);
-                
                 const sql = `UPDATE configuracoes_loja SET ${updates.join(', ')} WHERE tenant_id = $${paramCount}`;
                 
                 console.log('📝 SQL:', sql);
@@ -124,16 +123,10 @@ const horarioController = {
                 await pool.query(sql, values);
                 
             } else {
-                // Inserir novo registro
-                const campos = [];
-                const placeholders = [];
-                const values = [];
-                let paramCount = 1;
-                
-                campos.push('tenant_id');
-                placeholders.push(`$${paramCount}`);
-                values.push(tenantId);
-                paramCount++;
+                const campos = ['tenant_id'];
+                const placeholders = ['$1'];
+                const values = [tenantId];
+                let paramCount = 2;
                 
                 if (horarios !== undefined) {
                     campos.push('horarios');
@@ -164,20 +157,18 @@ const horarioController = {
             
             res.json({ 
                 mensagem: '✅ Horários salvos com sucesso!',
-                dados: {
-                    horarios,
-                    horarios_delivery,
-                    horario_funcionamento
-                }
+                recebido: dados
             });
             
         } catch (error) {
-            console.error('❌ Erro ao atualizar horários:', error);
-            res.status(500).json({ erro: error.message });
+            console.error('❌ ERRO DETALHADO:', error);
+            res.status(500).json({ 
+                erro: error.message,
+                stack: error.stack
+            });
         }
     },
 
-    // ===== VERIFICAR DISPONIBILIDADE (CORRIGIDO) =====
     async verificarDisponibilidade(req, res) {
         try {
             const { subdominio } = req.params;
@@ -185,7 +176,6 @@ const horarioController = {
             
             console.log(`🔍 Verificando disponibilidade: ${subdominio}, ${tipo}, ${data || 'agora'}`);
             
-            // Buscar tenant
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
@@ -197,14 +187,12 @@ const horarioController = {
             
             const tenantId = tenantQuery.rows[0].id;
             
-            // Buscar configurações
             const configQuery = await pool.query(
                 'SELECT horarios, horarios_delivery FROM configuracoes_loja WHERE tenant_id = $1',
                 [tenantId]
             );
             
             if (configQuery.rows.length === 0) {
-                // Sem configurações, considera sempre disponível
                 return res.json({ 
                     disponivel: true, 
                     pode_agendar: true,
@@ -212,7 +200,6 @@ const horarioController = {
                 });
             }
             
-            // Pegar os horários corretos baseado no tipo
             let horariosStr;
             if (tipo === 'delivery') {
                 horariosStr = configQuery.rows[0].horarios_delivery;
@@ -220,20 +207,17 @@ const horarioController = {
                 horariosStr = configQuery.rows[0].horarios;
             }
             
-            // Parse dos horários
             let horarios = {};
             if (horariosStr) {
                 try {
                     horarios = typeof horariosStr === 'string' ? JSON.parse(horariosStr) : horariosStr;
                 } catch (e) {
                     console.error('Erro ao parsear horários:', e);
-                    horarios = {};
                 }
             }
             
             const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
             
-            // Se não tem data, verifica agora
             if (!data) {
                 const agora = new Date();
                 const diaAtual = dias[agora.getDay()];
@@ -241,7 +225,6 @@ const horarioController = {
                 
                 const configHoje = horarios[diaAtual];
                 
-                // Se não tem configuração ou está fechado
                 if (!configHoje || String(configHoje.ativo) !== 'true') {
                     return res.json({ 
                         disponivel: false, 
@@ -250,14 +233,12 @@ const horarioController = {
                     });
                 }
                 
-                // Verificar horário
                 const [hAbre, mAbre] = (configHoje.abertura || '18:00').split(':').map(Number);
                 const [hFecha, mFecha] = (configHoje.fechamento || '23:00').split(':').map(Number);
                 
                 const aberturaMin = hAbre * 60 + (mAbre || 0);
                 let fechamentoMin = hFecha * 60 + (mFecha || 0);
                 
-                // Ajusta se passar da meia-noite
                 if (fechamentoMin < aberturaMin) {
                     fechamentoMin += 24 * 60;
                 }
@@ -272,14 +253,12 @@ const horarioController = {
                 });
             }
             
-            // Verifica disponibilidade para data específica
             const dataObj = new Date(data + 'T12:00:00');
             const diaNome = dias[dataObj.getDay()];
             const configDia = horarios[diaNome];
             
             const disponivel = configDia && String(configDia.ativo) === 'true';
             
-            // Gera opções de horário para o dia
             let opcoes = [];
             if (disponivel) {
                 opcoes = gerarOpcoesHorario(
@@ -300,14 +279,13 @@ const horarioController = {
             console.error('❌ Erro ao verificar disponibilidade:', error);
             res.status(500).json({ 
                 erro: error.message, 
-                disponivel: true, // Fallback para disponível em caso de erro
+                disponivel: true,
                 pode_agendar: true 
             });
         }
     }
 };
 
-// Funções auxiliares
 function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
     const opcoes = [];
     
@@ -321,7 +299,6 @@ function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
         minFecha += 24 * 60;
     }
     
-    // Se for hoje, começa do horário atual ou próximo
     if (isHoje) {
         const agora = new Date();
         const minAgora = agora.getHours() * 60 + agora.getMinutes();
@@ -330,7 +307,6 @@ function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
         }
     }
     
-    // Gera blocos de 1 hora
     for (let m = minAbre; m < minFecha; m += 60) {
         const hInicio = Math.floor(m / 60) % 24;
         const mInicio = m % 60;
