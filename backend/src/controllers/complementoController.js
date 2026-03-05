@@ -52,12 +52,10 @@ async function garantirTabelasComplementos() {
             );
         `);
 
-        // ==========================================
-        // A VACINA DE COLUNAS (A CORREÇÃO ESTÁ AQUI)
-        // Força a criação de colunas que podem estar faltando nas tabelas antigas
-        // ==========================================
+        // VACINA: Garante que as colunas novas existem sem apagar os dados antigos
         const vacinaColunas = [
             "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
+            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
             "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
             "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;",
             "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS categoria_complemento VARCHAR(100) DEFAULT 'geral';",
@@ -67,11 +65,11 @@ async function garantirTabelasComplementos() {
         ];
         
         for (let query of vacinaColunas) {
-            await pool.query(query).catch(e => {}); // Ignora se a coluna já existir
+            await pool.query(query).catch(e => {}); 
         }
 
     } catch(e) { 
-        console.log("Aviso ao criar tabelas de complementos:", e.message); 
+        console.log("Aviso DB Complementos:", e.message); 
     }
 }
 
@@ -82,7 +80,7 @@ const complementoController = {
     async listarGrupos(req, res) {
         try {
             await garantirTabelasComplementos();
-            const result = await pool.query('SELECT * FROM grupos_complementos ORDER BY ordem, nome');
+            const result = await pool.query('SELECT * FROM grupos_complementos ORDER BY ordem, id');
             res.json(result.rows);
         } catch (error) { res.status(500).json({ erro: error.message }); }
     },
@@ -90,10 +88,15 @@ const complementoController = {
     async criarGrupo(req, res) {
         try {
             await garantirTabelasComplementos();
-            const { tenant_id, nome, obrigatorio, limite_selecao, ordem } = req.body;
+            const { tenant_id, nome, minimo_selecao, limite_selecao, ordem } = req.body;
+            
+            const min = parseInt(minimo_selecao) || 0;
+            const lim = parseInt(limite_selecao) || 0;
+            const obrigatorio = min > 0; // Se o mínimo for maior que zero, o grupo torna-se obrigatório!
+
             const result = await pool.query(
-                `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, limite_selecao, ordem) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                [tenant_id || 1, nome, obrigatorio || false, limite_selecao || 1, ordem || 0]
+                `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, minimo_selecao, limite_selecao, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                [tenant_id || 1, nome, obrigatorio, min, lim, ordem || 0]
             );
             res.status(201).json(result.rows[0]);
         } catch (error) { res.status(500).json({ erro: error.message }); }
@@ -103,10 +106,15 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const { nome, obrigatorio, limite_selecao, ordem } = req.body;
+            const { nome, minimo_selecao, limite_selecao, ordem } = req.body;
+            
+            const min = parseInt(minimo_selecao) || 0;
+            const lim = parseInt(limite_selecao) || 0;
+            const obrigatorio = min > 0;
+
             const result = await pool.query(
-                `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, limite_selecao=$3, ordem=$4 WHERE id=$5 RETURNING *`,
-                [nome, obrigatorio, limite_selecao, ordem, id]
+                `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, minimo_selecao=$3, limite_selecao=$4, ordem=$5 WHERE id=$6 RETURNING *`,
+                [nome, obrigatorio, min, lim, ordem || 0, id]
             );
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
             res.json(result.rows[0]);
