@@ -3,8 +3,6 @@ const pool = require('../config/database');
 async function garantirColunas() {
     const colunas = [
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS horario_funcionamento VARCHAR(255);",
-        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS horarios TEXT;",
-        "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS horarios_delivery TEXT;",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_ativo BOOLEAN DEFAULT false;",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner TEXT;",
         "ALTER TABLE configuracoes_loja ADD COLUMN IF NOT EXISTS mensagem_banner_cor VARCHAR(50) DEFAULT '#FFF3E0';",
@@ -44,7 +42,13 @@ const configController = {
             const configQuery = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
             
             if (configQuery.rows.length === 0) {
-                return res.json({ tenant_id: tenantId });
+                // Criar registro inicial se não existir
+                const insertQuery = await pool.query(
+                    `INSERT INTO configuracoes_loja (tenant_id, horario_funcionamento) 
+                     VALUES ($1, $2) RETURNING *`,
+                    [tenantId, 'Seg a Dom: 18h às 23h']
+                );
+                return res.json(insertQuery.rows[0]);
             }
             
             res.json(configQuery.rows[0]);
@@ -100,7 +104,7 @@ const configController = {
                 const configAtualizada = await pool.query('SELECT * FROM configuracoes_loja WHERE tenant_id = $1', [tenantId]);
                 
                 res.json({ 
-                    mensagem: 'Configurações guardadas com sucesso!',
+                    mensagem: 'Configurações salvas com sucesso!',
                     dados: configAtualizada.rows[0]
                 });
                 
