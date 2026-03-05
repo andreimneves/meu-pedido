@@ -1,4 +1,3 @@
-// backend/src/controllers/horarioController.js
 const pool = require('../config/database');
 
 const horarioController = {
@@ -9,44 +8,56 @@ const horarioController = {
             
             console.log('🔍 Buscando horários para:', subdominio);
             
-            // Buscar tenant pelo subdomínio
+            // Buscar tenant
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
             );
             
             if (tenantQuery.rows.length === 0) {
-                return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
+                return res.status(404).json({ erro: 'Loja não encontrada' });
             }
             
             const tenantId = tenantQuery.rows[0].id;
             
-            // Tentar buscar da tabela de horários
-            try {
-                const horariosQuery = await pool.query(
-                    'SELECT * FROM horarios_delivery WHERE tenant_id = $1 ORDER BY dia_semana',
-                    [tenantId]
-                );
+            // Buscar configurações
+            const configQuery = await pool.query(
+                'SELECT horarios, horarios_delivery, horario_funcionamento FROM configuracoes_loja WHERE tenant_id = $1',
+                [tenantId]
+            );
+            
+            if (configQuery.rows.length === 0) {
+                // Criar registro padrão
+                const horariosPadrao = {
+                    horarios: JSON.stringify({
+                        domingo: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        segunda: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        terca: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        quarta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        quinta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        sexta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        sabado: { ativo: true, abertura: '18:00', fechamento: '23:00' }
+                    }),
+                    horarios_delivery: JSON.stringify({
+                        domingo: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        segunda: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        terca: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        quarta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        quinta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        sexta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+                        sabado: { ativo: true, abertura: '18:00', fechamento: '23:00' }
+                    }),
+                    horario_funcionamento: 'Seg a Dom: 18h às 23h'
+                };
                 
-                if (horariosQuery.rows.length > 0) {
-                    return res.json(horariosQuery.rows);
-                }
-            } catch (err) {
-                console.log('Tabela horarios_delivery pode não existir ainda');
+                return res.json(horariosPadrao);
             }
             
-            // Se não encontrar, retorna horários padrão
-            const horariosPadrao = [
-                { dia_semana: 0, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 1, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 2, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 3, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 4, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 5, aberto: true, abertura: '18:00', fechamento: '23:00' },
-                { dia_semana: 6, aberto: true, abertura: '18:00', fechamento: '23:00' }
-            ];
-            
-            res.json(horariosPadrao);
+            res.json({
+                horarios: configQuery.rows[0].horarios || '{}',
+                horarios_delivery: configQuery.rows[0].horarios_delivery || '{}',
+                horario_funcionamento: configQuery.rows[0].horario_funcionamento || 'Seg a Dom: 18h às 23h'
+            });
             
         } catch (error) {
             console.error('❌ Erro ao buscar horários:', error);
@@ -56,98 +67,11 @@ const horarioController = {
 
     // ===== ATUALIZAR HORÁRIOS =====
     async atualizarHorarios(req, res) {
-        const client = await pool.connect();
         try {
             const { subdominio } = req.params;
-            const { horarios } = req.body;
+            const { horarios, horarios_delivery, horario_funcionamento } = req.body;
             
             console.log('📝 Atualizando horários para:', subdominio);
-            console.log('📦 Dados recebidos:', horarios);
-            
-            if (!horarios || !Array.isArray(horarios)) {
-                return res.status(400).json({ erro: 'Formato de horários inválido' });
-            }
-            
-            await client.query('BEGIN');
-            
-            // Buscar tenant
-            const tenantQuery = await client.query(
-                'SELECT id FROM tenants WHERE subdominio = $1',
-                [subdominio]
-            );
-            
-            if (tenantQuery.rows.length === 0) {
-                await client.query('ROLLBACK');
-                return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
-            }
-            
-            const tenantId = tenantQuery.rows[0].id;
-            
-            // Verificar se a tabela existe, se não, criar
-            await client.query(`
-                CREATE TABLE IF NOT EXISTS horarios_delivery (
-                    id SERIAL PRIMARY KEY,
-                    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-                    dia_semana INTEGER NOT NULL,
-                    aberto BOOLEAN DEFAULT true,
-                    abertura TIME,
-                    fechamento TIME,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(tenant_id, dia_semana)
-                )
-            `);
-            
-            // Para cada dia, inserir ou atualizar
-            for (const h of horarios) {
-                if (h.dia_semana === undefined) continue;
-                
-                // Verificar se já existe registro para este dia
-                const existe = await client.query(
-                    'SELECT id FROM horarios_delivery WHERE tenant_id = $1 AND dia_semana = $2',
-                    [tenantId, h.dia_semana]
-                );
-                
-                if (existe.rows.length > 0) {
-                    // Atualizar
-                    await client.query(
-                        `UPDATE horarios_delivery 
-                         SET aberto = $1, abertura = $2, fechamento = $3, updated_at = NOW()
-                         WHERE tenant_id = $4 AND dia_semana = $5`,
-                        [h.aberto || false, h.abertura || '18:00', h.fechamento || '23:00', tenantId, h.dia_semana]
-                    );
-                } else {
-                    // Inserir
-                    await client.query(
-                        `INSERT INTO horarios_delivery (tenant_id, dia_semana, aberto, abertura, fechamento)
-                         VALUES ($1, $2, $3, $4, $5)`,
-                        [tenantId, h.dia_semana, h.aberto || false, h.abertura || '18:00', h.fechamento || '23:00']
-                    );
-                }
-            }
-            
-            await client.query('COMMIT');
-            
-            res.json({ 
-                mensagem: 'Horários atualizados com sucesso!',
-                horarios: horarios
-            });
-            
-        } catch (error) {
-            await client.query('ROLLBACK');
-            console.error('❌ Erro ao atualizar horários:', error);
-            res.status(500).json({ erro: error.message });
-        } finally {
-            client.release();
-        }
-    },
-
-    // ===== VERIFICAR DISPONIBILIDADE =====
-    async verificarDisponibilidade(req, res) {
-        try {
-            const { subdominio } = req.params;
-            
-            console.log('🔍 Verificando disponibilidade para:', subdominio);
             
             // Buscar tenant
             const tenantQuery = await pool.query(
@@ -156,89 +80,241 @@ const horarioController = {
             );
             
             if (tenantQuery.rows.length === 0) {
-                return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
+                return res.status(404).json({ erro: 'Loja não encontrada' });
             }
             
             const tenantId = tenantQuery.rows[0].id;
             
-            const agora = new Date();
-            const diaSemana = agora.getDay();
-            const horaAtual = agora.getHours() * 60 + agora.getMinutes();
+            // Verificar se já existe registro
+            const existe = await pool.query(
+                'SELECT id FROM configuracoes_loja WHERE tenant_id = $1',
+                [tenantId]
+            );
             
-            let disponivel = false;
-            let mensagem = '';
-            
-            // Tentar buscar horário do dia atual
-            try {
-                const horarioQuery = await pool.query(
-                    'SELECT * FROM horarios_delivery WHERE tenant_id = $1 AND dia_semana = $2',
-                    [tenantId, diaSemana]
+            if (existe.rows.length > 0) {
+                // Atualizar apenas campos de horário
+                await pool.query(
+                    `UPDATE configuracoes_loja 
+                     SET horarios = COALESCE($1, horarios),
+                         horarios_delivery = COALESCE($2, horarios_delivery),
+                         horario_funcionamento = COALESCE($3, horario_funcionamento)
+                     WHERE tenant_id = $4`,
+                    [horarios, horarios_delivery, horario_funcionamento, tenantId]
                 );
+            } else {
+                // Inserir novo registro
+                await pool.query(
+                    `INSERT INTO configuracoes_loja (tenant_id, horarios, horarios_delivery, horario_funcionamento)
+                     VALUES ($1, $2, $3, $4)`,
+                    [tenantId, horarios, horarios_delivery, horario_funcionamento]
+                );
+            }
+            
+            res.json({ 
+                mensagem: '✅ Horários salvos com sucesso!',
+                atualizado: true
+            });
+            
+        } catch (error) {
+            console.error('❌ Erro ao atualizar horários:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ===== VERIFICAR DISPONIBILIDADE =====
+    async verificarDisponibilidade(req, res) {
+        try {
+            const { subdominio } = req.params;
+            const { tipo, data, horario } = req.body;
+            
+            // Buscar tenant
+            const tenantQuery = await pool.query(
+                'SELECT id FROM tenants WHERE subdominio = $1',
+                [subdominio]
+            );
+            
+            if (tenantQuery.rows.length === 0) {
+                return res.status(404).json({ erro: 'Loja não encontrada' });
+            }
+            
+            const tenantId = tenantQuery.rows[0].id;
+            
+            // Buscar configurações
+            const configQuery = await pool.query(
+                'SELECT horarios, horarios_delivery FROM configuracoes_loja WHERE tenant_id = $1',
+                [tenantId]
+            );
+            
+            if (configQuery.rows.length === 0) {
+                return res.json({ disponivel: true, pode_agendar: true });
+            }
+            
+            const horariosConfig = tipo === 'delivery' 
+                ? configQuery.rows[0].horarios_delivery 
+                : configQuery.rows[0].horarios;
+            
+            // Se não tem configuração, considera sempre disponível
+            if (!horariosConfig) {
+                return res.json({ disponivel: true, pode_agendar: true });
+            }
+            
+            let mapaHorarios;
+            try {
+                mapaHorarios = typeof horariosConfig === 'string' 
+                    ? JSON.parse(horariosConfig) 
+                    : horariosConfig;
+            } catch (e) {
+                mapaHorarios = {};
+            }
+            
+            const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+            const agora = new Date();
+            
+            // Se não tem data específica, verifica agora
+            if (!data) {
+                const diaAtual = dias[agora.getDay()];
+                const horaAtual = agora.getHours() * 60 + agora.getMinutes();
                 
-                if (horarioQuery.rows.length > 0) {
-                    const hoje = horarioQuery.rows[0];
-                    
-                    if (hoje.aberto) {
-                        const abertura = this._horaParaMinutos(hoje.abertura);
-                        const fechamento = this._horaParaMinutos(hoje.fechamento);
-                        
-                        if (horaAtual >= abertura && horaAtual <= fechamento) {
-                            disponivel = true;
-                            mensagem = 'Delivery disponível agora';
-                        } else {
-                            mensagem = `Delivery indisponível agora. Horário: ${hoje.abertura} às ${hoje.fechamento}`;
-                        }
-                    } else {
-                        mensagem = 'Delivery fechado hoje';
-                    }
-                } else {
-                    // Horário padrão
-                    const abertura = 18 * 60;
-                    const fechamento = 23 * 60;
-                    
-                    if (horaAtual >= abertura && horaAtual <= fechamento) {
-                        disponivel = true;
-                        mensagem = 'Delivery disponível agora (horário padrão)';
-                    } else {
-                        mensagem = 'Delivery indisponível agora (horário padrão: 18h às 23h)';
-                    }
+                const configHoje = mapaHorarios[diaAtual];
+                
+                if (!configHoje || String(configHoje.ativo) !== 'true') {
+                    return res.json({ 
+                        disponivel: false, 
+                        pode_agendar: true,
+                        mensagem: `Fechado agora. Agende para outro horário.`,
+                        proximos_horarios: gerarProximosHorarios(mapaHorarios, diaAtual, horaAtual)
+                    });
                 }
-            } catch (err) {
-                console.log('Erro ao buscar horários, usando padrão:', err.message);
                 
-                const abertura = 18 * 60;
-                const fechamento = 23 * 60;
+                const [hAbre, mAbre] = (configHoje.abertura || '18:00').split(':').map(Number);
+                const [hFecha, mFecha] = (configHoje.fechamento || '23:00').split(':').map(Number);
                 
-                if (horaAtual >= abertura && horaAtual <= fechamento) {
-                    disponivel = true;
-                    mensagem = 'Delivery disponível agora (horário padrão)';
-                } else {
-                    mensagem = 'Delivery indisponível agora (horário padrão: 18h às 23h)';
+                const aberturaMin = hAbre * 60 + (mAbre || 0);
+                let fechamentoMin = hFecha * 60 + (mFecha || 0);
+                
+                // Ajusta se passar da meia-noite
+                if (fechamentoMin < aberturaMin) {
+                    fechamentoMin += 24 * 60;
                 }
+                
+                const disponivel = horaAtual >= aberturaMin && horaAtual <= fechamentoMin;
+                
+                return res.json({
+                    disponivel,
+                    pode_agendar: true,
+                    mensagem: disponivel ? 'Disponível agora' : 'Fechado agora',
+                    horario_hoje: `${configHoje.abertura || '18:00'} às ${configHoje.fechamento || '23:00'}`
+                });
+            }
+            
+            // Verifica disponibilidade para data específica
+            const dataObj = new Date(data + 'T12:00:00');
+            const diaNome = dias[dataObj.getDay()];
+            const configDia = mapaHorarios[diaNome];
+            
+            const disponivel = configDia && String(configDia.ativo) === 'true';
+            
+            // Gera opções de horário para o dia
+            let opcoes = [];
+            if (disponivel) {
+                opcoes = gerarOpcoesHorario(
+                    configDia.abertura || '18:00',
+                    configDia.fechamento || '23:00',
+                    dataObj.toDateString() === new Date().toDateString()
+                );
             }
             
             res.json({
-                disponivel: disponivel,
-                mensagem: mensagem,
-                pode_agendar: true
+                disponivel,
+                pode_agendar: disponivel,
+                opcoes_horario: opcoes,
+                mensagem: disponivel ? 'Disponível' : 'Fechado neste dia'
             });
             
         } catch (error) {
             console.error('❌ Erro ao verificar disponibilidade:', error);
-            res.status(500).json({ 
-                disponivel: false,
-                erro: error.message,
-                mensagem: 'Erro ao verificar disponibilidade'
-            });
+            res.status(500).json({ erro: error.message, disponivel: false });
         }
-    },
-
-    // Função auxiliar para converter hora string para minutos
-    _horaParaMinutos(horaStr) {
-        if (!horaStr) return 0;
-        const [h, m] = horaStr.split(':').map(Number);
-        return h * 60 + (m || 0);
     }
 };
+
+// Funções auxiliares
+function gerarProximosHorarios(mapaHorarios, diaAtual, horaAtual) {
+    const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const proximos = [];
+    
+    let diasPercorridos = 0;
+    let indexAtual = dias.indexOf(diaAtual);
+    
+    while (proximos.length < 3 && diasPercorridos < 7) {
+        const diaCheck = dias[(indexAtual + diasPercorridos) % 7];
+        const config = mapaHorarios[diaCheck];
+        
+        if (config && String(config.ativo) === 'true') {
+            const [hAbre] = (config.abertura || '18:00').split(':').map(Number);
+            
+            if (diasPercorridos === 0) {
+                // Hoje, mas depois do horário atual
+                if (horaAtual < hAbre * 60) {
+                    proximos.push({
+                        dia: diaCheck,
+                        data: new Date(new Date().setHours(hAbre, 0, 0, 0)).toISOString(),
+                        horario: config.abertura
+                    });
+                }
+            } else {
+                // Próximos dias
+                const data = new Date();
+                data.setDate(data.getDate() + diasPercorridos);
+                proximos.push({
+                    dia: diaCheck,
+                    data: data.toISOString().split('T')[0],
+                    horario: config.abertura
+                });
+            }
+        }
+        diasPercorridos++;
+    }
+    
+    return proximos;
+}
+
+function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
+    const opcoes = [];
+    
+    let [hAbre, mAbre] = aberturaStr.split(':').map(Number);
+    let [hFecha, mFecha] = fechamentoStr.split(':').map(Number);
+    
+    let minAbre = hAbre * 60 + (mAbre || 0);
+    let minFecha = hFecha * 60 + (mFecha || 0);
+    
+    if (minFecha < minAbre) {
+        minFecha += 24 * 60;
+    }
+    
+    // Se for hoje, começa do horário atual ou próximo
+    if (isHoje) {
+        const agora = new Date();
+        const minAgora = agora.getHours() * 60 + agora.getMinutes();
+        if (minAgora > minAbre) {
+            minAbre = Math.ceil(minAgora / 60) * 60;
+        }
+    }
+    
+    // Gera blocos de 1 hora
+    for (let m = minAbre; m < minFecha; m += 60) {
+        const hInicio = Math.floor(m / 60) % 24;
+        const mInicio = m % 60;
+        const hFim = Math.floor((m + 60) / 60) % 24;
+        const mFim = (m + 60) % 60;
+        
+        opcoes.push({
+            valor: `${String(hInicio).padStart(2, '0')}:${String(mInicio).padStart(2, '0')}`,
+            texto: `${String(hInicio).padStart(2, '0')}:${String(mInicio).padStart(2, '0')} às ${String(hFim).padStart(2, '0')}:${String(mFim).padStart(2, '0')}`
+        });
+    }
+    
+    return opcoes;
+}
 
 module.exports = horarioController;
