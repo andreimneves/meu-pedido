@@ -2,20 +2,6 @@ const pool = require('../config/database');
 
 async function garantirTabelasComplementos() {
     try {
-        // 1. Garante que a tabela de produtos existe ANTES de criar vínculos
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS produtos (
-                id SERIAL PRIMARY KEY,
-                tenant_id INTEGER DEFAULT 1,
-                nome VARCHAR(255) NOT NULL,
-                descricao TEXT,
-                preco NUMERIC(10,2) DEFAULT 0,
-                categoria_nome VARCHAR(255),
-                imagem_url TEXT,
-                ativo BOOLEAN DEFAULT true
-            );
-        `);
-        // 2. Tabela de Grupos
         await pool.query(`
             CREATE TABLE IF NOT EXISTS grupos_complementos (
                 id SERIAL PRIMARY KEY,
@@ -26,7 +12,6 @@ async function garantirTabelasComplementos() {
                 ordem INTEGER DEFAULT 0
             );
         `);
-        // 3. Tabela de Itens (Complementos)
         await pool.query(`
             CREATE TABLE IF NOT EXISTS complementos (
                 id SERIAL PRIMARY KEY,
@@ -38,7 +23,6 @@ async function garantirTabelasComplementos() {
                 ordem INTEGER DEFAULT 0
             );
         `);
-        // 4. Vínculo: Quais itens estão dentro de qual grupo
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vinculo_grupo_complemento (
                 grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
@@ -47,10 +31,10 @@ async function garantirTabelasComplementos() {
                 PRIMARY KEY (grupo_id, complemento_id)
             );
         `);
-        // 5. Vínculo: Quais grupos pertencem a qual produto
+        // A SOLUÇÃO ESTÁ AQUI: Removemos o "REFERENCES produtos(id)" para evitar conflito de tipos de dados antigos no NeonDB
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
-                produto_id INTEGER REFERENCES produtos(id) ON DELETE CASCADE,
+                produto_id INTEGER,
                 grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
                 ordem INTEGER DEFAULT 0,
                 PRIMARY KEY (produto_id, grupo_id)
@@ -218,7 +202,7 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { produtoId } = req.params;
-            const { grupos } = req.body; // Array [1, 2, 3]
+            const { grupos } = req.body; 
 
             await pool.query('BEGIN');
             await pool.query('DELETE FROM vinculo_produto_grupo WHERE produto_id = $1', [produtoId]);

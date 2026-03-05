@@ -257,21 +257,27 @@
         // ==========================================
         window.carregarGrupos = async function() {
             try {
-                const res = await window.fetchDireto(`${API_URL}/grupos-complementos?tenant_id=1`);
-                window.grupos = await res.json();
+                const res = await window.fetchDireto(`${API_URL}/grupos-complementos`);
+                if (!res.ok) throw new Error("Falha no servidor");
+                const dados = await res.json();
+                window.grupos = Array.isArray(dados) ? dados : [];
+                
                 for (let i = 0; i < window.grupos.length; i++) {
                     try {
                         let resItens = await window.fetchDireto(`${API_URL}/grupo-complementos/${window.grupos[i].id}/itens`);
-                        window.itensPorGrupo[window.grupos[i].id] = await resItens.json();
+                        window.itensPorGrupo[window.grupos[i].id] = resItens.ok ? await resItens.json() : [];
                     } catch(e) { window.itensPorGrupo[window.grupos[i].id] = []; }
                 }
                 if (document.getElementById('tab-grupos').classList.contains('active')) window.exibirGrupos();
-            } catch(e) { document.getElementById('gruposLista').innerHTML = '<p style="color:red;">Erro de conexão com o servidor.</p>'; }
+            } catch(e) { 
+                document.getElementById('gruposLista').innerHTML = '<p style="color:red; text-align:center;">⚠️ Servidor indisponível no momento. Tente recarregar.</p>'; 
+            }
         }
 
         window.exibirGrupos = function() {
             const container = document.getElementById('gruposLista');
-            if (window.grupos.length === 0) return container.innerHTML = '<p style="text-align:center;">Nenhum grupo criado.</p>';
+            if (window.grupos.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum grupo criado.</p>';
+            
             container.innerHTML = window.grupos.map(g => {
                 const itensDoGrupo = window.itensPorGrupo[g.id] || [];
                 const obrigatorioLabel = g.obrigatorio ? '<span class="preview-badge obrig" style="margin-left:10px;">Obrigatório (Min 1)</span>' : '';
@@ -336,10 +342,14 @@
         // ==========================================
         window.carregarItens = async function() { 
             try { 
-                const res = await window.fetchDireto(`${API_URL}/complementos?tenant_id=1`); 
-                window.itens = await res.json(); 
+                const res = await window.fetchDireto(`${API_URL}/complementos`); 
+                if (!res.ok) throw new Error("Falha no servidor");
+                const dados = await res.json(); 
+                window.itens = Array.isArray(dados) ? dados : [];
+                
                 const container = document.getElementById('itensLista'); 
-                if(window.itens.length === 0) return container.innerHTML = '<p style="text-align:center;">Nenhum item criado.</p>'; 
+                if(window.itens.length === 0) return container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item criado.</p>'; 
+                
                 container.innerHTML = `<table style="width:100%; border-collapse: collapse;"><tr style="background:#f5f5f5;"><th style="padding:10px; text-align:center; width:60px;">Ativo</th><th style="padding:10px; text-align:left;">Nome</th><th style="padding:10px; text-align:left;">Preço</th><th style="padding:10px;">Ações</th></tr>` + window.itens.map(i => { 
                     const isDisp = i.disponivel !== false; 
                     return `<tr style="border-bottom:1px solid #eee;">
@@ -352,7 +362,7 @@
                         </td>
                     </tr>`; 
                 }).join('') + `</table>`; 
-            } catch(e) { document.getElementById('itensLista').innerHTML = 'Erro ao carregar itens'; } 
+            } catch(e) { document.getElementById('itensLista').innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar itens.</p>'; } 
         }
 
         window.toggleDisponibilidadeItem = async function(id, isChecked) { 
@@ -406,8 +416,8 @@
             window.grupoSelecionadoParaVinculo = gId; 
             document.getElementById('vincularGrupoNomeTxt').textContent = gNome; 
             if(window.itens.length === 0) { 
-                const res = await window.fetchDireto(`${API_URL}/complementos?tenant_id=1`); 
-                window.itens = await res.json(); 
+                const res = await window.fetchDireto(`${API_URL}/complementos`); 
+                if(res.ok) window.itens = await res.json(); 
             } 
             document.getElementById('vincularItemSelect').innerHTML = '<option value="">Selecione...</option>' + window.itens.map(i => `<option value="${i.id}">${i.nome} - R$ ${parseFloat(i.preco).toFixed(2)}</option>`).join(''); 
             document.getElementById('vincularItemModal').style.display = 'block'; 
@@ -439,8 +449,10 @@
         window.carregarProdutosSelect = async function() {
             try {
                 const res = await window.fetchDireto(`${API_URL}/produtos`); 
-                window.produtos = await res.json();
-                document.getElementById('produtoSelect').innerHTML = '<option value="">Selecione o Produto...</option>' + window.produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                if(res.ok) {
+                    window.produtos = await res.json();
+                    document.getElementById('produtoSelect').innerHTML = '<option value="">Selecione o Produto...</option>' + window.produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+                }
             } catch (e) { document.getElementById('produtoSelect').innerHTML = '<option value="">Erro ao buscar produtos</option>'; }
         }
 
@@ -458,13 +470,14 @@
             
             try {
                 if(!window.grupos || window.grupos.length === 0) {
-                    const resG = await window.fetchDireto(`${API_URL}/grupos-complementos?tenant_id=1`);
+                    const resG = await window.fetchDireto(`${API_URL}/grupos-complementos`);
                     if(resG.ok) window.grupos = await resG.json();
                 }
                 if(!window.grupos || window.grupos.length === 0) {
                     container.innerHTML = '<p style="color:#C83232; text-align:center; padding:30px;">Nenhum grupo encontrado. Crie um na Aba 1!</p>';
                     return;
                 }
+
                 const res = await window.fetchDireto(`${API_URL}/complementos/produto/${pId}`);
                 let vinculados = [];
                 if (res.ok) {
@@ -500,7 +513,7 @@
                 document.getElementById('btnSalvarMontagem').style.display = 'block';
                 window.atualizarPreviewCelular();
             } catch (error) {
-                container.innerHTML = `<p style="color:red; text-align:center; padding:30px;">Erro de servidor: ${error.message}</p>`;
+                container.innerHTML = `<p style="color:red; text-align:center; padding:30px;">Erro de servidor. Tente novamente.</p>`;
             }
         }
 
@@ -519,7 +532,7 @@
                     method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ grupos: marcados }) 
                 });
                 
-                if(res.ok) { window.mostrarNotificacao('Montagem salva online com sucesso!', 'sucesso'); } 
+                if(res.ok) { window.mostrarNotificacao('Montagem salva com sucesso!', 'sucesso'); } 
                 else { window.mostrarNotificacao('Falha ao salvar.', 'erro'); }
             } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
             finally { btn.innerHTML = '💾 Salvar Montagem'; btn.disabled = false; }
@@ -533,7 +546,7 @@
             let html = `<div class="preview-produto-nome">${prod.nome} <div style="color:#C83232; font-size:14px; margin-top:5px;">R$ ${parseFloat(prod.preco).toFixed(2)}</div></div>`;
             const marcados = document.querySelectorAll('.vinculo-cb:checked');
             
-            if(marcados.length === 0) html += `<div style="padding:20px; text-align:center; color:#999; font-size:14px;">Sem complementos.</div>`;
+            if(marcados.length === 0) html += `<div style="padding:20px; text-align:center; color:#999; font-size:14px;">Nenhuma opção selecionada.</div>`;
             
             marcados.forEach(cb => {
                 const gId = cb.value; const g = window.grupos.find(x => String(x.id) === String(gId)); const its = window.itensPorGrupo[gId] || [];
@@ -571,7 +584,7 @@
                 const comVinculos = await Promise.all(promessas);
                 const configurados = comVinculos.filter(p => p.qtde_grupos > 0);
                 
-                if (configurados.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">Nenhum produto possui complementos. Vá na Aba 3!</p>';
+                if (configurados.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">Nenhum produto possui complementos ainda. Vá na Aba 3!</p>';
                 
                 container.innerHTML = configurados.map(p => `<div class="grupo-item" style="display:flex; justify-content:space-between; align-items:center; background:#fff;"><div><div style="font-weight:bold; font-size:16px; color:#333;">${p.nome}</div><div style="font-size:13px; color:#666; margin-top:5px;">🧩 ${p.qtde_grupos} grupo(s) ativos</div></div><div style="display:flex; gap:10px;"><button class="btn-edit" style="padding:8px 15px; font-size:13px;" onclick="editarConfiguracaoProduto(${p.id})">✏️ Editar</button><button class="btn-delete" style="padding:8px 15px; font-size:13px;" onclick="limparConfiguracaoProduto(${p.id}, '${p.nome.replace(/'/g, "\\'")}')">🗑️ Limpar</button></div></div>`).join('');
             } catch (e) { container.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar a lista de produtos.</p>'; }
@@ -605,10 +618,9 @@
                     }
                     window.carregarProdutosConfigurados();
                 } else { window.mostrarNotificacao('Erro ao limpar.', 'erro'); }
-            } catch(e) { window.mostrarNotificacao('Erro de conexão ao limpar', 'erro'); }
+            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); }
         }
 
-        // Inicialização
         window.onload = () => { carregarGrupos(); };
     </script>
 </body>
