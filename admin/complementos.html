@@ -1,530 +1,214 @@
-<script>
-    // CONFIGURAÇÃO DA API
-    const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-        ? 'http://localhost:10000/api'
-        : 'https://meu-pedido-backend.onrender.com/api';
-
-    console.log('🚀 Conectando à API:', API_URL);
-
-    // Variáveis globais
-    window.grupos = []; 
-    window.itens = []; 
-    window.produtos = [];
-    window.grupoEditando = null; 
-    window.itemEditando = null;
-    window.grupoSelecionadoParaVinculo = null;
-    window.itensPorGrupo = {};
-
-    // Verificar login
-    if (!localStorage.getItem('adminLogado')) {
-        window.location.href = 'index.html';
-    }
-
-    // Funções utilitárias
-    window.logout = function() { 
-        localStorage.removeItem('adminLogado'); 
-        window.location.href = 'index.html'; 
-    }
-
-    window.fecharModal = function(id) { 
-        document.getElementById(id).style.display = 'none'; 
-    }
-
-    window.mostrarNotificacao = function(mensagem, tipo = 'sucesso') {
-        const notificacao = document.createElement('div');
-        notificacao.className = `notificacao ${tipo}`;
-        notificacao.textContent = mensagem;
-        notificacao.style.cssText = `
-            position: fixed; top: 20px; right: 20px; padding: 15px 25px;
-            border-radius: 5px; color: white; font-weight: 500; z-index: 9999;
-            background: ${tipo === 'sucesso' ? '#4CAF50' : (tipo === 'aviso' ? '#ff9800' : '#f44336')};
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        document.body.appendChild(notificacao);
-        setTimeout(() => notificacao.remove(), 4000);
-    }
-
-    // Função de fetch com tratamento de erro
-    window.apiFetch = async function(endpoint, options = {}) {
-        const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complementos - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', 'Segoe UI', sans-serif; background-color: #f5f5f5; }
+        .admin-header { background: linear-gradient(135deg, #C83232, #A02828); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .admin-container { display: flex; min-height: calc(100vh - 70px); }
+        .admin-sidebar { width: 250px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); padding: 20px 0; }
+        .admin-sidebar ul { list-style: none; }
+        .admin-sidebar a { display: block; padding: 12px 20px; color: #333; text-decoration: none; border-left: 3px solid transparent; }
+        .admin-sidebar a:hover, .admin-sidebar a.active { background: #f0f0f0; border-left-color: #C83232; color: #C83232; font-weight: 500; }
+        .admin-content { flex: 1; padding: 30px; background: #f9f9f9; }
         
-        if (!options.headers) options.headers = {};
-        options.headers['Content-Type'] = 'application/json';
-        options.cache = 'no-store';
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 12px 20px; border: none; background: none; font-size: 16px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .tab-btn.active { color: #C83232; border-bottom-color: #C83232; }
+        .tab-content { display: none; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .tab-content.active { display: block; }
         
-        console.log(`📡 ${options.method || 'GET'} ${url}`);
+        .form-row { margin-bottom: 15px; }
+        .form-row label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-row input, .form-row select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; color: white; }
+        .btn-add { background: #4CAF50; } .btn-edit { background: #2196F3; padding: 5px 10px; } .btn-delete { background: #f44336; padding: 5px 10px; }
         
-        try {
-            const response = await fetch(url, options);
-            
-            if (!response.ok) {
-                console.error(`❌ Erro ${response.status}: ${response.statusText}`);
-                return { error: true, status: response.status, data: null };
-            }
-            
-            const data = await response.json();
-            return { error: false, data };
-        } catch (error) {
-            console.error('❌ Erro de conexão:', error);
-            return { error: true, message: error.message, data: null };
-        }
-    };
-
-    // ==========================================
-    // ABA 1 - GRUPOS DE COMPLEMENTOS
-    // ==========================================
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; font-weight: 600; }
+        
+        .success-msg { background: #4CAF50; color: white; padding: 10px; border-radius: 5px; display: none; margin-bottom: 15px; }
+        .error-msg { background: #f44336; color: white; padding: 10px; border-radius: 5px; display: none; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        <h1>🍽️ Painel Administrativo</h1>
+        <button class="btn" style="background: rgba(255,255,255,0.2);" onclick="logout()">🚪 Sair</button>
+    </div>
     
-    window.abrirTab = async function(tab) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="config.html">⚙️ Configurações da Loja</a></li>
+                <li><a href="complementos.html" class="active">🧩 Complementos</a></li>
+            </ul>
+        </div>
         
-        document.querySelector(`button[onclick="abrirTab('${tab}')"]`).classList.add('active');
-        document.getElementById(`tab-${tab}`).classList.add('active');
+        <div class="admin-content">
+            <h1>🧩 Gestão de Complementos</h1>
+            <div id="successMsg" class="success-msg"></div>
+            <div id="errorMsg" class="error-msg"></div>
 
-        if (tab === 'grupos') {
-            await window.carregarGrupos();
-        }
-        if (tab === 'itens') {
-            await window.carregarItens();
-        }
-        if (tab === 'vinculos') {
-            document.getElementById('produtoSelect').innerHTML = '<option value="">Carregando produtos...</option>';
-            await window.carregarGrupos();
-            await window.carregarProdutosSelect();
-        }
-        if (tab === 'configurados') {
-            await window.carregarProdutosConfigurados();
-        }
-    }
-
-    window.carregarGrupos = async function() {
-        const container = document.getElementById('gruposLista');
-        if (!container) return;
-        
-        container.innerHTML = '<div class="loading">Carregando grupos...</div>';
-        
-        try {
-            console.log('🔄 Carregando grupos...');
-            const result = await window.apiFetch('/grupos-complementos?tenant_id=1');
-            
-            if (result.error) {
-                container.innerHTML = '<p style="color:red; text-align:center; padding:20px;">❌ Erro de conexão com o servidor. Verifique se o backend está rodando.</p>';
-                return;
-            }
-            
-            window.grupos = result.data || [];
-            console.log('✅ Grupos carregados:', window.grupos);
-            
-            // Carregar itens de cada grupo
-            for (let i = 0; i < window.grupos.length; i++) {
-                const g = window.grupos[i];
-                try {
-                    const itensResult = await window.apiFetch(`/grupo-complementos/${g.id}/itens`);
-                    window.itensPorGrupo[g.id] = itensResult.error ? [] : (itensResult.data || []);
-                } catch(e) {
-                    window.itensPorGrupo[g.id] = [];
-                }
-            }
-            
-            window.exibirGrupos();
-            
-        } catch(e) {
-            console.error('❌ Erro fatal:', e);
-            container.innerHTML = '<p style="color:red; text-align:center; padding:20px;">❌ Erro fatal ao carregar grupos.</p>';
-        }
-    }
-
-    window.exibirGrupos = function() {
-        const container = document.getElementById('gruposLista');
-        if (!container) return;
-        
-        if (!window.grupos || window.grupos.length === 0) {
-            container.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum grupo criado ainda.</p>';
-            return;
-        }
-
-        container.innerHTML = window.grupos.map(g => {
-            const itensDoGrupo = window.itensPorGrupo[g.id] || [];
-            const obrigatorioLabel = g.obrigatorio ? '<span class="preview-badge obrig" style="margin-left:10px;">Obrigatório</span>' : '';
-            
-            let htmlItens = itensDoGrupo.map(item => `
-                <div class="complemento-item">
-                    <span>${item.nome} ${!item.disponivel ? '(Pausado)' : ''}</span>
-                    <span>
-                        <strong>${item.preco > 0 ? '+ R$ ' + parseFloat(item.preco).toFixed(2) : 'Grátis'}</strong>
-                        <button class="btn-delete" style="padding:2px 6px; margin-left:10px;" onclick="removerItemDoGrupo(${g.id}, ${item.id})">X</button>
-                    </span>
-                </div>
-            `).join('');
-            
-            if(itensDoGrupo.length === 0) {
-                htmlItens = '<p style="color:#999; font-size:13px; font-style:italic; padding:10px;">Nenhuma opção neste grupo.</p>';
-            }
-
-            return `
-                <div class="grupo-item">
-                    <div class="grupo-header">
-                        <div>
-                            <span class="grupo-nome">${g.nome}</span>
-                            ${obrigatorioLabel}
-                            <span class="preview-badge opc" style="margin-left:5px;">Máx: ${g.limite_selecao}</span>
-                        </div>
-                        <div>
-                            <button class="btn-edit" onclick="editarGrupo(${g.id})">Editar</button>
-                            <button class="btn-delete" onclick="excluirGrupo(${g.id})">Excluir</button>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:10px;">${htmlItens}</div>
-                    <button class="btn-add" style="padding:5px 10px; font-size:12px; margin:0;" onclick="abrirVincularItem(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">
-                        + Adicionar opção
-                    </button>
-                </div>
-            `;
-        }).join('');
-    }
-
-    window.abrirModalGrupo = function() { 
-        window.grupoEditando = null; 
-        document.getElementById('grupoModalTitulo').textContent = 'Novo Grupo'; 
-        document.getElementById('grupoNome').value = ''; 
-        document.getElementById('grupoObrigatorio').value = 'false'; 
-        document.getElementById('grupoLimite').value = '1'; 
-        document.getElementById('grupoModal').style.display = 'block'; 
-    }
-
-    window.editarGrupo = function(id) { 
-        window.grupoEditando = window.grupos.find(g => g.id == id); 
-        if (!window.grupoEditando) return; 
-        document.getElementById('grupoModalTitulo').textContent = 'Editar Grupo'; 
-        document.getElementById('grupoNome').value = window.grupoEditando.nome; 
-        document.getElementById('grupoObrigatorio').value = window.grupoEditando.obrigatorio ? 'true' : 'false'; 
-        document.getElementById('grupoLimite').value = window.grupoEditando.limite_selecao; 
-        document.getElementById('grupoModal').style.display = 'block'; 
-    }
-
-    window.salvarGrupo = async function() { 
-        const grupo = { 
-            tenant_id: 1, 
-            nome: document.getElementById('grupoNome').value, 
-            obrigatorio: document.getElementById('grupoObrigatorio').value === 'true', 
-            limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1
-        }; 
-        
-        const method = window.grupoEditando ? 'PUT' : 'POST'; 
-        const url = window.grupoEditando ? `/grupos-complementos/${window.grupoEditando.id}` : '/grupos-complementos'; 
-        
-        try { 
-            const result = await window.apiFetch(url, { method, body: JSON.stringify(grupo) });
-            
-            if(!result.error) { 
-                window.fecharModal('grupoModal'); 
-                window.mostrarNotificacao('✅ Grupo salvo!', 'sucesso'); 
-                await window.carregarGrupos(); 
-            } else { 
-                window.mostrarNotificacao('❌ Erro ao salvar', 'erro'); 
-            } 
-        } catch(e) { 
-            window.mostrarNotificacao('❌ Erro de conexão', 'erro'); 
-        } 
-    }
-
-    window.excluirGrupo = async function(id) { 
-        if(confirm('Excluir este grupo?')) { 
-            const result = await window.apiFetch(`/grupos-complementos/${id}`, { method: 'DELETE' });
-            if(!result.error) { 
-                window.mostrarNotificacao('✅ Grupo excluído!', 'sucesso'); 
-                await window.carregarGrupos(); 
-            } else { 
-                window.mostrarNotificacao('❌ Erro ao excluir.', 'erro'); 
-            } 
-        } 
-    }
-
-    // ==========================================
-    // ABA 2 - ITENS
-    // ==========================================
-    
-    window.carregarItens = async function() { 
-        const container = document.getElementById('itensLista');
-        container.innerHTML = '<div class="loading">Carregando itens...</div>';
-        
-        const result = await window.apiFetch('/complementos?tenant_id=1');
-        
-        if(result.error) {
-            container.innerHTML = '<p style="color:red;">Erro ao carregar itens</p>';
-            return;
-        }
-        
-        window.itens = result.data || [];
-        
-        if(window.itens.length === 0) {
-            container.innerHTML = '<p style="text-align:center;">Nenhum item criado.</p>'; 
-            return;
-        }
-        
-        let html = '<table style="width:100%"><tr><th>Ativo</th><th>Nome</th><th>Preço</th><th>Ações</th></tr>';
-        window.itens.forEach(i => { 
-            html += `
-                <tr>
-                    <td><input type="checkbox" ${i.disponivel !== false ? 'checked' : ''} onchange="toggleDisponibilidadeItem(${i.id}, this.checked)"></td>
-                    <td>${i.nome}</td>
-                    <td>R$ ${parseFloat(i.preco).toFixed(2)}</td>
-                    <td>
-                        <button onclick="editarItem(${i.id})">Editar</button>
-                        <button onclick="excluirItem(${i.id})">Excluir</button>
-                    </td>
-                </tr>
-            `; 
-        });
-        html += '</table>';
-        container.innerHTML = html;
-    }
-
-    window.toggleDisponibilidadeItem = async function(id, checked) { 
-        const item = window.itens.find(i => i.id == id); 
-        if (!item) return; 
-        item.disponivel = checked; 
-        await window.apiFetch(`/complementos/${id}`, { method: 'PUT', body: JSON.stringify(item) });
-        window.mostrarNotificacao(checked ? '✅ Disponível' : '⏸️ Pausado'); 
-        window.carregarItens(); 
-    }
-
-    window.abrirModalItem = function() { 
-        window.itemEditando = null; 
-        document.getElementById('itemModalTitulo').textContent = 'Nova Opção'; 
-        document.getElementById('itemNome').value = ''; 
-        document.getElementById('itemPreco').value = '0.00'; 
-        document.getElementById('itemDisponivel').checked = true; 
-        document.getElementById('itemModal').style.display = 'block'; 
-    }
-
-    window.editarItem = function(id) { 
-        window.itemEditando = window.itens.find(i => i.id == id); 
-        document.getElementById('itemModalTitulo').textContent = 'Editar Opção'; 
-        document.getElementById('itemNome').value = window.itemEditando.nome; 
-        document.getElementById('itemPreco').value = window.itemEditando.preco; 
-        document.getElementById('itemDisponivel').checked = window.itemEditando.disponivel !== false; 
-        document.getElementById('itemModal').style.display = 'block'; 
-    }
-
-    window.salvarItem = async function() { 
-        const item = { 
-            tenant_id: 1, 
-            nome: document.getElementById('itemNome').value, 
-            preco: parseFloat(document.getElementById('itemPreco').value) || 0,
-            disponivel: document.getElementById('itemDisponivel').checked
-        }; 
-        
-        const method = window.itemEditando ? 'PUT' : 'POST'; 
-        const url = window.itemEditando ? `/complementos/${window.itemEditando.id}` : '/complementos'; 
-        
-        const result = await window.apiFetch(url, { method, body: JSON.stringify(item) });
-        
-        if(!result.error) { 
-            window.fecharModal('itemModal'); 
-            window.mostrarNotificacao('✅ Item salvo!'); 
-            window.carregarItens(); 
-        } 
-    }
-
-    window.excluirItem = async function(id) { 
-        if(confirm('Excluir item?')) { 
-            await window.apiFetch(`/complementos/${id}`, { method: 'DELETE' });
-            window.mostrarNotificacao('✅ Item excluído!'); 
-            window.carregarItens(); 
-        } 
-    }
-
-    window.abrirVincularItem = async function(gId, gNome) {
-        window.grupoSelecionadoParaVinculo = gId;
-        document.getElementById('vincularGrupoNomeTxt').textContent = gNome;
-        
-        const result = await window.apiFetch('/complementos?tenant_id=1');
-        window.itens = result.data || [];
-        
-        let options = '<option value="">Selecione...</option>';
-        window.itens.forEach(i => {
-            options += `<option value="${i.id}">${i.nome} - R$ ${parseFloat(i.preco).toFixed(2)}</option>`;
-        });
-        
-        document.getElementById('vincularItemSelect').innerHTML = options;
-        document.getElementById('vincularItemModal').style.display = 'block';
-    }
-
-    window.salvarVinculoItem = async function() { 
-        const itemId = document.getElementById('vincularItemSelect').value; 
-        if(!itemId) return window.mostrarNotificacao('Selecione!', 'erro'); 
-        
-        const result = await window.apiFetch(`/grupos/${window.grupoSelecionadoParaVinculo}/itens/${itemId}`, { 
-            method: 'POST', 
-            body: JSON.stringify({ordem: 0}) 
-        });
-        
-        if(!result.error) { 
-            window.fecharModal('vincularItemModal'); 
-            window.mostrarNotificacao('✅ Adicionado!'); 
-            window.carregarGrupos(); 
-        }
-    }
-
-    window.removerItemDoGrupo = async function(gId, iId) { 
-        if(confirm('Remover?')) { 
-            await window.apiFetch(`/grupos/${gId}/itens/${iId}`, { method: 'DELETE' });
-            window.mostrarNotificacao('✅ Removido'); 
-            window.carregarGrupos(); 
-        } 
-    }
-
-    // ==========================================
-    // ABA 3 - VINCULAR AO PRODUTO
-    // ==========================================
-    
-    window.carregarProdutosSelect = async function() {
-        const result = await window.apiFetch('/produtos');
-        window.produtos = result.data || [];
-        
-        let options = '<option value="">Selecione o Produto...</option>';
-        window.produtos.forEach(p => {
-            options += `<option value="${p.id}">${p.nome}</option>`;
-        });
-        
-        document.getElementById('produtoSelect').innerHTML = options;
-    }
-
-    window.carregarVinculosProduto = async function() {
-        const pId = document.getElementById('produtoSelect').value;
-        const container = document.getElementById('vinculosContainer');
-
-        if(!pId) {
-            container.innerHTML = '<p style="color:#C83232; text-align:center; padding:30px;">⚠️ Selecione um produto</p>';
-            document.getElementById('mobilePreviewContent').innerHTML = '<div style="text-align:center; margin-top:50%; color:#999;">📱 Selecione um produto</div>';
-            return;
-        }
-
-        container.innerHTML = '<div class="loading">Carregando...</div>';
-
-        // Buscar grupos vinculados
-        const vinculadosResult = await window.apiFetch(`/complementos/produto/${pId}`);
-        const vinculados = vinculadosResult.data || [];
-
-        // Montar HTML
-        let html = '';
-        window.grupos.forEach(g => {
-            const isChecked = vinculados.some(v => String(v.id) === String(g.id)) ? 'checked' : '';
-            html += `
-                <div class="grupo-vinculo-box">
-                    <label style="flex:1;">
-                        <input type="checkbox" class="vinculo-cb" value="${g.id}" ${isChecked} onchange="atualizarPreviewCelular()">
-                        <strong>${g.nome}</strong>
-                        <br><small>${g.obrigatorio ? 'Obrigatório' : 'Opcional'} • Máx: ${g.limite_selecao}</small>
-                    </label>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-        window.atualizarPreviewCelular();
-    }
-
-    window.salvarVinculos = async function() {
-        const pId = document.getElementById('produtoSelect').value;
-        if(!pId) return window.mostrarNotificacao('Selecione um produto!', 'erro');
-
-        const marcados = Array.from(document.querySelectorAll('.vinculo-cb:checked')).map(cb => parseInt(cb.value));
-
-        const result = await window.apiFetch(`/complementos/produto/${pId}/vincular`, {
-            method: 'PUT',
-            body: JSON.stringify({ grupos: marcados })
-        });
-
-        if(!result.error) {
-            window.mostrarNotificacao('✅ Montagem salva!', 'sucesso');
-        }
-    }
-
-    window.atualizarPreviewCelular = function() {
-        const pId = document.getElementById('produtoSelect').value;
-        const prod = window.produtos.find(p => String(p.id) === String(pId));
-        
-        if(!prod) return;
-
-        let html = `
-            <div class="preview-produto-nome">
-                ${prod.nome} - R$ ${parseFloat(prod.preco).toFixed(2)}
+            <div class="tabs">
+                <button class="tab-btn active" onclick="abrirAba('grupos')">📁 Grupos de Complementos</button>
+                <button class="tab-btn" onclick="abrirAba('itens')">🍔 Itens (Complementos)</button>
             </div>
-        `;
 
-        const marcados = document.querySelectorAll('.vinculo-cb:checked');
-        
-        marcados.forEach(cb => {
-            const gId = cb.value; 
-            const g = window.grupos.find(x => String(x.id) === String(gId)); 
-            const its = window.itensPorGrupo[gId] || [];
-
-            if(!g) return;
-
-            html += `
-                <div class="preview-grupo">
-                    <div class="preview-grupo-header">
-                        <strong>${g.nome}</strong> - ${g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL'}
-                        <br><small>Escolha até ${g.limite_selecao}</small>
+            <div id="aba-grupos" class="tab-content active">
+                <h3>Criar Novo Grupo</h3>
+                <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-row" style="flex:2;">
+                        <label>Nome do Grupo (Ex: Escolha a Carne)</label>
+                        <input type="text" id="novoGrupoNome" placeholder="Digite o nome">
                     </div>
-            `;
-
-            its.forEach(i => {
-                html += `
-                    <div class="preview-item">
-                        <span>${i.nome}</span>
-                        <span>${i.preco > 0 ? '+ R$ ' + parseFloat(i.preco).toFixed(2) : 'Grátis'}</span>
+                    <div class="form-row" style="flex:1;">
+                        <label>É obrigatório?</label>
+                        <select id="novoGrupoObrigatorio">
+                            <option value="false">Não (Opcional)</option>
+                            <option value="true">Sim (Obrigatório)</option>
+                        </select>
                     </div>
-                `;
-            });
+                    <div class="form-row" style="flex:1;">
+                        <label>Limite (Máx)</label>
+                        <input type="number" id="novoGrupoLimite" value="1" min="1">
+                    </div>
+                    <button class="btn btn-add" style="margin-bottom: 15px;" onclick="salvarGrupo()">+ Adicionar</button>
+                </div>
 
-            html += '</div>';
-        });
-
-        document.getElementById('mobilePreviewContent').innerHTML = html;
-    }
-
-    // ==========================================
-    // ABA 4 - PRODUTOS CONFIGURADOS
-    // ==========================================
-    
-    window.carregarProdutosConfigurados = async function() {
-        const container = document.getElementById('produtosConfiguradosLista');
-        container.innerHTML = '<div class="loading">Carregando...</div>';
-
-        const produtosResult = await window.apiFetch('/produtos');
-        const todosProdutos = produtosResult.data || [];
-        
-        let configurados = [];
-        
-        for(let p of todosProdutos) {
-            const vinculosResult = await window.apiFetch(`/complementos/produto/${p.id}`);
-            if(vinculosResult.data && vinculosResult.data.length > 0) {
-                configurados.push({...p, qtde_grupos: vinculosResult.data.length});
-            }
-        }
-
-        if(configurados.length === 0) {
-            container.innerHTML = '<p style="text-align:center;">Nenhum produto com complementos</p>';
-            return;
-        }
-
-        container.innerHTML = configurados.map(p => `
-            <div class="grupo-item">
-                <strong>${p.nome}</strong> - ${p.qtde_grupos} grupo(s)
-                <button onclick="editarConfiguracaoProduto(${p.id})">Editar</button>
+                <h3>Grupos Cadastrados</h3>
+                <table id="tabelaGrupos">
+                    <thead><tr><th>Nome</th><th>Obrigatório</th><th>Limite</th><th>Ações</th></tr></thead>
+                    <tbody><tr><td colspan="4" style="text-align:center;">Carregando...</td></tr></tbody>
+                </table>
             </div>
-        `).join('');
-    }
 
-    window.editarConfiguracaoProduto = async function(produtoId) {
-        await window.abrirTab('vinculos');
-        document.getElementById('produtoSelect').value = produtoId;
-        await window.carregarVinculosProduto();
-    }
+            <div id="aba-itens" class="tab-content">
+                <h3>Criar Novo Item</h3>
+                <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-row" style="flex:2;">
+                        <label>Nome do Item (Ex: Bacon)</label>
+                        <input type="text" id="novoItemNome" placeholder="Digite o nome">
+                    </div>
+                    <div class="form-row" style="flex:1;">
+                        <label>Preço Adicional (R$)</label>
+                        <input type="number" id="novoItemPreco" step="0.01" value="0.00" min="0">
+                    </div>
+                    <button class="btn btn-add" style="margin-bottom: 15px;" onclick="salvarItem()">+ Adicionar</button>
+                </div>
 
-    // Iniciar carregando grupos
-    window.carregarGrupos();
-</script>
+                <h3>Itens Cadastrados</h3>
+                <table id="tabelaItens">
+                    <thead><tr><th>Nome</th><th>Preço</th><th>Disponível</th><th>Ações</th></tr></thead>
+                    <tbody><tr><td colspan="4" style="text-align:center;">Carregando...</td></tr></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
+        
+        if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
+        function logout() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
+
+        function mostrarMsg(tipo, texto) {
+            const suc = document.getElementById('successMsg'); const err = document.getElementById('errorMsg');
+            suc.style.display = 'none'; err.style.display = 'none';
+            if (tipo === 'sucesso') { suc.textContent = texto; suc.style.display = 'block'; setTimeout(() => suc.style.display='none', 4000); }
+            else { err.textContent = texto; err.style.display = 'block'; setTimeout(() => err.style.display='none', 5000); }
+        }
+
+        function abrirAba(abaId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`aba-${abaId}`).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // GRUPOS
+        async function carregarGrupos() {
+            try {
+                const res = await fetch(`${API_URL}/grupos-complementos`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tabelaGrupos tbody');
+                if (dados.length === 0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum grupo cadastrado.</td></tr>';
+                else tbody.innerHTML = dados.map(g => `<tr><td>${g.nome}</td><td>${g.obrigatorio ? 'Sim' : 'Não'}</td><td>${g.limite_selecao}</td><td><button class="btn btn-delete" onclick="excluirGrupo(${g.id})">Apagar</button></td></tr>`).join('');
+            } catch (e) { mostrarMsg('erro', 'Falha ao carregar grupos.'); }
+        }
+
+        async function salvarGrupo() {
+            const nome = document.getElementById('novoGrupoNome').value;
+            const obrigatorio = document.getElementById('novoGrupoObrigatorio').value === 'true';
+            const limite = parseInt(document.getElementById('novoGrupoLimite').value) || 1;
+            
+            if(!nome) return mostrarMsg('erro', 'Nome do grupo é obrigatório!');
+            
+            try {
+                const res = await fetch(`${API_URL}/grupos-complementos`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, obrigatorio, limite_selecao: limite })
+                });
+                if(res.ok) { mostrarMsg('sucesso', 'Grupo salvo!'); document.getElementById('novoGrupoNome').value = ''; carregarGrupos(); }
+                else mostrarMsg('erro', 'Erro ao salvar grupo no servidor.');
+            } catch (e) { mostrarMsg('erro', 'Erro de conexão com o servidor.'); }
+        }
+
+        async function excluirGrupo(id) {
+            if(!confirm('Tem certeza que deseja apagar este grupo?')) return;
+            try {
+                await fetch(`${API_URL}/grupos-complementos/${id}`, { method: 'DELETE' });
+                mostrarMsg('sucesso', 'Grupo apagado!'); carregarGrupos();
+            } catch(e) { mostrarMsg('erro', 'Erro ao apagar.'); }
+        }
+
+        // ITENS
+        async function carregarItens() {
+            try {
+                const res = await fetch(`${API_URL}/complementos`);
+                const dados = await res.json();
+                const tbody = document.querySelector('#tabelaItens tbody');
+                if (dados.length === 0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item cadastrado.</td></tr>';
+                else tbody.innerHTML = dados.map(i => `<tr><td>${i.nome}</td><td>R$ ${parseFloat(i.preco).toFixed(2)}</td><td>${i.disponivel ? 'Sim' : 'Não'}</td><td><button class="btn btn-delete" onclick="excluirItem(${i.id})">Apagar</button></td></tr>`).join('');
+            } catch (e) { mostrarMsg('erro', 'Falha ao carregar itens.'); }
+        }
+
+        async function salvarItem() {
+            const nome = document.getElementById('novoItemNome').value;
+            const preco = parseFloat(document.getElementById('novoItemPreco').value) || 0;
+            
+            if(!nome) return mostrarMsg('erro', 'Nome do item é obrigatório!');
+            
+            try {
+                const res = await fetch(`${API_URL}/complementos`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, preco, disponivel: true })
+                });
+                if(res.ok) { mostrarMsg('sucesso', 'Item salvo!'); document.getElementById('novoItemNome').value = ''; document.getElementById('novoItemPreco').value = '0.00'; carregarItens(); }
+                else mostrarMsg('erro', 'Erro ao salvar item.');
+            } catch (e) { mostrarMsg('erro', 'Erro de conexão com o servidor.'); }
+        }
+
+        async function excluirItem(id) {
+            if(!confirm('Tem certeza que deseja apagar este item?')) return;
+            try {
+                const res = await fetch(`${API_URL}/complementos/${id}`, { method: 'DELETE' });
+                if(res.ok) { mostrarMsg('sucesso', 'Item apagado!'); carregarItens(); }
+                else { const err = await res.json(); mostrarMsg('erro', err.erro); }
+            } catch(e) { mostrarMsg('erro', 'Erro ao apagar.'); }
+        }
+
+        window.onload = () => { carregarGrupos(); carregarItens(); };
+    </script>
+</body>
+</html>
