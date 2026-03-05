@@ -9,27 +9,16 @@ function garantirTabelasComplementos() {
             try {
                 // Criar tabelas base se não existirem
                 await pool.query(`
-                    CREATE TABLE IF NOT EXISTS produtos (
-                        id SERIAL PRIMARY KEY,
-                        tenant_id INTEGER DEFAULT 1,
-                        nome VARCHAR(255) NOT NULL,
-                        descricao TEXT,
-                        preco NUMERIC(10,2) DEFAULT 0,
-                        categoria_nome VARCHAR(255),
-                        imagem_url TEXT,
-                        ativo BOOLEAN DEFAULT true
-                    );
-                `);
-                
-                await pool.query(`
                     CREATE TABLE IF NOT EXISTS grupos_complementos (
                         id SERIAL PRIMARY KEY,
                         tenant_id INTEGER DEFAULT 1,
                         nome VARCHAR(255) NOT NULL,
+                        descricao TEXT,
                         obrigatorio BOOLEAN DEFAULT false,
                         minimo_selecao INTEGER DEFAULT 0,
                         limite_selecao INTEGER DEFAULT 1,
-                        ordem INTEGER DEFAULT 0
+                        ordem INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 `);
                 
@@ -38,10 +27,12 @@ function garantirTabelasComplementos() {
                         id SERIAL PRIMARY KEY,
                         tenant_id INTEGER DEFAULT 1,
                         nome VARCHAR(255) NOT NULL,
+                        descricao TEXT,
                         preco NUMERIC(10,2) DEFAULT 0,
                         categoria_complemento VARCHAR(100) DEFAULT 'geral',
                         disponivel BOOLEAN DEFAULT true,
-                        ordem INTEGER DEFAULT 0
+                        ordem INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 `);
 
@@ -49,7 +40,7 @@ function garantirTabelasComplementos() {
                 // RECRIAÇÃO DA TABELA DE VÍNCULOS (CORRIGIDA)
                 // ==========================================
                 
-                // Primeiro, dropar a tabela antiga se existir
+                // Dropar a tabela antiga se existir (para garantir)
                 await pool.query("DROP TABLE IF EXISTS vinculo_grupo_complemento CASCADE;");
                 
                 // Recriar com a estrutura CORRETA - usando complemento_id
@@ -72,17 +63,6 @@ function garantirTabelasComplementos() {
                     );
                 `);
 
-                // Adicionar colunas que podem estar faltando
-                const colunas = [
-                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
-                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
-                    "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
-                ];
-                
-                for (let query of colunas) { 
-                    try { await pool.query(query); } catch(e) {} 
-                }
-
                 console.log('✅ Tabelas de complementos verificadas/criadas com sucesso');
                 
             } catch(e) {
@@ -102,7 +82,9 @@ const complementoController = {
     async listarGrupos(req, res) {
         try {
             await garantirTabelasComplementos();
-            const result = await pool.query('SELECT * FROM grupos_complementos ORDER BY ordem, id');
+            const result = await pool.query(
+                'SELECT * FROM grupos_complementos ORDER BY ordem, id'
+            );
             res.json(result.rows);
         } catch (error) { 
             console.error('❌ Erro ao listar grupos:', error);
@@ -110,16 +92,47 @@ const complementoController = {
         }
     },
 
+    async buscarGrupoPorId(req, res) {
+        try {
+            await garantirTabelasComplementos();
+            const { id } = req.params;
+            const result = await pool.query(
+                'SELECT * FROM grupos_complementos WHERE id = $1',
+                [id]
+            );
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Grupo não encontrado' });
+            }
+            
+            res.json(result.rows[0]);
+        } catch (error) { 
+            console.error('❌ Erro ao buscar grupo:', error);
+            res.status(500).json({ erro: error.message }); 
+        }
+    },
+
     async criarGrupo(req, res) {
         try {
             await garantirTabelasComplementos();
-            const { tenant_id, nome, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
+            const { tenant_id, nome, descricao, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
             
             const result = await pool.query(
-                `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, minimo_selecao, limite_selecao, ordem) 
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                [tenant_id || 1, nome, obrigatorio || false, minimo_selecao || 0, limite_selecao || 1, ordem || 0]
+                `INSERT INTO grupos_complementos 
+                 (tenant_id, nome, descricao, obrigatorio, minimo_selecao, limite_selecao, ordem) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                 RETURNING *`,
+                [
+                    tenant_id || 1, 
+                    nome, 
+                    descricao || '', 
+                    obrigatorio || false, 
+                    minimo_selecao || 0, 
+                    limite_selecao || 1, 
+                    ordem || 0
+                ]
             );
+            
             console.log('✅ Grupo criado:', result.rows[0]);
             res.status(201).json(result.rows[0]);
         } catch (error) { 
@@ -132,15 +145,20 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const { nome, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
+            const { nome, descricao, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
             
             const result = await pool.query(
-                `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, minimo_selecao=$3, limite_selecao=$4, ordem=$5 
-                 WHERE id=$6 RETURNING *`,
-                [nome, obrigatorio, minimo_selecao || 0, limite_selecao || 1, ordem || 0, id]
+                `UPDATE grupos_complementos 
+                 SET nome = $1, descricao = $2, obrigatorio = $3, 
+                     minimo_selecao = $4, limite_selecao = $5, ordem = $6
+                 WHERE id = $7 
+                 RETURNING *`,
+                [nome, descricao || '', obrigatorio, minimo_selecao || 0, limite_selecao || 1, ordem || 0, id]
             );
             
-            if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Grupo não encontrado' });
+            }
             
             console.log('✅ Grupo atualizado:', result.rows[0]);
             res.json(result.rows[0]);
@@ -159,9 +177,14 @@ const complementoController = {
             await pool.query('DELETE FROM vinculo_grupo_complemento WHERE grupo_id = $1', [id]);
             await pool.query('DELETE FROM vinculo_produto_grupo WHERE grupo_id = $1', [id]);
             
-            const result = await pool.query('DELETE FROM grupos_complementos WHERE id = $1 RETURNING *', [id]);
+            const result = await pool.query(
+                'DELETE FROM grupos_complementos WHERE id = $1 RETURNING *', 
+                [id]
+            );
             
-            if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Grupo não encontrado' });
+            }
             
             console.log('✅ Grupo excluído:', id);
             res.json({ mensagem: 'Grupo excluído com sucesso' });
@@ -177,7 +200,9 @@ const complementoController = {
     async listarItens(req, res) {
         try {
             await garantirTabelasComplementos();
-            const result = await pool.query('SELECT * FROM complementos ORDER BY nome');
+            const result = await pool.query(
+                'SELECT * FROM complementos ORDER BY nome'
+            );
             res.json(result.rows);
         } catch (error) { 
             console.error('❌ Erro ao listar itens:', error);
@@ -185,15 +210,47 @@ const complementoController = {
         }
     },
 
+    async buscarItemPorId(req, res) {
+        try {
+            await garantirTabelasComplementos();
+            const { id } = req.params;
+            const result = await pool.query(
+                'SELECT * FROM complementos WHERE id = $1',
+                [id]
+            );
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Item não encontrado' });
+            }
+            
+            res.json(result.rows[0]);
+        } catch (error) { 
+            console.error('❌ Erro ao buscar item:', error);
+            res.status(500).json({ erro: error.message }); 
+        }
+    },
+
     async criarItem(req, res) {
         try {
             await garantirTabelasComplementos();
-            const { tenant_id, nome, preco, disponivel } = req.body;
+            const { tenant_id, nome, descricao, preco, categoria_complemento, disponivel, ordem } = req.body;
+            
             const result = await pool.query(
-                `INSERT INTO complementos (tenant_id, nome, preco, disponivel) 
-                 VALUES ($1, $2, $3, $4) RETURNING *`,
-                [tenant_id || 1, nome, preco || 0, disponivel !== false]
+                `INSERT INTO complementos 
+                 (tenant_id, nome, descricao, preco, categoria_complemento, disponivel, ordem) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) 
+                 RETURNING *`,
+                [
+                    tenant_id || 1, 
+                    nome, 
+                    descricao || '', 
+                    preco || 0, 
+                    categoria_complemento || 'geral', 
+                    disponivel !== false, 
+                    ordem || 0
+                ]
             );
+            
             console.log('✅ Item criado:', result.rows[0]);
             res.status(201).json(result.rows[0]);
         } catch (error) { 
@@ -206,14 +263,20 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const { nome, preco, disponivel } = req.body;
+            const { nome, descricao, preco, categoria_complemento, disponivel, ordem } = req.body;
             
             const result = await pool.query(
-                `UPDATE complementos SET nome=$1, preco=$2, disponivel=$3 WHERE id=$4 RETURNING *`,
-                [nome, preco, disponivel, id]
+                `UPDATE complementos 
+                 SET nome = $1, descricao = $2, preco = $3, 
+                     categoria_complemento = $4, disponivel = $5, ordem = $6
+                 WHERE id = $7 
+                 RETURNING *`,
+                [nome, descricao || '', preco, categoria_complemento || 'geral', disponivel, ordem || 0, id]
             );
             
-            if (result.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Item não encontrado' });
+            }
             
             console.log('✅ Item atualizado:', result.rows[0]);
             res.json(result.rows[0]);
@@ -229,7 +292,10 @@ const complementoController = {
             const { id } = req.params;
             
             // Verificar se está vinculado a algum grupo
-            const vinculos = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', [id]);
+            const vinculos = await pool.query(
+                'SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', 
+                [id]
+            );
             
             if (vinculos.rows.length > 0) {
                 return res.status(400).json({ 
@@ -237,9 +303,14 @@ const complementoController = {
                 });
             }
             
-            const result = await pool.query('DELETE FROM complementos WHERE id = $1 RETURNING *', [id]);
+            const result = await pool.query(
+                'DELETE FROM complementos WHERE id = $1 RETURNING *', 
+                [id]
+            );
             
-            if (result.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
+            if (result.rows.length === 0) {
+                return res.status(404).json({ erro: 'Item não encontrado' });
+            }
             
             console.log('✅ Item excluído:', id);
             res.json({ mensagem: 'Item excluído com sucesso' });
@@ -259,10 +330,12 @@ const complementoController = {
             
             console.log(`🔍 Buscando itens do grupo: ${id}`);
             
+            // CORREÇÃO: Usando complemento_id (com 'o')
             const result = await pool.query(
                 `SELECT c.* FROM complementos c 
                  INNER JOIN vinculo_grupo_complemento v ON c.id = v.complemento_id 
-                 WHERE v.grupo_id = $1 ORDER BY c.nome`,
+                 WHERE v.grupo_id = $1 
+                 ORDER BY c.nome`,
                 [id]
             );
             
@@ -312,7 +385,7 @@ const complementoController = {
             console.log(`🔗 Removendo item ${itemId} do grupo ${grupoId}`);
             
             await pool.query(
-                'DELETE FROM vinculo_grupo_complemento WHERE grupo_id=$1 AND complemento_id=$2', 
+                'DELETE FROM vinculo_grupo_complemento WHERE grupo_id = $1 AND complemento_id = $2', 
                 [grupoId, itemId]
             );
             
@@ -337,7 +410,8 @@ const complementoController = {
             const result = await pool.query(
                 `SELECT g.* FROM grupos_complementos g 
                  INNER JOIN vinculo_produto_grupo v ON g.id = v.grupo_id 
-                 WHERE v.produto_id = $1 ORDER BY v.ordem, g.nome`,
+                 WHERE v.produto_id = $1 
+                 ORDER BY v.ordem, g.nome`,
                 [produtoId]
             );
             
@@ -390,7 +464,9 @@ const complementoController = {
             await garantirTabelasComplementos();
             
             // Buscar todos os grupos
-            const grupos = await pool.query('SELECT * FROM grupos_complementos ORDER BY ordem, id');
+            const grupos = await pool.query(
+                'SELECT * FROM grupos_complementos ORDER BY ordem, id'
+            );
             
             // Para cada grupo, buscar seus itens
             const resultado = [];
@@ -398,7 +474,8 @@ const complementoController = {
                 const itens = await pool.query(
                     `SELECT c.* FROM complementos c 
                      INNER JOIN vinculo_grupo_complemento v ON c.id = v.complemento_id 
-                     WHERE v.grupo_id = $1 ORDER BY c.nome`,
+                     WHERE v.grupo_id = $1 
+                     ORDER BY c.nome`,
                     [g.id]
                 );
                 
