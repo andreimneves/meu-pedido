@@ -27,30 +27,12 @@ const horarioController = {
             );
             
             if (configQuery.rows.length === 0) {
-                // Criar registro padrão
-                const horariosPadrao = {
-                    horarios: JSON.stringify({
-                        domingo: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        segunda: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        terca: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        quarta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        quinta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        sexta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        sabado: { ativo: true, abertura: '18:00', fechamento: '23:00' }
-                    }),
-                    horarios_delivery: JSON.stringify({
-                        domingo: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        segunda: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        terca: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        quarta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        quinta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        sexta: { ativo: true, abertura: '18:00', fechamento: '23:00' },
-                        sabado: { ativo: true, abertura: '18:00', fechamento: '23:00' }
-                    }),
+                // Retornar objeto vazio se não existir
+                return res.json({
+                    horarios: '{}',
+                    horarios_delivery: '{}',
                     horario_funcionamento: 'Seg a Dom: 18h às 23h'
-                };
-                
-                return res.json(horariosPadrao);
+                });
             }
             
             res.json({
@@ -65,13 +47,14 @@ const horarioController = {
         }
     },
 
-    // ===== ATUALIZAR HORÁRIOS =====
+    // ===== ATUALIZAR HORÁRIOS (CORRIGIDO) =====
     async atualizarHorarios(req, res) {
         try {
             const { subdominio } = req.params;
-            const { horarios, horarios_delivery, horario_funcionamento } = req.body;
+            const dados = req.body;
             
             console.log('📝 Atualizando horários para:', subdominio);
+            console.log('📦 Dados recebidos:', dados);
             
             // Buscar tenant
             const tenantQuery = await pool.query(
@@ -85,6 +68,20 @@ const horarioController = {
             
             const tenantId = tenantQuery.rows[0].id;
             
+            // Extrair dados (podem vir como string JSON ou objeto)
+            let horarios = dados.horarios;
+            let horarios_delivery = dados.horarios_delivery;
+            let horario_funcionamento = dados.horario_funcionamento;
+            
+            // Se veio como string, manter como string
+            // Se veio como objeto, converter para string
+            if (horarios && typeof horarios === 'object') {
+                horarios = JSON.stringify(horarios);
+            }
+            if (horarios_delivery && typeof horarios_delivery === 'object') {
+                horarios_delivery = JSON.stringify(horarios_delivery);
+            }
+            
             // Verificar se já existe registro
             const existe = await pool.query(
                 'SELECT id FROM configuracoes_loja WHERE tenant_id = $1',
@@ -92,27 +89,86 @@ const horarioController = {
             );
             
             if (existe.rows.length > 0) {
-                // Atualizar apenas campos de horário
-                await pool.query(
-                    `UPDATE configuracoes_loja 
-                     SET horarios = COALESCE($1, horarios),
-                         horarios_delivery = COALESCE($2, horarios_delivery),
-                         horario_funcionamento = COALESCE($3, horario_funcionamento)
-                     WHERE tenant_id = $4`,
-                    [horarios, horarios_delivery, horario_funcionamento, tenantId]
-                );
+                // Construir query dinâmica
+                const updates = [];
+                const values = [];
+                let paramCount = 1;
+                
+                if (horarios !== undefined) {
+                    updates.push(`horarios = $${paramCount}`);
+                    values.push(horarios);
+                    paramCount++;
+                }
+                if (horarios_delivery !== undefined) {
+                    updates.push(`horarios_delivery = $${paramCount}`);
+                    values.push(horarios_delivery);
+                    paramCount++;
+                }
+                if (horario_funcionamento !== undefined) {
+                    updates.push(`horario_funcionamento = $${paramCount}`);
+                    values.push(horario_funcionamento);
+                    paramCount++;
+                }
+                
+                if (updates.length === 0) {
+                    return res.json({ mensagem: 'Nenhum dado para atualizar' });
+                }
+                
+                values.push(tenantId);
+                
+                const sql = `UPDATE configuracoes_loja SET ${updates.join(', ')} WHERE tenant_id = $${paramCount}`;
+                
+                console.log('📝 SQL:', sql);
+                console.log('📊 Valores:', values);
+                
+                await pool.query(sql, values);
+                
             } else {
                 // Inserir novo registro
-                await pool.query(
-                    `INSERT INTO configuracoes_loja (tenant_id, horarios, horarios_delivery, horario_funcionamento)
-                     VALUES ($1, $2, $3, $4)`,
-                    [tenantId, horarios, horarios_delivery, horario_funcionamento]
-                );
+                const campos = [];
+                const placeholders = [];
+                const values = [];
+                let paramCount = 1;
+                
+                campos.push('tenant_id');
+                placeholders.push(`$${paramCount}`);
+                values.push(tenantId);
+                paramCount++;
+                
+                if (horarios !== undefined) {
+                    campos.push('horarios');
+                    placeholders.push(`$${paramCount}`);
+                    values.push(horarios);
+                    paramCount++;
+                }
+                if (horarios_delivery !== undefined) {
+                    campos.push('horarios_delivery');
+                    placeholders.push(`$${paramCount}`);
+                    values.push(horarios_delivery);
+                    paramCount++;
+                }
+                if (horario_funcionamento !== undefined) {
+                    campos.push('horario_funcionamento');
+                    placeholders.push(`$${paramCount}`);
+                    values.push(horario_funcionamento);
+                    paramCount++;
+                }
+                
+                const sql = `INSERT INTO configuracoes_loja (${campos.join(', ')}) VALUES (${placeholders.join(', ')})`;
+                
+                console.log('📝 SQL:', sql);
+                console.log('📊 Valores:', values);
+                
+                await pool.query(sql, values);
             }
             
             res.json({ 
                 mensagem: '✅ Horários salvos com sucesso!',
-                atualizado: true
+                dados: {
+                    horarios,
+                    horarios_delivery,
+                    horario_funcionamento
+                }
             });
             
         } catch (error) {
@@ -121,11 +177,13 @@ const horarioController = {
         }
     },
 
-    // ===== VERIFICAR DISPONIBILIDADE =====
+    // ===== VERIFICAR DISPONIBILIDADE (CORRIGIDO) =====
     async verificarDisponibilidade(req, res) {
         try {
             const { subdominio } = req.params;
-            const { tipo, data, horario } = req.body;
+            const { tipo, data } = req.body;
+            
+            console.log(`🔍 Verificando disponibilidade: ${subdominio}, ${tipo}, ${data || 'agora'}`);
             
             // Buscar tenant
             const tenantQuery = await pool.query(
@@ -146,46 +204,53 @@ const horarioController = {
             );
             
             if (configQuery.rows.length === 0) {
-                return res.json({ disponivel: true, pode_agendar: true });
+                // Sem configurações, considera sempre disponível
+                return res.json({ 
+                    disponivel: true, 
+                    pode_agendar: true,
+                    opcoes_horario: gerarOpcoesPadrao()
+                });
             }
             
-            const horariosConfig = tipo === 'delivery' 
-                ? configQuery.rows[0].horarios_delivery 
-                : configQuery.rows[0].horarios;
-            
-            // Se não tem configuração, considera sempre disponível
-            if (!horariosConfig) {
-                return res.json({ disponivel: true, pode_agendar: true });
+            // Pegar os horários corretos baseado no tipo
+            let horariosStr;
+            if (tipo === 'delivery') {
+                horariosStr = configQuery.rows[0].horarios_delivery;
+            } else {
+                horariosStr = configQuery.rows[0].horarios;
             }
             
-            let mapaHorarios;
-            try {
-                mapaHorarios = typeof horariosConfig === 'string' 
-                    ? JSON.parse(horariosConfig) 
-                    : horariosConfig;
-            } catch (e) {
-                mapaHorarios = {};
+            // Parse dos horários
+            let horarios = {};
+            if (horariosStr) {
+                try {
+                    horarios = typeof horariosStr === 'string' ? JSON.parse(horariosStr) : horariosStr;
+                } catch (e) {
+                    console.error('Erro ao parsear horários:', e);
+                    horarios = {};
+                }
             }
             
             const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-            const agora = new Date();
             
-            // Se não tem data específica, verifica agora
+            // Se não tem data, verifica agora
             if (!data) {
+                const agora = new Date();
                 const diaAtual = dias[agora.getDay()];
                 const horaAtual = agora.getHours() * 60 + agora.getMinutes();
                 
-                const configHoje = mapaHorarios[diaAtual];
+                const configHoje = horarios[diaAtual];
                 
+                // Se não tem configuração ou está fechado
                 if (!configHoje || String(configHoje.ativo) !== 'true') {
                     return res.json({ 
                         disponivel: false, 
                         pode_agendar: true,
-                        mensagem: `Fechado agora. Agende para outro horário.`,
-                        proximos_horarios: gerarProximosHorarios(mapaHorarios, diaAtual, horaAtual)
+                        mensagem: `Fechado agora. Agende para outro horário.`
                     });
                 }
                 
+                // Verificar horário
                 const [hAbre, mAbre] = (configHoje.abertura || '18:00').split(':').map(Number);
                 const [hFecha, mFecha] = (configHoje.fechamento || '23:00').split(':').map(Number);
                 
@@ -210,7 +275,7 @@ const horarioController = {
             // Verifica disponibilidade para data específica
             const dataObj = new Date(data + 'T12:00:00');
             const diaNome = dias[dataObj.getDay()];
-            const configDia = mapaHorarios[diaNome];
+            const configDia = horarios[diaNome];
             
             const disponivel = configDia && String(configDia.ativo) === 'true';
             
@@ -233,52 +298,16 @@ const horarioController = {
             
         } catch (error) {
             console.error('❌ Erro ao verificar disponibilidade:', error);
-            res.status(500).json({ erro: error.message, disponivel: false });
+            res.status(500).json({ 
+                erro: error.message, 
+                disponivel: true, // Fallback para disponível em caso de erro
+                pode_agendar: true 
+            });
         }
     }
 };
 
 // Funções auxiliares
-function gerarProximosHorarios(mapaHorarios, diaAtual, horaAtual) {
-    const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
-    const proximos = [];
-    
-    let diasPercorridos = 0;
-    let indexAtual = dias.indexOf(diaAtual);
-    
-    while (proximos.length < 3 && diasPercorridos < 7) {
-        const diaCheck = dias[(indexAtual + diasPercorridos) % 7];
-        const config = mapaHorarios[diaCheck];
-        
-        if (config && String(config.ativo) === 'true') {
-            const [hAbre] = (config.abertura || '18:00').split(':').map(Number);
-            
-            if (diasPercorridos === 0) {
-                // Hoje, mas depois do horário atual
-                if (horaAtual < hAbre * 60) {
-                    proximos.push({
-                        dia: diaCheck,
-                        data: new Date(new Date().setHours(hAbre, 0, 0, 0)).toISOString(),
-                        horario: config.abertura
-                    });
-                }
-            } else {
-                // Próximos dias
-                const data = new Date();
-                data.setDate(data.getDate() + diasPercorridos);
-                proximos.push({
-                    dia: diaCheck,
-                    data: data.toISOString().split('T')[0],
-                    horario: config.abertura
-                });
-            }
-        }
-        diasPercorridos++;
-    }
-    
-    return proximos;
-}
-
 function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
     const opcoes = [];
     
@@ -314,6 +343,17 @@ function gerarOpcoesHorario(aberturaStr, fechamentoStr, isHoje) {
         });
     }
     
+    return opcoes;
+}
+
+function gerarOpcoesPadrao() {
+    const opcoes = [];
+    for (let h = 18; h < 23; h++) {
+        opcoes.push({
+            valor: `${String(h).padStart(2, '0')}:00`,
+            texto: `${String(h).padStart(2, '0')}:00 às ${String(h+1).padStart(2, '0')}:00`
+        });
+    }
     return opcoes;
 }
 

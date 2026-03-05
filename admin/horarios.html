@@ -351,11 +351,14 @@
                 };
             });
             
+            // IMPORTANTE: Enviar como strings JSON, não como objetos
             const dados = {
                 horarios: JSON.stringify(objLoja),
                 horarios_delivery: JSON.stringify(objDelivery),
                 horario_funcionamento: document.getElementById('horario_funcionamento').value
             };
+            
+            console.log('📤 Enviando dados:', dados);
             
             try {
                 const response = await fetch(`${API_URL}/horarios/${SUBDOMINIO}`, {
@@ -364,14 +367,17 @@
                     body: JSON.stringify(dados)
                 });
                 
+                const resultado = await response.json();
+                console.log('📥 Resposta:', resultado);
+                
                 if (response.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
-                    await carregarHorarios();
+                    await carregarHorarios(); // Recarregar para confirmar
                 } else {
-                    const erro = await response.json();
-                    mostrarMensagem('error', `❌ Erro: ${erro.erro || 'Erro ao salvar'}`);
+                    mostrarMensagem('error', `❌ Erro: ${resultado.erro || 'Erro ao salvar'}`);
                 }
             } catch (error) {
+                console.error('❌ Erro:', error);
                 mostrarMensagem('error', '❌ Erro de conexão');
             } finally {
                 btn.innerHTML = '💾 Salvar Todos os Horários';

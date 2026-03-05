@@ -398,24 +398,30 @@
             } catch (e) { console.error('Erro configs', e); }
         }
 
-        // ==========================================
-        // VERIFICAÇÃO DE DISPONIBILIDADE (NOVO)
-        // ==========================================
-        async function verificarDisponibilidade(tipo) {
-            try {
-                const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tipo: tipo })
-                });
-                
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Erro ao verificar disponibilidade:', error);
-                return { disponivel: true, pode_agendar: true };
+        // ===== VERIFICAÇÃO DE DISPONIBILIDADE (CORRIGIDA) =====
+            async function verificarDisponibilidade(tipo) {
+                try {
+                    const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tipo: tipo })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('Resposta não OK, usando fallback');
+                        return { disponivel: true, pode_agendar: true };
+                    }
+                    
+                    const data = await response.json();
+                    console.log('📊 Disponibilidade:', data);
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Erro ao verificar disponibilidade:', error);
+                    // Fallback: considera disponível para não travar o pedido
+                    return { disponivel: true, pode_agendar: true };
+                }
             }
-        }
 
         // ==========================================
         // CARDÁPIO
@@ -888,7 +894,12 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error('Erro na resposta');
+                }
+
                 const data = await response.json();
+                console.log('📅 Horários para data:', data);
 
                 if (!data.disponivel) {
                     select.innerHTML = '<option value="">❌ Fechado neste dia</option>';
@@ -907,7 +918,19 @@
 
             } catch (error) {
                 console.error('Erro:', error);
-                select.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+                // Fallback: gerar opções padrão
+                const opcoesPadrao = [];
+                for (let h = 18; h < 23; h++) {
+                    opcoesPadrao.push({
+                        valor: `${String(h).padStart(2, '0')}:00`,
+                        texto: `${String(h).padStart(2, '0')}:00 às ${String(h+1).padStart(2, '0')}:00`
+                    });
+                }
+                
+                select.innerHTML = '<option value="">Selecione o horário (padrão)</option>' +
+                    opcoesPadrao.map(h => 
+                        `<option value="${dataSelecionada}|${h.valor}">${h.texto}</option>`
+                    ).join('');
             }
         }
 
