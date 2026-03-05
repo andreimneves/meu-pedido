@@ -71,34 +71,84 @@
     </div>
 
     <script>
-        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
+        // URL FIXA e SIMPLES
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         let configuracoes = {};
         
-        const diasSemana = [{ id: 'domingo', nome: 'Dom' }, { id: 'segunda', nome: 'Seg' }, { id: 'terca', nome: 'Ter' }, { id: 'quarta', nome: 'Qua' }, { id: 'quinta', nome: 'Qui' }, { id: 'sexta', nome: 'Sex' }, { id: 'sabado', nome: 'Sáb' }];
+        const diasSemana = [
+            { id: 'domingo', nome: 'Dom' }, 
+            { id: 'segunda', nome: 'Seg' }, 
+            { id: 'terca', nome: 'Ter' }, 
+            { id: 'quarta', nome: 'Qua' }, 
+            { id: 'quinta', nome: 'Qui' }, 
+            { id: 'sexta', nome: 'Sex' }, 
+            { id: 'sabado', nome: 'Sáb' }
+        ];
 
-        if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
-        window.logout = function() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
+        console.log('🚀 Horários - Iniciado');
+        console.log('📡 API_URL:', API_URL);
+        console.log('🏪 SUBDOMINIO:', SUBDOMINIO);
+
+        if (!localStorage.getItem('adminLogado')) {
+            console.log('🔒 Redirecionando para login...');
+            window.location.href = 'index.html';
+        }
+
+        window.logout = function() { 
+            localStorage.removeItem('adminLogado'); 
+            window.location.href = 'index.html'; 
+        }
         
         function mostrarMensagem(tipo, texto) {
-            const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
-            success.style.display = 'none'; error.style.display = 'none';
-            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 4000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 6000); }
+            const success = document.getElementById('successMessage');
+            const error = document.getElementById('errorMessage');
+            success.style.display = 'none';
+            error.style.display = 'none';
+            
+            if (tipo === 'success') { 
+                success.textContent = texto; 
+                success.style.display = 'block'; 
+                setTimeout(() => success.style.display = 'none', 4000);
+            } else { 
+                error.textContent = texto; 
+                error.style.display = 'block'; 
+                setTimeout(() => error.style.display = 'none', 6000);
+            }
         }
 
         function parseJSONSeguro(texto) {
             if (!texto) return {};
             if (typeof texto === 'object') return texto;
-            try { return JSON.parse(texto); } catch (e) { return {}; }
+            try { 
+                return JSON.parse(texto); 
+            } catch (e) { 
+                return {}; 
+            }
         }
 
         async function carregarHorarios() {
+            console.log('📥 Carregando horários...');
             try {
-                const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
+                const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { 
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 configuracoes = await response.json();
+                console.log('✅ Horários carregados:', configuracoes);
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red; font-weight:bold;">❌ Erro ao carregar</div>`; }
+            } catch (error) {
+                console.error('❌ Erro ao carregar:', error);
+                document.getElementById('configContainer').innerHTML = 
+                    `<div style="text-align:center; padding:40px; color:red;">
+                        ❌ Erro ao carregar: ${error.message}
+                     </div>`;
+            }
         }
 
         function exibirFormulario() {
@@ -108,7 +158,8 @@
                         <h2>Texto de Resumo (Aparece no App)</h2>
                         <div class="info-box">ℹ️ Esta é a frase curta que os clientes verão no topo do App.</div>
                         <div class="form-group" style="margin-bottom: 25px;">
-                            <input type="text" id="horario_funcionamento" value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
+                            <input type="text" id="horario_funcionamento" 
+                                   value="${configuracoes.horario_funcionamento || 'Seg a Dom: 18h às 23h'}">
                         </div>
 
                         <h2>Controle Automático Diário</h2>
@@ -131,7 +182,8 @@
             
             let hLoja = parseJSONSeguro(configuracoes.horarios);
             let hDel = parseJSONSeguro(configuracoes.horarios_delivery);
-            renderizarGridHorarios('Loja', hLoja); renderizarGridHorarios('Delivery', hDel);
+            renderizarGridHorarios('Loja', hLoja);
+            renderizarGridHorarios('Delivery', hDel);
         }
 
         function renderizarGridHorarios(tipo, dadosDoBanco) {
@@ -139,9 +191,15 @@
             container.innerHTML = diasSemana.map(dia => {
                 const prefix = tipo.toLowerCase();
                 let diaAtivo = true;
-                if (dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].ativo !== undefined) { diaAtivo = (String(dadosDoBanco[dia.id].ativo) === 'true' || dadosDoBanco[dia.id].ativo === true); }
-                const diaAbre = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].abertura ? dadosDoBanco[dia.id].abertura : '18:00';
-                const diaFecha = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].fechamento ? dadosDoBanco[dia.id].fechamento : '23:59';
+                
+                if (dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].ativo !== undefined) { 
+                    diaAtivo = (String(dadosDoBanco[dia.id].ativo) === 'true' || dadosDoBanco[dia.id].ativo === true); 
+                }
+                
+                const diaAbre = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].abertura ? 
+                               dadosDoBanco[dia.id].abertura : '18:00';
+                const diaFecha = dadosDoBanco && dadosDoBanco[dia.id] && dadosDoBanco[dia.id].fechamento ? 
+                                dadosDoBanco[dia.id].fechamento : '23:59';
 
                 return `
                     <div class="horario-row">
@@ -161,34 +219,60 @@
         }
 
         window.salvarHorarios = async function() {
-            const btn = document.getElementById('btnSalvarGeral'); btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
+            const btn = document.getElementById('btnSalvarGeral'); 
+            btn.innerHTML = '⏳ Salvando...'; 
+            btn.disabled = true;
             
-            const objHorariosLoja = {}; const objHorariosDelivery = {};
+            const objHorariosLoja = {}; 
+            const objHorariosDelivery = {};
+            
             diasSemana.forEach(dia => {
-                objHorariosLoja[dia.id] = { ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, abertura: document.getElementById(`loja_abre_${dia.id}`).value, fechamento: document.getElementById(`loja_fecha_${dia.id}`).value };
-                objHorariosDelivery[dia.id] = { ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, abertura: document.getElementById(`delivery_abre_${dia.id}`).value, fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value };
+                objHorariosLoja[dia.id] = { 
+                    ativo: document.getElementById(`loja_ativo_${dia.id}`).checked, 
+                    abertura: document.getElementById(`loja_abre_${dia.id}`).value, 
+                    fechamento: document.getElementById(`loja_fecha_${dia.id}`).value 
+                };
+                objHorariosDelivery[dia.id] = { 
+                    ativo: document.getElementById(`delivery_ativo_${dia.id}`).checked, 
+                    abertura: document.getElementById(`delivery_abre_${dia.id}`).value, 
+                    fechamento: document.getElementById(`delivery_fecha_${dia.id}`).value 
+                };
             });
 
-            // ENVIAMOS APENAS O PACOTE DE HORÁRIOS
             const configData = {
                 horario_funcionamento: document.getElementById('horario_funcionamento').value,
                 horarios: JSON.stringify(objHorariosLoja),
                 horarios_delivery: JSON.stringify(objHorariosDelivery)
             };
 
+            console.log('📤 Enviando horários:', configData);
+
             try {
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(configData) 
+                });
+                
+                const responseData = await res.json();
+                console.log('📥 Resposta:', responseData);
+                
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Horários salvos com sucesso!');
-                    carregarHorarios(); // Refaz a leitura do banco para confirmar visualmente
+                    carregarHorarios();
                 } else {
-                    const err = await res.json().catch(() => ({erro: res.statusText}));
-                    mostrarMensagem('error', `❌ Falha ao salvar: ${err.erro}`);
+                    mostrarMensagem('error', `❌ Falha ao salvar: ${responseData.erro || 'Erro desconhecido'}`);
                 }
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); } 
-            finally { btn.innerHTML = '💾 Salvar Alterações de Horário'; btn.disabled = false; }
+            } catch (error) { 
+                console.error('❌ Erro conexão:', error);
+                mostrarMensagem('error', '❌ Erro de Conexão com o Servidor.'); 
+            } finally { 
+                btn.innerHTML = '💾 Salvar Alterações de Horário'; 
+                btn.disabled = false; 
+            }
         }
 
+        // Iniciar
         carregarHorarios();
     </script>
 </body>

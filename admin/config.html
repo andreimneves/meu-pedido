@@ -64,26 +64,65 @@
     </div>
 
     <script>
-        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:10000/api' : 'https://meu-pedido-backend.onrender.com/api';
+        // URL FIXA e SIMPLES
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
         const SUBDOMINIO = 'dlcrepes';
         let configuracoes = {};
 
-        if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
-        function logout() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
+        console.log('🚀 Configurações - Iniciado');
+        console.log('📡 API_URL:', API_URL);
+        console.log('🏪 SUBDOMINIO:', SUBDOMINIO);
+
+        // Verificar login
+        if (!localStorage.getItem('adminLogado')) {
+            console.log('🔒 Redirecionando para login...');
+            window.location.href = 'index.html';
+        }
+
+        function logout() { 
+            localStorage.removeItem('adminLogado'); 
+            window.location.href = 'index.html'; 
+        }
         
         function mostrarMensagem(tipo, texto) {
-            const success = document.getElementById('successMessage'); const error = document.getElementById('errorMessage');
-            success.style.display = 'none'; error.style.display = 'none';
-            if (tipo === 'success') { success.textContent = texto; success.style.display = 'block'; setTimeout(() => success.style.display = 'none', 3000); }
-            else { error.textContent = texto; error.style.display = 'block'; setTimeout(() => error.style.display = 'none', 5000); }
+            const success = document.getElementById('successMessage');
+            const error = document.getElementById('errorMessage');
+            success.style.display = 'none';
+            error.style.display = 'none';
+            
+            if (tipo === 'success') { 
+                success.textContent = texto; 
+                success.style.display = 'block'; 
+                setTimeout(() => success.style.display = 'none', 3000);
+            } else { 
+                error.textContent = texto; 
+                error.style.display = 'block'; 
+                setTimeout(() => error.style.display = 'none', 5000);
+            }
         }
 
         async function carregarConfiguracoes() {
+            console.log('📥 Carregando configurações...');
             try {
-                const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { cache: 'no-store' });
-                configuracoes = await response.json(); 
+                const response = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { 
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                configuracoes = await response.json();
+                console.log('✅ Configurações carregadas:', configuracoes);
                 exibirFormulario();
-            } catch (error) { document.getElementById('configContainer').innerHTML = `<div style="text-align:center; padding:40px; color:red;">Erro ao conectar com servidor.</div>`; }
+            } catch (error) {
+                console.error('❌ Erro ao carregar:', error);
+                document.getElementById('configContainer').innerHTML = 
+                    `<div style="text-align:center; padding:40px; color:red;">
+                        ❌ Erro ao conectar com servidor: ${error.message}
+                     </div>`;
+            }
         }
 
         function exibirFormulario() {
@@ -101,38 +140,93 @@
                                 <span style="display:block; margin-top:5px;">📸 Clique aqui para selecionar a logo</span>
                             </div>
                             <input type="hidden" id="logo_url" value="${configuracoes.logo_url || ''}">
-                            <div style="text-align: center;"><img id="logoPreview" class="logo-preview ${configuracoes.logo_url ? 'ativo' : ''}" src="${configuracoes.logo_url || ''}"></div>
+                            <div style="text-align: center;">
+                                <img id="logoPreview" class="logo-preview ${configuracoes.logo_url ? 'ativo' : ''}" 
+                                     src="${configuracoes.logo_url || ''}" alt="Logo">
+                            </div>
                         </div>
-                        <div class="form-group"><label>Nome da Loja</label><input type="text" id="nome_loja" value="${configuracoes.nome_loja || ''}" required></div>
-                        <div class="form-group"><label>Slogan</label><input type="text" id="slogan" value="${configuracoes.slogan || ''}"></div>
-                        <div class="form-group"><label>WhatsApp (com DDD)</label><input type="text" id="whatsapp" value="${configuracoes.whatsapp || ''}" required></div>
-                        <div class="form-group"><label>Endereço Completo</label><textarea id="endereco_completo" rows="2">${configuracoes.endereco_completo || ''}</textarea></div>
-                        <div class="form-group"><label>Cor Principal</label><input type="color" id="cor_principal" value="${configuracoes.cor_principal || '#C83232'}" style="height:40px;"></div>
+                        <div class="form-group">
+                            <label>Nome da Loja</label>
+                            <input type="text" id="nome_loja" value="${configuracoes.nome_loja || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Slogan</label>
+                            <input type="text" id="slogan" value="${configuracoes.slogan || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp (com DDD)</label>
+                            <input type="text" id="whatsapp" value="${configuracoes.whatsapp || ''}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço Completo</label>
+                            <textarea id="endereco_completo" rows="2">${configuracoes.endereco_completo || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Cor Principal</label>
+                            <input type="color" id="cor_principal" value="${configuracoes.cor_principal || '#C83232'}" style="height:40px;">
+                        </div>
                     </div>
 
                     <div class="config-section">
                         <h2>🚚 Configurações de Frete (Radar por KM)</h2>
                         <div class="grid-2">
-                            <div class="form-group"><label>CEP da Loja (Ponto Zero) *</label><input type="text" id="cep_loja" value="${configuracoes.cep_loja || ''}"></div>
-                            <div class="form-group"><label>Limite Máximo (KM) *</label><input type="number" id="km_maximo_entrega" step="0.1" min="0" value="${configuracoes.km_maximo_entrega || 15}"></div>
-                            <div class="form-group"><label>Taxa Mínima (R$)</label><input type="number" id="taxa_minima" step="0.01" min="0" value="${configuracoes.taxa_minima || 5.00}"></div>
-                            <div class="form-group"><label>Adicional por KM (R$)</label><input type="number" id="taxa_por_km" step="0.01" min="0" value="${configuracoes.taxa_por_km || 1.00}"></div>
+                            <div class="form-group">
+                                <label>CEP da Loja (Ponto Zero) *</label>
+                                <input type="text" id="cep_loja" value="${configuracoes.cep_loja || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Limite Máximo (KM) *</label>
+                                <input type="number" id="km_maximo_entrega" step="0.1" min="0" 
+                                       value="${configuracoes.km_maximo_entrega || 15}">
+                            </div>
+                            <div class="form-group">
+                                <label>Taxa Mínima (R$)</label>
+                                <input type="number" id="taxa_minima" step="0.01" min="0" 
+                                       value="${configuracoes.taxa_minima || 5.00}">
+                            </div>
+                            <div class="form-group">
+                                <label>Adicional por KM (R$)</label>
+                                <input type="number" id="taxa_por_km" step="0.01" min="0" 
+                                       value="${configuracoes.taxa_por_km || 1.00}">
+                            </div>
                         </div>
-                        <input type="hidden" id="mensagem_km_excedido" value="${configuracoes.mensagem_km_excedido || ''}">
+                        
                         <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-                            <div class="checkbox-group"><input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}><label>Ativar frete grátis</label></div>
-                            <div class="form-group"><label>Frete Grátis Acima de R$</label><input type="number" id="frete_gratis_acima" step="0.01" min="0" value="${configuracoes.frete_gratis_acima || 50.00}"></div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="frete_gratis_ativo" ${freteGratisAtivo ? 'checked' : ''}>
+                                <label>Ativar frete grátis</label>
+                            </div>
+                            <div class="form-group">
+                                <label>Frete Grátis Acima de R$</label>
+                                <input type="number" id="frete_gratis_acima" step="0.01" min="0" 
+                                       value="${configuracoes.frete_gratis_acima || 50.00}">
+                            </div>
                         </div>
                     </div>
 
                     <div class="config-section">
                         <h2>📝 Mensagem Personalizada (Aparece no Topo do App)</h2>
-                        <div class="checkbox-group"><input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}><label>Ativar mensagem de destaque</label></div>
-                        <div class="form-group"><label>Texto da Mensagem</label><textarea id="mensagem_banner" rows="2">${configuracoes.mensagem_banner || ''}</textarea></div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="mensagem_banner_ativo" ${bannerAtivo ? 'checked' : ''}>
+                            <label>Ativar mensagem de destaque</label>
+                        </div>
+                        <div class="form-group">
+                            <label>Texto da Mensagem</label>
+                            <textarea id="mensagem_banner" rows="2">${configuracoes.mensagem_banner || ''}</textarea>
+                        </div>
                         <div class="grid-2">
-                            <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="mensagem_banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}"></div>
-                            <div class="form-group"><label>Cor de Fundo</label><input type="color" id="mensagem_banner_cor" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}"></div>
-                            <div class="form-group"><label>Cor do Texto</label><input type="color" id="mensagem_banner_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}"></div>
+                            <div class="form-group">
+                                <label>Ícone (emoji)</label>
+                                <input type="text" id="mensagem_banner_icone" value="${configuracoes.mensagem_banner_icone || '📢'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Cor de Fundo</label>
+                                <input type="color" id="mensagem_banner_cor" value="${configuracoes.mensagem_banner_cor || '#FFF3E0'}">
+                            </div>
+                            <div class="form-group">
+                                <label>Cor do Texto</label>
+                                <input type="color" id="mensagem_banner_texto" value="${configuracoes.mensagem_banner_texto || '#E65100'}">
+                            </div>
                         </div>
                     </div>
 
@@ -143,18 +237,40 @@
         }
 
         async function uploadLogo(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const formData = new FormData(); formData.append('imagem', file);
+            const file = event.target.files[0]; 
+            if (!file) return;
+            
+            const formData = new FormData(); 
+            formData.append('imagem', file);
+            
             try {
-                const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData }); const data = await res.json();
-                if (data.sucesso) { document.getElementById('logo_url').value = data.arquivo.url; document.getElementById('logoPreview').src = data.arquivo.url; document.getElementById('logoPreview').classList.add('ativo'); }
-            } catch (e) {}
+                const res = await fetch(`${API_URL}/upload`, { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                
+                if (!res.ok) {
+                    throw new Error('Erro no upload');
+                }
+                
+                const data = await res.json();
+                if (data.sucesso) { 
+                    document.getElementById('logo_url').value = data.arquivo.url; 
+                    document.getElementById('logoPreview').src = data.arquivo.url; 
+                    document.getElementById('logoPreview').classList.add('ativo');
+                    mostrarMensagem('success', '✅ Logo enviada com sucesso!');
+                }
+            } catch (e) {
+                console.error('Erro upload:', e);
+                mostrarMensagem('error', '❌ Erro ao enviar logo');
+            }
         }
 
         window.salvarConfiguracoes = async function() {
-            const btn = document.getElementById('btnSalvarGeral'); btn.textContent = '⏳ Salvando...'; btn.disabled = true;
+            const btn = document.getElementById('btnSalvarGeral'); 
+            btn.textContent = '⏳ Salvando...'; 
+            btn.disabled = true;
             
-            // ENVIAMOS APENAS O PACOTE GERAL
             const configData = {
                 logo_url: document.getElementById('logo_url').value,
                 nome_loja: document.getElementById('nome_loja').value,
@@ -175,19 +291,34 @@
                 mensagem_banner_texto: document.getElementById('mensagem_banner_texto').value
             };
 
+            console.log('📤 Enviando dados:', configData);
+
             try {
-                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configData) });
+                const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(configData) 
+                });
+                
+                const responseData = await res.json();
+                console.log('📥 Resposta:', responseData);
+                
                 if (res.ok) {
                     mostrarMensagem('success', '✅ Configurações salvas com sucesso!'); 
                     carregarConfiguracoes();
                 } else { 
-                    const err = await res.json().catch(() => ({erro: res.statusText}));
-                    mostrarMensagem('error', `❌ Erro DB: ${err.erro}`); 
+                    mostrarMensagem('error', `❌ Erro: ${responseData.erro || 'Erro desconhecido'}`); 
                 }
-            } catch (error) { mostrarMensagem('error', '❌ Erro de Conexão. Verifique sua internet.'); } 
-            finally { btn.textContent = '💾 Salvar Configurações Gerais'; btn.disabled = false; }
+            } catch (error) { 
+                console.error('❌ Erro conexão:', error);
+                mostrarMensagem('error', '❌ Erro de Conexão. Verifique sua internet.'); 
+            } finally { 
+                btn.textContent = '💾 Salvar Configurações Gerais'; 
+                btn.disabled = false; 
+            }
         }
 
+        // Iniciar
         carregarConfiguracoes();
     </script>
 </body>
