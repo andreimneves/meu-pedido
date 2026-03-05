@@ -3,6 +3,18 @@ const pool = require('../config/database');
 async function garantirTabelasComplementos() {
     try {
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS produtos (
+                id SERIAL PRIMARY KEY,
+                tenant_id INTEGER DEFAULT 1,
+                nome VARCHAR(255) NOT NULL,
+                descricao TEXT,
+                preco NUMERIC(10,2) DEFAULT 0,
+                categoria_nome VARCHAR(255),
+                imagem_url TEXT,
+                ativo BOOLEAN DEFAULT true
+            );
+        `);
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS grupos_complementos (
                 id SERIAL PRIMARY KEY,
                 tenant_id INTEGER DEFAULT 1,
@@ -31,7 +43,6 @@ async function garantirTabelasComplementos() {
                 PRIMARY KEY (grupo_id, complemento_id)
             );
         `);
-        // A SOLUÇÃO ESTÁ AQUI: Removemos o "REFERENCES produtos(id)" para evitar conflito de tipos de dados antigos no NeonDB
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
                 produto_id INTEGER,
@@ -40,6 +51,25 @@ async function garantirTabelasComplementos() {
                 PRIMARY KEY (produto_id, grupo_id)
             );
         `);
+
+        // ==========================================
+        // A VACINA DE COLUNAS (A CORREÇÃO ESTÁ AQUI)
+        // Força a criação de colunas que podem estar faltando nas tabelas antigas
+        // ==========================================
+        const vacinaColunas = [
+            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
+            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
+            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;",
+            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS categoria_complemento VARCHAR(100) DEFAULT 'geral';",
+            "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS preco NUMERIC(10,2) DEFAULT 0;",
+            "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
+            "ALTER TABLE vinculo_produto_grupo ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;"
+        ];
+        
+        for (let query of vacinaColunas) {
+            await pool.query(query).catch(e => {}); // Ignora se a coluna já existir
+        }
+
     } catch(e) { 
         console.log("Aviso ao criar tabelas de complementos:", e.message); 
     }
