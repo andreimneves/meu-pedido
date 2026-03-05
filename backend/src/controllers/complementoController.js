@@ -35,13 +35,23 @@ async function garantirTabelasComplementos() {
                 ordem INTEGER DEFAULT 0
             );
         `);
+
+        // ==========================================
+        // A LIMPEZA ABSOLUTA DO "FANTASMA"
+        // Apagamos a tabela antiga "grupo_itens" e a de vínculos para recriar do zero com as colunas certas!
+        // ==========================================
+        await pool.query("DROP TABLE IF EXISTS grupo_itens CASCADE;").catch(() => {});
+        await pool.query("DROP TABLE IF EXISTS vinculo_grupo_complemento CASCADE;").catch(() => {});
+        
         await pool.query(`
-            CREATE TABLE IF NOT EXISTS vinculo_grupo_complemento (
+            CREATE TABLE vinculo_grupo_complemento (
                 grupo_id INTEGER REFERENCES grupos_complementos(id) ON DELETE CASCADE,
                 complemento_id INTEGER REFERENCES complementos(id) ON DELETE CASCADE,
+                ordem INTEGER DEFAULT 0,
                 PRIMARY KEY (grupo_id, complemento_id)
             );
         `);
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
                 produto_id INTEGER,
@@ -51,19 +61,13 @@ async function garantirTabelasComplementos() {
             );
         `);
 
-        // ==========================================
-        // A CURA DO BANCO DE DADOS
-        // ==========================================
-        // 1. Tenta renomear a coluna antiga 'item_id' para 'complemento_id' caso tenha ficado presa no passado
-        try { await pool.query("ALTER TABLE vinculo_grupo_complemento RENAME COLUMN item_id TO complemento_id;"); } catch(e) {}
-        
-        // 2. Garante que as colunas padrão existam
         const vacinaColunas = [
+            "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
             "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
             "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
         ];
         
-        for (let query of vacinaColunas) {
+        for (let query of vacinaColunas) { 
             await pool.query(query).catch(e => {}); 
         }
 
@@ -87,11 +91,11 @@ const complementoController = {
     async criarGrupo(req, res) {
         try {
             await garantirTabelasComplementos();
-            const { tenant_id, nome, obrigatorio, limite_selecao, ordem } = req.body;
+            const { tenant_id, nome, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
             
             const result = await pool.query(
-                `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, limite_selecao, ordem) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                [tenant_id || 1, nome, obrigatorio || false, limite_selecao || 1, ordem || 0]
+                `INSERT INTO grupos_complementos (tenant_id, nome, obrigatorio, minimo_selecao, limite_selecao, ordem) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                [tenant_id || 1, nome, obrigatorio || false, minimo_selecao || 0, limite_selecao || 1, ordem || 0]
             );
             res.status(201).json(result.rows[0]);
         } catch (error) { res.status(500).json({ erro: error.message }); }
@@ -101,11 +105,11 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const { nome, obrigatorio, limite_selecao, ordem } = req.body;
+            const { nome, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
             
             const result = await pool.query(
-                `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, limite_selecao=$3, ordem=$4 WHERE id=$5 RETURNING *`,
-                [nome, obrigatorio, limite_selecao, ordem || 0, id]
+                `UPDATE grupos_complementos SET nome=$1, obrigatorio=$2, minimo_selecao=$3, limite_selecao=$4, ordem=$5 WHERE id=$6 RETURNING *`,
+                [nome, obrigatorio, minimo_selecao || 0, limite_selecao, ordem || 0, id]
             );
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
             res.json(result.rows[0]);
@@ -164,7 +168,7 @@ const complementoController = {
             await garantirTabelasComplementos();
             const { id } = req.params;
             const vinculos = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', [id]);
-            if (vinculos.rows.length > 0) return res.status(400).json({ erro: 'Este item está sendo usado em um grupo. Remova-o do grupo primeiro.' });
+            if (vinculos.rows.length > 0) return res.status(400).json({ erro: 'Este item está a ser usado num grupo. Remova-o do grupo primeiro.' });
             
             const result = await pool.query('DELETE FROM complementos WHERE id = $1 RETURNING *', [id]);
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Item não encontrado' });
