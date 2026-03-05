@@ -146,14 +146,15 @@
                 </div>
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Obrigatório (Mínimo escolhas)</label>
-                        <div style="font-size: 11px; color: #666; margin-bottom: 5px;">Deixe 0 se for 100% opcional</div>
-                        <input type="number" id="grupoMinimo" value="0" min="0">
+                        <label>Regra de Escolha</label>
+                        <select id="grupoObrigatorio" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                            <option value="true">Obrigatório (O cliente tem que escolher algo)</option>
+                            <option value="false">Opcional (O cliente escolhe se quiser)</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Opcional (Máximo escolhas)</label>
-                        <div style="font-size: 11px; color: #666; margin-bottom: 5px;">Deixe 0 para escolhas ilimitadas</div>
-                        <input type="number" id="grupoLimite" value="0" min="0">
+                        <label>Máximo de Opções Permitidas</label>
+                        <input type="number" id="grupoLimite" value="1" min="1" max="50">
                     </div>
                 </div>
                 <button type="submit" class="btn-save">Salvar Grupo</button>
@@ -274,15 +275,7 @@
             if (window.grupos.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum grupo criado.</p>';
             
             container.innerHTML = window.grupos.map(g => {
-                const min = parseInt(g.minimo_selecao) || 0;
-                const max = parseInt(g.limite_selecao) || 0;
-                
-                let limitesTexto = '';
-                if (min > 0 && max > 0) limitesTexto = `Mínimo: ${min} • Máximo: ${max}`;
-                else if (min > 0) limitesTexto = `Mínimo: ${min} (Sem máximo)`;
-                else if (max > 0) limitesTexto = `Opcional • Máximo: ${max}`;
-                else limitesTexto = `Livre (Opcional, sem limite)`;
-
+                const max = parseInt(g.limite_selecao) || 1;
                 const obrigatorioBadge = g.obrigatorio ? '<span class="preview-badge obrig" style="margin-left:10px;">Obrigatório</span>' : '<span class="preview-badge opc" style="margin-left:10px;">Opcional</span>';
                 
                 const itensDoGrupo = window.itensPorGrupo[g.id] || [];
@@ -298,7 +291,7 @@
                 return `
                 <div class="grupo-item">
                     <div class="grupo-header">
-                        <div><span class="grupo-nome">${g.nome}</span>${obrigatorioBadge}<span class="preview-badge opc" style="margin-left:5px;">${limitesTexto}</span></div>
+                        <div><span class="grupo-nome">${g.nome}</span>${obrigatorioBadge}<span class="preview-badge opc" style="margin-left:5px;">Máximo: ${max}</span></div>
                         <div>
                             <button class="btn-edit" onclick="editarGrupo(${g.id})">✏️ Editar</button> 
                             <button class="btn-delete" onclick="excluirGrupo(${g.id})">🗑️ Excluir</button>
@@ -314,8 +307,8 @@
             window.grupoEditando = null; 
             document.getElementById('grupoModalTitulo').textContent = 'Novo Grupo'; 
             document.getElementById('grupoNome').value = ''; 
-            document.getElementById('grupoMinimo').value = '0'; 
-            document.getElementById('grupoLimite').value = '0'; 
+            document.getElementById('grupoObrigatorio').value = 'true'; 
+            document.getElementById('grupoLimite').value = '1'; 
             document.getElementById('grupoModal').style.display = 'block'; 
         }
         
@@ -324,8 +317,8 @@
             if (!window.grupoEditando) return; 
             document.getElementById('grupoModalTitulo').textContent = 'Editar Grupo'; 
             document.getElementById('grupoNome').value = window.grupoEditando.nome; 
-            document.getElementById('grupoMinimo').value = window.grupoEditando.minimo_selecao || 0; 
-            document.getElementById('grupoLimite').value = window.grupoEditando.limite_selecao || 0; 
+            document.getElementById('grupoObrigatorio').value = window.grupoEditando.obrigatorio ? 'true' : 'false'; 
+            document.getElementById('grupoLimite').value = window.grupoEditando.limite_selecao || 1; 
             document.getElementById('grupoModal').style.display = 'block'; 
         }
 
@@ -333,8 +326,8 @@
             const grupo = { 
                 tenant_id: 1, 
                 nome: document.getElementById('grupoNome').value, 
-                minimo_selecao: parseInt(document.getElementById('grupoMinimo').value) || 0, 
-                limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 0, 
+                obrigatorio: document.getElementById('grupoObrigatorio').value === 'true', 
+                limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1, 
                 ordem: 0 
             }; 
             const method = window.grupoEditando ? 'PUT' : 'POST'; 
@@ -357,7 +350,7 @@
         }
 
         // ==========================================
-        // VINCULAR ITEM NO GRUPO (AGORA LÊ DIRETO DO SERVIDOR)
+        // VINCULAR ITEM NO GRUPO E ATUALIZAR MODAL
         // ==========================================
         window.abrirVincularItem = async function(gId, gNome) { 
             window.grupoSelecionadoParaVinculo = gId; 
@@ -366,7 +359,6 @@
             const listaDiv = document.getElementById('itensDoGrupoAtualList');
             listaDiv.innerHTML = '<p style="color:#999; font-size:13px; text-align:center;">Atualizando lista...</p>';
 
-            // Busca do servidor na hora para ter certeza absoluta
             try {
                 const resG = await window.fetchDireto(`${API_URL}/grupo-complementos/${gId}/itens`);
                 if (resG.ok) window.itensPorGrupo[gId] = await resG.json();
@@ -610,13 +602,8 @@
                 const gId = cb.value; const g = window.grupos.find(x => String(x.id) === String(gId)); const its = window.itensPorGrupo[gId] || [];
                 if(!g) return;
                 
-                const min = parseInt(g.minimo_selecao) || 0;
-                const max = parseInt(g.limite_selecao) || 0;
-                let subText = '';
-                if (min > 0 && max > 0) subText = `Escolha de ${min} até ${max} opções`;
-                else if (min > 0) subText = `Escolha no mínimo ${min} opções`;
-                else if (max > 0) subText = `Escolha até ${max} opções`;
-                else subText = `Escolha livre`;
+                const max = parseInt(g.limite_selecao) || 1;
+                let subText = `Escolha até ${max} opções`;
 
                 let reqClass = g.obrigatorio ? 'obrig' : 'opc'; let reqText = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL';
                 
