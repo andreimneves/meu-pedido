@@ -1,18 +1,18 @@
 const express = require('express');
 const router = express.Router();
 
-// rotas de complementos
+// rotas
 const complementosRoutes = require('./routes/complementos');
 
 // registrar rotas
 router.use(complementosRoutes);
 
-// rota de teste
-router.get('/status', (req, res) => {
+// teste
+router.get('/status', (req,res)=>{
     res.json({
-        status: 'ok',
-        mensagem: 'API funcionando'
-    });
-});
+        status:"ok",
+        api:"rodando"
+    })
+})
 
 module.exports = router;

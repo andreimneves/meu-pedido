@@ -1,27 +1,38 @@
-const express = require('express');
-const controller = require('../controllers/complementoController');
+const express = require('express')
+const router = express.Router()
 
-const router = express.Router();
+const complementoController = require('../controllers/complementoController')
 
 // GRUPOS
-router.get('/grupos', controller.listarGrupos);
-router.post('/grupos', controller.criarGrupo);
-router.put('/grupos/:id', controller.atualizarGrupo);
-router.delete('/grupos/:id', controller.excluirGrupo);
+router.get('/grupos', complementoController.listarGrupos)
+router.post('/grupos', complementoController.criarGrupo)
+router.put('/grupos/:id', complementoController.atualizarGrupo)
+router.delete('/grupos/:id', complementoController.excluirGrupo)
 
 // ITENS
-router.get('/itens', controller.listarItens);
-router.post('/itens', controller.criarItem);
-router.put('/itens/:id', controller.atualizarItem);
-router.delete('/itens/:id', controller.excluirItem);
+router.get('/itens', complementoController.listarItens)
+router.post('/itens', complementoController.criarItem)
+router.put('/itens/:id', complementoController.atualizarItem)
+router.delete('/itens/:id', complementoController.excluirItem)
 
 // ITENS DO GRUPO
-router.get('/grupos/:id/itens', controller.listarItensDoGrupo);
-router.post('/grupos/:grupoId/itens/:itemId', controller.vincularItemAoGrupo);
-router.delete('/grupos/:grupoId/itens/:itemId', controller.removerItemDoGrupo);
+router.get('/grupos/:id/itens', complementoController.listarItensDoGrupo)
 
-// PRODUTO
-router.get('/produtos/:produtoId/grupos', controller.listarGruposDoProduto);
-router.put('/produtos/:produtoId/grupos', controller.vincularGruposProduto);
+router.post('/grupos/:grupoId/itens/:itemId',
+    complementoController.vincularItemAoGrupo
+)
 
-module.exports = router;
+router.delete('/grupos/:grupoId/itens/:itemId',
+    complementoController.removerItemDoGrupo
+)
+
+// GRUPOS DO PRODUTO
+router.get('/produtos/:produtoId/grupos',
+    complementoController.listarGruposDoProduto
+)
+
+router.put('/produtos/:produtoId/grupos',
+    complementoController.vincularGruposProduto
+)
+
+module.exports = router
