@@ -8,6 +8,7 @@ const produtoController = require('../controllers/produtoController');
 const categoriaController = require('../controllers/categoriaController');
 const pedidoController = require('../controllers/pedidoController');
 const complementoController = require('../controllers/complementoController');
+const horarioController = require('../controllers/horarioController'); // NOVO
 
 // Upload protegido (não quebra se faltar)
 try {
@@ -48,11 +49,8 @@ router.get('/cardapio/:subdominio', produtoController.cardapio);
 // PEDIDOS
 // ==========================================
 router.post('/pedidos', pedidoController.criarPedido);
-
 router.get('/pedidos/:subdominio', pedidoController.listarPedidos);
-
 router.get('/pedidos/:subdominio/:id', pedidoController.buscarPedido);
-
 router.put(
     '/pedidos/:subdominio/:id/status',
     pedidoController.atualizarStatus
@@ -67,26 +65,19 @@ router.get('/dashboard/:subdominio', pedidoController.dashboard);
 
 // GRUPOS
 router.get('/grupos-complementos', complementoController.listarGrupos);
-
 router.post('/grupos-complementos', complementoController.criarGrupo);
-
 router.put('/grupos-complementos/:id', complementoController.atualizarGrupo);
-
 router.delete('/grupos-complementos/:id', complementoController.excluirGrupo);
 
 // ITENS
 router.get('/complementos', complementoController.listarItens);
-
 router.post('/complementos', complementoController.criarItem);
-
 router.put('/complementos/:id', complementoController.atualizarItem);
-
 router.delete('/complementos/:id', complementoController.excluirItem);
 
 // ==========================================
 // ITENS DENTRO DO GRUPO
 // ==========================================
-
 router.get(
     '/grupo-complementos/:id/itens',
     complementoController.listarItensDoGrupo
@@ -105,7 +96,6 @@ router.delete(
 // ==========================================
 // GRUPOS DO PRODUTO
 // ==========================================
-
 router.get(
     '/produtos/:produtoId/grupos',
     complementoController.listarGruposDoProduto
@@ -126,5 +116,12 @@ router.put(
     '/complementos/produto/:produtoId/vincular',
     complementoController.vincularGruposProduto
 );
+
+// ==========================================
+// HORÁRIOS DA LOJA E DELIVERY (NOVO)
+// ==========================================
+router.get('/horarios', horarioController.listar);
+router.put('/horarios', horarioController.atualizar);
+router.get('/horarios/status', horarioController.verificarStatus);
 
 module.exports = router;

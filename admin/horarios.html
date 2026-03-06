@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horários - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .horarios-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        .coluna-loja { background: #fffafb; padding: 20px; border-radius: 10px; border: 1px solid #ffcdd2; }
+        .coluna-delivery { background: #f8fbff; padding: 20px; border-radius: 10px; border: 1px solid #bbdefb; }
+        .horario-card { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .dia-nome { font-weight: bold; width: 80px; }
+        .inputs-hora input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .header-acoes { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        <h1>🍽️ Meu Pedido - Painel Administrativo</h1>
+        <div class="user-info">
+            <span id="admin-user-name">👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="config.html">⚙️ Configurações</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="complementos.html">🧩 Complementos</a></li>
+                <li><a href="horarios.html" class="active">🕒 Horários</a></li>
+            </ul>
+        </div>
+        
+        <div class="admin-content">
+            <div class="header-acoes">
+                <h1>🕒 Configuração de Horários</h1>
+                <button class="btn-save" onclick="salvarTodosHorarios()" style="width: auto; padding: 10px 30px;">💾 Salvar Tudo</button>
+            </div>
+            
+            <p style="color: #666; margin-bottom: 20px;">Defina os horários de funcionamento. Se a loja fechar para o almoço, você pode desativar o botão "Aberto" manualmente quando precisar.</p>
+            
+            <div class="horarios-container">
+                <div class="coluna-loja">
+                    <h3 style="color: #c62828; text-align: center; margin-bottom: 15px;">🏪 Retirada na Loja</h3>
+                    <div id="lista-loja"><div class="loading">Carregando...</div></div>
+                </div>
+
+                <div class="coluna-delivery">
+                    <h3 style="color: #1565c0; text-align: center; margin-bottom: 15px;">🛵 Delivery</h3>
+                    <div id="lista-delivery"><div class="loading">Carregando...</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+            ? 'http://localhost:10000/api'
+            : 'https://meu-pedido-backend.onrender.com/api';
+
+        if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
+        window.logout = function() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
+
+        async function carregarHorarios() {
+            try {
+                const res = await fetch(`${API_URL}/horarios`);
+                const dados = await res.json();
+                
+                const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                const gerarCards = (lista) => lista.map(h => `
+                    <div class="horario-card" data-id="${h.id}">
+                        <div class="dia-nome">${dias[h.dia_semana]}</div>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="h-aberto" ${h.aberto ? 'checked' : ''}> Aberto
+                        </label>
+                        <div class="inputs-hora">
+                            <input type="time" class="h-abre" value="${h.abertura.slice(0,5)}"> às
+                            <input type="time" class="h-fecha" value="${h.fechamento.slice(0,5)}">
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('lista-loja').innerHTML = gerarCards(dados.filter(d => d.tipo === 'loja'));
+                document.getElementById('lista-delivery').innerHTML = gerarCards(dados.filter(d => d.tipo === 'delivery'));
+            } catch (e) {
+                console.error(e);
+                document.getElementById('lista-loja').innerHTML = '<p style="color:red">Erro ao carregar.</p>';
+            }
+        }
+
+        window.salvarTodosHorarios = async function() {
+            const cards = document.querySelectorAll('.horario-card');
+            const horarios = Array.from(cards).map(c => ({
+                id: c.dataset.id,
+                aberto: c.querySelector('.h-aberto').checked,
+                abertura: c.querySelector('.h-abre').value,
+                fechamento: c.querySelector('.h-fecha').value
+            }));
+
+            try {
+                const btn = document.querySelector('.btn-save');
+                btn.innerHTML = 'Salvando...';
+                
+                const res = await fetch(`${API_URL}/horarios`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ horarios })
+                });
+
+                if(res.ok) alert("✅ Horários salvos com sucesso!");
+                else alert("❌ Falha ao salvar os horários.");
+                
+                btn.innerHTML = '💾 Salvar Tudo';
+            } catch (e) {
+                alert("Erro de conexão com o servidor.");
+            }
+        }
+
+        window.onload = carregarHorarios;
+    </script>
+</body>
+</html>
