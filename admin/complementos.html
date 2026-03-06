@@ -324,16 +324,12 @@
 
         window.salvarGrupo = async function() { 
             const obrigatorio = document.getElementById('grupoObrigatorio').value === 'true';
-            // Se for obrigatório o mínimo é 1, se não é 0. O Banco guarda essa informação correta agora.
-            const minimo_selecao = obrigatorio ? 1 : 0;
             
             const grupo = { 
                 tenant_id: 1, 
                 nome: document.getElementById('grupoNome').value, 
                 obrigatorio: obrigatorio,
-                minimo_selecao: minimo_selecao, 
-                limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1, 
-                ordem: 0 
+                limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1
             }; 
             const method = window.grupoEditando ? 'PUT' : 'POST'; 
             const url = window.grupoEditando ? `${API_URL}/grupos-complementos/${window.grupoEditando.id}` : `${API_URL}/grupos-complementos`; 
