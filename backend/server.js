@@ -8,32 +8,31 @@ const app = express();
 console.log("🚀 Iniciando servidor...");
 console.log("📂 Diretório atual:", __dirname);
 console.log("🌐 Ambiente:", process.env.NODE_ENV || 'development');
-console.log("📊 Configurações do banco:");
-console.log("   DB_USER:", process.env.DB_USER);
-console.log("   DB_HOST:", process.env.DB_HOST);
-console.log("   DB_NAME:", process.env.DB_NAME);
-console.log("   DB_PORT:", process.env.DB_PORT);
 
-// Configurações básicas
+// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Servir imagens
+// Servir uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ==========================================
-// A MÁGICA: O ".js" FORÇA A IGNORAR A PASTA VELHA
-// ==========================================
+// Rotas
 try {
-    const rotas = require('./src/routes.js'); // <-- AQUI ESTÁ A CORREÇÃO!
+    const rotas = require('./src/routes');
     app.use('/api', rotas);
-    console.log("✅ Rotas carregadas com sucesso!");
-} catch (error) {
-    console.error("❌ Erro ao carregar as rotas:", error.message);
+    console.log("✅ Rotas carregadas!");
+} catch (err) {
+    console.error("❌ Erro ao carregar rotas:", err);
 }
 
-// Ligar o Servidor
+// Health check
+app.get('/', (req, res) => {
+    res.json({ status: 'API rodando' });
+});
+
+// Porta
 const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
-    console.log(`✅ Servidor rodando com sucesso na porta ${PORT}`);
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
