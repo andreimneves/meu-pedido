@@ -3,48 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Complementos - Meu Pedido</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; flex-wrap: wrap; }
-        .tab-btn { padding: 10px 15px; background: none; border: none; cursor: pointer; font-size: 14px; color: #666; border-radius: 5px 5px 0 0; transition: all 0.3s; font-weight: 500;}
-        .tab-btn:hover { background: #f0f0f0; color: #C83232; }
-        .tab-btn.active { background: #C83232; color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card h3 { margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 10px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
         
-        .grupo-item { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
-        .grupo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        .grupo-nome { font-weight: bold; font-size: 16px; color: #333;}
-        .complemento-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px dashed #ddd; background: white; border-radius: 4px; margin-bottom: 5px; }
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-radius: 5px 5px 0 0;
+            transition: all 0.3s;
+        }
         
-        .btn-ordenar { background: #fff; border: 1px solid #ddd; padding: 5px; border-radius: 4px; cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s;}
-        .btn-ordenar:hover { background: #f0f0f0; border-color: #ccc; }
-        .grupo-vinculo-box { display: flex; align-items: center; gap: 15px; background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:10px; border:1px solid #eee; transition: 0.3s; }
-        .grupo-vinculo-box:hover { border-color: #ccc; }
-        .celular-preview { width: 320px; height: 600px; border: 12px solid #333; border-radius: 30px; background: white; margin: 0 auto; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
-        .celular-topo { background: #C83232; color: white; padding: 15px; text-align: center; font-weight: 600; font-size: 14px;}
-        .celular-conteudo { flex: 1; overflow-y: auto; padding-bottom: 20px; background: #f5f5f5;}
-        .preview-produto-nome { padding: 20px 15px; font-size: 18px; font-weight: bold; color: #333; background: white; border-bottom: 1px solid #eee; }
-        .preview-grupo { background: #fff; border-bottom: 1px solid #eee; margin-top: 10px;}
-        .preview-grupo-header { padding: 15px; background: #fff; border-bottom: 1px solid #f0f0f0; }
-        .preview-grupo-titulo { font-weight: 700; font-size: 15px; color: #333; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .preview-badge { font-size: 9px; padding: 3px 6px; border-radius: 4px; color: white; font-weight: bold;}
-        .preview-badge.obrig { background: #333; }
-        .preview-badge.opc { background: #999; }
-        .preview-grupo-sub { font-size: 12px; color: #666; }
-        .preview-item { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f9f9f9; }
-        .preview-item-info { display: flex; flex-direction: column; }
-        .preview-item-nome { font-size: 14px; color: #333; }
-        .preview-item-preco { font-size: 13px; color: #C83232; font-weight: 600; margin-top: 2px; }
-        .preview-checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #ddd; }
+        .tab-btn:hover {
+            background: #f0f0f0;
+            color: #C83232;
+        }
         
-        .switch-container { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .switch-input { width: 18px; height: 18px; accent-color: #4CAF50; cursor: pointer; }
+        .tab-btn.active {
+            background: #C83232;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .card h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+        }
+        
+        .grupo-item {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        
+        .grupo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .grupo-nome {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .badge {
+            background: #4CAF50;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        
+        .badge.obrigatorio {
+            background: #C83232;
+        }
+        
+        .complemento-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .complemento-item:last-child {
+            border-bottom: none;
+        }
+        
+        .complemento-preco {
+            color: #C83232;
+            font-weight: bold;
+        }
+        
+        .acoes-grupo {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .grupos-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        /* Notificações */
+        .notificacao {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .notificacao.sucesso {
+            background: #4CAF50;
+        }
+        
+        .notificacao.erro {
+            background: #f44336;
+        }
+        
+        .notificacao.info {
+            background: #2196F3;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -60,623 +204,730 @@
         <div class="admin-sidebar">
             <ul>
                 <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
                 <li><a href="pedidos.html">📋 Pedidos</a></li>
                 <li><a href="config.html">⚙️ Configurações</a></li>
-                <li><a href="categorias.html">📁 Categorias</a></li>
-                <li><a href="produtos.html">📦 Produtos</a></li>
                 <li><a href="complementos.html" class="active">🧩 Complementos</a></li>
             </ul>
         </div>
         
         <div class="admin-content">
-            <h1>🧩 Configurar Complementos</h1>
+            <h1>🧩 Gerenciar Complementos</h1>
             
             <div class="tabs">
-                <button class="tab-btn active" onclick="abrirTab('grupos')">1️⃣ Criar Grupos</button>
-                <button class="tab-btn" onclick="abrirTab('itens')">2️⃣ Estoque de Itens</button>
-                <button class="tab-btn" onclick="abrirTab('vinculos')">3️⃣ Montar no Produto</button>
-                <button class="tab-btn" onclick="abrirTab('configurados')">4️⃣ Produtos Salvos</button>
+                <button class="tab-btn active" onclick="abrirTab('grupos')">📁 Grupos</button>
+                <button class="tab-btn" onclick="abrirTab('itens')">🧩 Itens</button>
+                <button class="tab-btn" onclick="abrirTab('vinculos')">🔗 Vincular a Produtos</button>
             </div>
             
+            <!-- TAB GRUPOS -->
             <div id="tab-grupos" class="tab-content active">
                 <div class="card">
                     <h3>
                         <span>📁 Grupos de Complementos</span>
-                        <button class="btn-add" onclick="abrirModalGrupo()" style="margin-left: auto; width: auto;">+ Criar Novo Grupo</button>
+                        <button class="btn-add" onclick="abrirModalGrupo()" style="margin-left: auto; width: auto;">+ Novo Grupo</button>
                     </h3>
-                    <div id="gruposLista"><div class="loading">Carregando grupos...</div></div>
+                    
+                    <div id="gruposLista" class="grupos-container">
+                        <div class="loading">Carregando grupos...</div>
+                    </div>
                 </div>
             </div>
             
+            <!-- TAB ITENS -->
             <div id="tab-itens" class="tab-content">
                 <div class="card">
                     <h3>
-                        <span>🧩 Todas as Opções (Estoque)</span>
-                        <button class="btn-add" onclick="abrirModalItem()" style="margin-left: auto; width: auto;">+ Cadastrar Nova Opção</button>
+                        <span>🧩 Itens de Complemento</span>
+                        <button class="btn-add" onclick="abrirModalItem()" style="margin-left: auto; width: auto;">+ Novo Item</button>
                     </h3>
-                    <p style="color:#666; font-size:13px; margin-bottom:15px;">Faltou um ingrediente hoje? Desmarque a caixinha <strong>"Ativo"</strong> para pausar a venda dele rapidamente!</p>
-                    <div id="itensLista"><div class="loading">Carregando itens...</div></div>
+                    
+                    <div id="itensLista">
+                        <div class="loading">Carregando itens...</div>
+                    </div>
                 </div>
             </div>
             
+            <!-- TAB VÍNCULOS -->
             <div id="tab-vinculos" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <h3>🔗 Selecione o Produto</h3>
-                        <div class="form-group" style="display: flex; gap: 10px;">
-                            <select id="produtoSelect" class="form-control" onchange="carregarVinculosProduto()" style="flex: 1;">
+                <div class="card">
+                    <h3>🔗 Vincular Grupos a Produtos</h3>
+                    
+                    <div class="grid-2" style="margin-bottom: 20px;">
+                        <div>
+                            <label>Selecione o Produto</label>
+                            <select id="produtoSelect" class="form-control" onchange="carregarVinculosProduto()">
                                 <option value="">Carregando produtos...</option>
                             </select>
-                            <button type="button" class="btn-save" onclick="carregarVinculosProduto()" style="margin: 0; width: auto; padding: 0 20px; font-size: 14px; background: #333;">🔄 Buscar</button>
-                        </div>
-                        <div id="vinculosContainer">
-                            <p style="color:#999; text-align:center; padding:30px;">Selecione um produto acima para escolher os grupos dele.</p>
-                        </div>
-                        <button id="btnSalvarMontagem" class="btn-save" onclick="salvarVinculos()" style="margin-top:20px; display:none;">💾 Salvar Montagem</button>
-                    </div>
-                    <div>
-                        <h3 style="text-align: center; margin-bottom: 15px; color: #C83232;">👀 Como o cliente vai ver no App:</h3>
-                        <div class="celular-preview">
-                            <div class="celular-topo">Detalhes do Item</div>
-                            <div class="celular-conteudo" id="mobilePreviewContent">
-                                <div style="text-align:center; margin-top:50%; color:#999;">📱 Selecione um produto para simular.</div>
-                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="tab-configurados" class="tab-content">
-                <div class="card">
-                    <h3><span>📋 Produtos com Complementos Salvos</span></h3>
-                    <div id="produtosConfiguradosLista"><div class="loading">Buscando configurações ativas...</div></div>
+                    
+                    <div id="vinculosContainer">
+                        <p style="color:#999; text-align:center; padding:40px;">Selecione um produto para configurar os complementos</p>
+                    </div>
+                    
+                    <button class="btn-save" onclick="salvarVinculos()" style="margin-top:20px;">💾 Salvar Vínculos</button>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- MODAL GRUPO -->
     <div id="grupoModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharModal('grupoModal')">&times;</span>
             <h2 id="grupoModalTitulo">Novo Grupo</h2>
+            
             <form onsubmit="event.preventDefault(); salvarGrupo();">
                 <div class="form-group">
-                    <label>Título para o cliente (Ex: "Acompanhamentos")</label>
-                    <input type="text" id="grupoNome" required>
+                    <label>Nome do Grupo</label>
+                    <input type="text" id="grupoNome" class="form-control" required>
                 </div>
+                
+                <div class="form-group">
+                    <label>Descrição (opcional)</label>
+                    <textarea id="grupoDescricao" class="form-control" rows="2"></textarea>
+                </div>
+                
                 <div class="grid-2">
                     <div class="form-group">
-                        <label>Regra de Escolha</label>
-                        <select id="grupoObrigatorio" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                            <option value="true">Obrigatório (Cliente tem que escolher algo)</option>
-                            <option value="false">Opcional (Cliente escolhe se quiser)</option>
-                        </select>
+                        <label>Limite de Seleção</label>
+                        <input type="number" id="grupoLimite" class="form-control" value="1" min="1" max="10">
+                        <small style="color:#666;">Quantos itens podem ser selecionados</small>
                     </div>
+                    
                     <div class="form-group">
-                        <label>Máximo de Opções Permitidas</label>
-                        <input type="number" id="grupoLimite" value="1" min="1" max="50">
+                        <label>Ordem</label>
+                        <input type="number" id="grupoOrdem" class="form-control" value="0">
                     </div>
                 </div>
-                <button type="submit" class="btn-save">Salvar Grupo</button>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="grupoObrigatorio">
+                    <label for="grupoObrigatorio">Grupo obrigatório (cliente precisa selecionar)</label>
+                </div>
+                
+                <button type="submit" class="btn-save" style="margin-top:20px;">Salvar Grupo</button>
             </form>
         </div>
     </div>
-
+    
+    <!-- MODAL ITEM -->
     <div id="itemModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharModal('itemModal')">&times;</span>
-            <h2 id="itemModalTitulo">Nova Opção</h2>
+            <h2 id="itemModalTitulo">Novo Item</h2>
+            
             <form onsubmit="event.preventDefault(); salvarItem();">
                 <div class="form-group">
-                    <label>Nome (Ex: Leite Ninho)</label>
-                    <input type="text" id="itemNome" required>
+                    <label>Nome do Item</label>
+                    <input type="text" id="itemNome" class="form-control" required>
                 </div>
+                
                 <div class="form-group">
-                    <label>Preço Adicional (R$)</label>
-                    <input type="number" id="itemPreco" step="0.01" min="0" value="0.00" required>
+                    <label>Descrição (opcional)</label>
+                    <textarea id="itemDescricao" class="form-control" rows="2"></textarea>
                 </div>
-                <div class="form-group switch-container" style="margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
-                    <input type="checkbox" id="itemDisponivel" class="switch-input" checked>
-                    <label for="itemDisponivel" style="margin:0; cursor:pointer; font-weight:bold;">Opção Disponível para Venda</label>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Preço (R$)</label>
+                        <input type="number" id="itemPreco" class="form-control" step="0.01" min="0" value="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="itemCategoria" class="form-control">
+                            <option value="massa">Massa</option>
+                            <option value="borda">Borda</option>
+                            <option value="sabor">Sabor</option>
+                            <option value="acompanhamento">Acompanhamento</option>
+                            <option value="bebida">Bebida</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
                 </div>
-                <button type="submit" class="btn-save" style="margin-top: 15px;">Salvar Opção</button>
+                
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Ordem</label>
+                        <input type="number" id="itemOrdem" class="form-control" value="0">
+                    </div>
+                    
+                    <div class="checkbox-group" style="align-items: center;">
+                        <input type="checkbox" id="itemDisponivel" checked>
+                        <label for="itemDisponivel">Disponível</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-save" style="margin-top:20px;">Salvar Item</button>
             </form>
         </div>
     </div>
-
+    
+    <!-- MODAL VINCULAR ITEM AO GRUPO -->
     <div id="vincularItemModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="fecharModal('vincularItemModal')">&times;</span>
-            <h2>Vincular à: <span id="vincularGrupoNomeTxt" style="color:#C83232;"></span></h2>
+            <h2>Vincular Item ao Grupo</h2>
             
-            <div class="form-group" style="margin-top: 20px;">
-                <label>1. Escolha a opção no estoque e clique Adicionar</label>
-                <div style="display:flex; gap:10px;">
-                    <select id="vincularItemSelect" class="form-control" style="flex:1;">
-                        <option value="">Carregando opções...</option>
-                    </select>
-                    <button class="btn-save" style="margin:0; padding:10px; width:auto;" id="btnAddVincular" onclick="salvarVinculoItem()">+ Adicionar</button>
-                </div>
+            <div class="form-group">
+                <label>Grupo</label>
+                <input type="text" id="vincularGrupoNome" class="form-control" readonly disabled style="background:#f5f5f5;">
             </div>
-
-            <div style="margin-top: 30px;">
-                <h3 style="font-size: 15px; color:#333; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">📋 Opções já salvas neste grupo:</h3>
-                <div id="itensDoGrupoAtualList" style="max-height: 300px; overflow-y: auto;">
-                    <p style="text-align:center;">Carregando...</p>
-                </div>
+            
+            <div class="form-group">
+                <label>Item</label>
+                <select id="vincularItemSelect" class="form-control">
+                    <option value="">Selecione um item...</option>
+                </select>
             </div>
+            
+            <div class="form-group">
+                <label>Ordem no grupo</label>
+                <input type="number" id="vincularOrdem" class="form-control" value="0">
+            </div>
+            
+            <button class="btn-save" onclick="salvarVinculoItem()">Vincular Item</button>
         </div>
     </div>
 
     <script>
-        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
-            ? 'http://localhost:10000/api'
-            : 'https://meu-pedido-backend.onrender.com/api';
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const SUBDOMINIO = 'dlcrepes';
         
-        window.grupos = []; window.itens = []; window.produtos = [];
-        window.grupoEditando = null; window.itemEditando = null; window.grupoSelecionadoParaVinculo = null;
-        window.itensPorGrupo = {};
+        // Variáveis globais
+        let grupos = [];
+        let itens = [];
+        let produtos = [];
+        let grupoSelecionado = null;
+        let itemEditando = null;
+        let grupoEditando = null;
 
-        if (!localStorage.getItem('adminLogado')) window.location.href = 'index.html';
-        window.logout = function() { localStorage.removeItem('adminLogado'); window.location.href = 'index.html'; }
-        window.fecharModal = function(id) { document.getElementById(id).style.display = 'none'; }
-        
-        window.mostrarNotificacao = function(mensagem, tipo = 'sucesso') {
+        // Verificar login
+        if (!localStorage.getItem('adminLogado')) {
+            window.location.href = 'index.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('adminLogado');
+            window.location.href = 'index.html';
+        }
+
+        // ===== NOTIFICAÇÕES =====
+        function mostrarNotificacao(mensagem, tipo = 'sucesso') {
             const notificacao = document.createElement('div');
             notificacao.className = `notificacao ${tipo}`;
             notificacao.textContent = mensagem;
-            notificacao.style.cssText = `position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 5px; color: white; font-weight: 500; z-index: 9999; background: ${tipo === 'sucesso' ? '#4CAF50' : (tipo === 'aviso' ? '#ff9800' : '#f44336')}; box-shadow: 0 4px 12px rgba(0,0,0,0.15);`;
             document.body.appendChild(notificacao);
-            setTimeout(() => notificacao.remove(), 4000);
+            
+            setTimeout(() => {
+                notificacao.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (notificacao.parentNode) notificacao.remove();
+                }, 300);
+            }, 3000);
         }
 
-        window.fetchDireto = async function(url, options = {}) {
-            if(!options.headers) options.headers = {};
-            options.cache = 'no-store'; 
-            return fetch(url, options);
-        };
-
-        window.abrirTab = async function(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`button[onclick="abrirTab('${tab}')"]`).classList.add('active');
+        // ===== TABS =====
+        function abrirTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
             document.getElementById(`tab-${tab}`).classList.add('active');
             
-            if (tab === 'grupos') window.carregarGrupos();
-            if (tab === 'itens') window.carregarItens();
-            if (tab === 'vinculos') { 
-                document.getElementById('produtoSelect').innerHTML = '<option value="">Carregando produtos...</option>';
-                await window.carregarGrupos(); window.carregarProdutosSelect(); 
+            if (tab === 'grupos') carregarGrupos();
+            if (tab === 'itens') carregarItens();
+            if (tab === 'vinculos') {
+                carregarProdutos();
+                carregarGruposParaVinculo();
             }
-            if (tab === 'configurados') { window.carregarProdutosConfigurados(); }
         }
 
-        // ==========================================
-        // ABA 1: GRUPOS E ITENS
-        // ==========================================
-        window.carregarGrupos = async function() {
+        function fecharModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ===== GRUPOS =====
+        async function carregarGrupos() {
             try {
-                const res = await window.fetchDireto(`${API_URL}/grupos-complementos`);
-                const dados = await res.json();
-                window.grupos = Array.isArray(dados) ? dados : [];
-                
-                for (let i = 0; i < window.grupos.length; i++) {
-                    try {
-                        let resItens = await window.fetchDireto(`${API_URL}/grupo-complementos/${window.grupos[i].id}/itens`);
-                        window.itensPorGrupo[window.grupos[i].id] = resItens.ok ? await resItens.json() : [];
-                    } catch(e) { window.itensPorGrupo[window.grupos[i].id] = []; }
-                }
-                if (document.getElementById('tab-grupos').classList.contains('active')) window.exibirGrupos();
-            } catch(e) { document.getElementById('gruposLista').innerHTML = '<p style="color:red; text-align:center;">Servidor indisponível.</p>'; }
+                const response = await fetch(`${API_URL}/grupos-complementos?tenant_id=1`);
+                grupos = await response.json();
+                exibirGrupos();
+            } catch (error) {
+                console.error('Erro ao carregar grupos:', error);
+                document.getElementById('gruposLista').innerHTML = '<p style="color:red">Erro ao carregar grupos</p>';
+            }
         }
 
-        window.exibirGrupos = function() {
+        function exibirGrupos() {
             const container = document.getElementById('gruposLista');
-            if (window.grupos.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Nenhum grupo criado.</p>';
             
-            container.innerHTML = window.grupos.map(g => {
-                const max = parseInt(g.limite_selecao) || 1;
-                const obrigatorioBadge = g.obrigatorio ? '<span class="preview-badge obrig" style="margin-left:10px;">Obrigatório</span>' : '<span class="preview-badge opc" style="margin-left:10px;">Opcional</span>';
-                
-                const itensDoGrupo = window.itensPorGrupo[g.id] || [];
-                let htmlItens = itensDoGrupo.map(item => `
-                    <div class="complemento-item">
-                        <span style="${item.disponivel === false ? 'text-decoration: line-through; color: #999;' : ''}">${item.nome} ${item.disponivel === false ? '(Pausado)' : ''}</span>
-                        <span><strong style="color:${item.preco > 0 ? '#C83232' : '#4CAF50'}">${item.preco > 0 ? '+ R$ '+parseFloat(item.preco).toFixed(2) : 'Grátis'}</strong>
-                        <button class="btn-delete" style="padding:2px 6px; margin-left:10px;" onclick="removerItemDoGrupo(${g.id}, ${item.id})">X</button></span>
-                    </div>`).join('');
-                
-                if(itensDoGrupo.length === 0) htmlItens = '<p style="color:#999; font-size:13px; font-style:italic;">Nenhuma opção colocada.</p>';
-                
-                return `
-                <div class="grupo-item">
-                    <div class="grupo-header">
-                        <div><span class="grupo-nome">${g.nome}</span>${obrigatorioBadge}<span class="preview-badge opc" style="margin-left:5px;">Máximo: ${max}</span></div>
-                        <div>
-                            <button class="btn-edit" onclick="editarGrupo(${g.id})">✏️ Editar</button> 
-                            <button class="btn-delete" onclick="excluirGrupo(${g.id})">🗑️ Excluir</button>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:10px;">${htmlItens}</div>
-                    <button class="btn-add" style="padding:5px 10px; font-size:12px; margin:0;" onclick="abrirVincularItem(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">+ Adicionar/Ver opções neste grupo</button>
-                </div>`;
-            }).join('');
-        }
-
-        window.abrirModalGrupo = function() { 
-            window.grupoEditando = null; 
-            document.getElementById('grupoModalTitulo').textContent = 'Novo Grupo'; 
-            document.getElementById('grupoNome').value = ''; 
-            document.getElementById('grupoObrigatorio').value = 'true'; 
-            document.getElementById('grupoLimite').value = '1'; 
-            document.getElementById('grupoModal').style.display = 'block'; 
-        }
-        
-        window.editarGrupo = function(id) { 
-            window.grupoEditando = window.grupos.find(g => g.id == id); 
-            if (!window.grupoEditando) return; 
-            document.getElementById('grupoModalTitulo').textContent = 'Editar Grupo'; 
-            document.getElementById('grupoNome').value = window.grupoEditando.nome; 
-            document.getElementById('grupoObrigatorio').value = window.grupoEditando.obrigatorio ? 'true' : 'false'; 
-            document.getElementById('grupoLimite').value = window.grupoEditando.limite_selecao || 1; 
-            document.getElementById('grupoModal').style.display = 'block'; 
-        }
-
-        window.salvarGrupo = async function() { 
-            const obrigatorio = document.getElementById('grupoObrigatorio').value === 'true';
-            
-            const grupo = { 
-                tenant_id: 1, 
-                nome: document.getElementById('grupoNome').value, 
-                obrigatorio: obrigatorio,
-                limite_selecao: parseInt(document.getElementById('grupoLimite').value) || 1
-            }; 
-            const method = window.grupoEditando ? 'PUT' : 'POST'; 
-            const url = window.grupoEditando ? `${API_URL}/grupos-complementos/${window.grupoEditando.id}` : `${API_URL}/grupos-complementos`; 
-            try { 
-                const res = await window.fetchDireto(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(grupo) }); 
-                if(res.ok) { window.fecharModal('grupoModal'); window.mostrarNotificacao('Grupo salvo!', 'sucesso'); window.carregarGrupos(); } 
-                else { window.mostrarNotificacao('Erro ao salvar', 'erro'); } 
-            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
-        }
-
-        window.excluirGrupo = async function(id) { 
-            if(confirm('Excluir este grupo removerá ele de todos os produtos! Continuar?')) { 
-                try { 
-                    const res = await window.fetchDireto(`${API_URL}/grupos-complementos/${id}`, { method: 'DELETE' }); 
-                    if(res.ok) { window.mostrarNotificacao('Grupo excluído!', 'sucesso'); window.carregarGrupos(); } 
-                    else { window.mostrarNotificacao('Erro ao excluir.', 'erro'); } 
-                } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
-            } 
-        }
-
-        // ==========================================
-        // VINCULAR ITEM NO GRUPO E ATUALIZAR MODAL
-        // ==========================================
-        window.abrirVincularItem = async function(gId, gNome) { 
-            window.grupoSelecionadoParaVinculo = gId; 
-            document.getElementById('vincularGrupoNomeTxt').textContent = gNome; 
-            
-            const listaDiv = document.getElementById('itensDoGrupoAtualList');
-            listaDiv.innerHTML = '<p style="color:#999; font-size:13px; text-align:center;">Atualizando lista...</p>';
-
-            try {
-                const resG = await window.fetchDireto(`${API_URL}/grupo-complementos/${gId}/itens`);
-                if (resG.ok) window.itensPorGrupo[gId] = await resG.json();
-            } catch(e){}
-
-            const itensDoGrupo = window.itensPorGrupo[gId] || [];
-            if (itensDoGrupo.length === 0) {
-                listaDiv.innerHTML = '<p style="color:#999; font-size:13px; text-align:center;">Nenhuma opção cadastrada neste grupo ainda.</p>';
-            } else {
-                listaDiv.innerHTML = itensDoGrupo.map(item => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:#f9f9f9; border-radius:5px; border: 1px solid #eee; margin-bottom:8px;">
-                        <span><strong>${item.nome}</strong> <span style="color:#C83232; margin-left:10px; font-size:13px;">${item.preco > 0 ? '+ R$ '+parseFloat(item.preco).toFixed(2) : 'Grátis'}</span></span>
-                        <button class="btn-delete" style="padding:6px 12px; font-size:12px; background:#f44336; border:none; border-radius:4px; color:white; cursor:pointer;" onclick="removerItemDoGrupo(${gId}, ${item.id})">Remover</button>
-                    </div>
-                `).join('');
-            }
-
-            if(window.itens.length === 0) { 
-                const res = await window.fetchDireto(`${API_URL}/complementos`); 
-                if(res.ok) window.itens = await res.json(); 
-            } 
-            document.getElementById('vincularItemSelect').innerHTML = '<option value="">Selecione para adicionar...</option>' + window.itens.map(i => `<option value="${i.id}">${i.nome} - R$ ${parseFloat(i.preco).toFixed(2)}</option>`).join(''); 
-            
-            document.getElementById('vincularItemModal').style.display = 'block'; 
-        }
-
-        window.salvarVinculoItem = async function() { 
-            const itemId = document.getElementById('vincularItemSelect').value; 
-            if(!itemId) return window.mostrarNotificacao('Selecione uma opção!', 'erro'); 
-            
-            const btn = document.getElementById('btnAddVincular');
-            btn.innerHTML = '⏳...'; btn.disabled = true;
-
-            try { 
-                const res = await window.fetchDireto(`${API_URL}/grupos/${window.grupoSelecionadoParaVinculo}/itens/${itemId}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) }); 
-                
-                if(res.ok) { 
-                    window.mostrarNotificacao('Opção Adicionada!', 'sucesso'); 
-                    await window.carregarGrupos(); 
-                    window.abrirVincularItem(window.grupoSelecionadoParaVinculo, document.getElementById('vincularGrupoNomeTxt').textContent);
-                } 
-                else { 
-                    const err = await res.json().catch(()=>({erro: "Erro desconhecido"}));
-                    window.mostrarNotificacao(err.erro, 'erro'); 
-                } 
-            } catch(e) { window.mostrarNotificacao('Erro de conexão com servidor', 'erro'); } 
-            finally { btn.innerHTML = '+ Adicionar'; btn.disabled = false; }
-        }
-
-        window.removerItemDoGrupo = async function(gId, iId) { 
-            if(confirm('Tem certeza que deseja remover esta opção do grupo?')) { 
-                try { 
-                    await window.fetchDireto(`${API_URL}/grupos/${gId}/itens/${iId}`, { method: 'DELETE' }); 
-                    window.mostrarNotificacao('Opção removida', 'sucesso'); 
-                    await window.carregarGrupos(); 
-                    
-                    if (document.getElementById('vincularItemModal').style.display === 'block' && window.grupoSelecionadoParaVinculo === gId) {
-                        window.abrirVincularItem(gId, document.getElementById('vincularGrupoNomeTxt').textContent);
-                    }
-                } catch(e) { window.mostrarNotificacao('Erro ao remover', 'erro'); } 
-            } 
-        }
-
-        // ==========================================
-        // ABA 2: ITENS ESTOQUE E DEMAIS FUNÇÕES...
-        // ==========================================
-        window.carregarItens = async function() { 
-            try { 
-                const res = await window.fetchDireto(`${API_URL}/complementos`); 
-                const dados = await res.json(); 
-                window.itens = Array.isArray(dados) ? dados : [];
-                
-                const container = document.getElementById('itensLista'); 
-                if(window.itens.length === 0) return container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum item criado.</p>'; 
-                
-                container.innerHTML = `<table style="width:100%; border-collapse: collapse;"><tr style="background:#f5f5f5;"><th style="padding:10px; text-align:center; width:60px;">Ativo</th><th style="padding:10px; text-align:left;">Nome</th><th style="padding:10px; text-align:left;">Preço</th><th style="padding:10px;">Ações</th></tr>` + window.itens.map(i => { 
-                    const isDisp = i.disponivel !== false; 
-                    return `<tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:10px; text-align:center;"><input type="checkbox" class="switch-input" ${isDisp ? 'checked' : ''} onchange="toggleDisponibilidadeItem(${i.id}, this.checked)"></td>
-                        <td style="padding:10px; ${!isDisp ? 'text-decoration: line-through; color: #999;' : ''}">${i.nome} ${!isDisp ? '<span style="color:#C83232; font-size:11px;">(Pausado)</span>' : ''}</td>
-                        <td style="padding:10px; color:#C83232; font-weight:bold;">R$ ${parseFloat(i.preco).toFixed(2)}</td>
-                        <td style="padding:10px; text-align:center;">
-                            <button class="btn-edit" onclick="editarItem(${i.id})">✏️ Editar</button> 
-                            <button class="btn-delete" onclick="excluirItem(${i.id})">🗑️ Excluir</button>
-                        </td>
-                    </tr>`; 
-                }).join('') + `</table>`; 
-            } catch(e) { document.getElementById('itensLista').innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar itens.</p>'; } 
-        }
-
-        window.toggleDisponibilidadeItem = async function(id, isChecked) { 
-            const item = window.itens.find(i => i.id == id); 
-            if (!item) return; 
-            item.disponivel = isChecked; 
-            try { 
-                await window.fetchDireto(`${API_URL}/complementos/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(item) }); 
-                window.mostrarNotificacao(isChecked ? '✅ Item Disponível' : '⏸️ Item Pausado', isChecked ? 'sucesso' : 'aviso'); 
-                window.carregarItens(); 
-            } catch (e) { window.carregarItens(); } 
-        }
-
-        window.abrirModalItem = function() { window.itemEditando = null; document.getElementById('itemModalTitulo').textContent = 'Nova Opção'; document.getElementById('itemNome').value = ''; document.getElementById('itemPreco').value = '0.00'; document.getElementById('itemDisponivel').checked = true; document.getElementById('itemModal').style.display = 'block'; }
-        
-        window.editarItem = function(id) { 
-            window.itemEditando = window.itens.find(i => i.id == id); 
-            if(!window.itemEditando) return; 
-            document.getElementById('itemModalTitulo').textContent = 'Editar Opção'; 
-            document.getElementById('itemNome').value = window.itemEditando.nome; 
-            document.getElementById('itemPreco').value = window.itemEditando.preco; 
-            document.getElementById('itemDisponivel').checked = window.itemEditando.disponivel !== false; 
-            document.getElementById('itemModal').style.display = 'block'; 
-        }
-
-        window.salvarItem = async function() { 
-            const item = { tenant_id: 1, nome: document.getElementById('itemNome').value, preco: parseFloat(document.getElementById('itemPreco').value) || 0, categoria_complemento: 'geral', disponivel: document.getElementById('itemDisponivel').checked, ordem: 0 }; 
-            const method = window.itemEditando ? 'PUT' : 'POST'; 
-            const url = window.itemEditando ? `${API_URL}/complementos/${window.itemEditando.id}` : `${API_URL}/complementos`; 
-            try { 
-                const res = await window.fetchDireto(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(item) }); 
-                if(res.ok) { window.fecharModal('itemModal'); window.mostrarNotificacao('Item salvo!', 'sucesso'); window.carregarItens(); } 
-                else { window.mostrarNotificacao('Erro ao salvar item', 'erro'); } 
-            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
-        }
-
-        window.excluirItem = async function(id) { 
-            if(confirm('Excluir? Se estiver num grupo, será apenas pausado.')) { 
-                try { 
-                    const res = await window.fetchDireto(`${API_URL}/complementos/${id}`, { method: 'DELETE' }); 
-                    if(res.ok) { window.mostrarNotificacao('Item excluído!', 'sucesso'); window.carregarItens(); } 
-                    else { window.mostrarNotificacao('Item pausado (está em uso num grupo).', 'aviso'); window.toggleDisponibilidadeItem(id, false); } 
-                } catch(e) { window.mostrarNotificacao('Erro', 'erro'); } 
-            } 
-        }
-
-        // ==========================================
-        // ABA 3: VINCULAR AO PRODUTO E CELULAR
-        // ==========================================
-        window.carregarProdutosSelect = async function() {
-            try {
-                const res = await window.fetchDireto(`${API_URL}/produtos`); 
-                if(res.ok) {
-                    window.produtos = await res.json();
-                    document.getElementById('produtoSelect').innerHTML = '<option value="">Selecione o Produto...</option>' + window.produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-                }
-            } catch (e) { document.getElementById('produtoSelect').innerHTML = '<option value="">Erro ao buscar produtos</option>'; }
-        }
-
-        window.carregarVinculosProduto = async function() {
-            const select = document.getElementById('produtoSelect');
-            const pId = select.value;
-            const container = document.getElementById('vinculosContainer');
-            
-            if(!pId || pId === "") {
-                container.innerHTML = '<p style="color:#C83232; text-align:center; padding:30px;">⚠️ Selecione um produto acima.</p>';
-                document.getElementById('btnSalvarMontagem').style.display = 'none';
+            if (grupos.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum grupo cadastrado</p>';
                 return;
             }
-            container.innerHTML = '<div class="loading" style="text-align:center; padding:20px;">Lendo informações do servidor...</div>';
             
+            container.innerHTML = grupos.map(g => `
+                <div class="grupo-item">
+                    <div class="grupo-header">
+                        <div>
+                            <span class="grupo-nome">${g.nome}</span>
+                            ${g.obrigatorio ? '<span class="badge obrigatorio">Obrigatório</span>' : ''}
+                            <span class="badge">Limite: ${g.limite_selecao}</span>
+                        </div>
+                        <div class="acoes-grupo">
+                            <button class="btn-edit btn-small" onclick="editarGrupo(${g.id})">Editar</button>
+                            <button class="btn-delete btn-small" onclick="excluirGrupo(${g.id})">Excluir</button>
+                        </div>
+                    </div>
+                    
+                    ${g.descricao ? `<p style="color:#666; font-size:13px; margin-bottom:10px;">${g.descricao}</p>` : ''}
+                    
+                    <div style="margin-top:10px;">
+                        <h4 style="font-size:14px; margin-bottom:5px;">Itens no grupo:</h4>
+                        <div id="itens-grupo-${g.id}">
+                            <p style="color:#999;">Carregando...</p>
+                        </div>
+                        <button class="btn-add btn-small" onclick="abrirVincularItem(${g.id}, '${g.nome}')" style="margin-top:10px;">
+                            + Vincular Item
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Carregar itens de cada grupo
+            grupos.forEach(g => carregarItensGrupo(g.id));
+        }
+
+        async function carregarItensGrupo(grupoId) {
             try {
-                if(!window.grupos || window.grupos.length === 0) {
-                    const resG = await window.fetchDireto(`${API_URL}/grupos-complementos`);
-                    if(resG.ok) window.grupos = await resG.json();
-                }
-                if(!window.grupos || window.grupos.length === 0) {
-                    container.innerHTML = '<p style="color:#C83232; text-align:center; padding:30px;">Nenhum grupo encontrado. Crie um na Aba 1!</p>';
+                const response = await fetch(`${API_URL}/grupo-complementos/${grupoId}/itens`);
+                const itens = await response.json();
+                
+                const container = document.getElementById(`itens-grupo-${grupoId}`);
+                
+                if (!itens || itens.length === 0) {
+                    container.innerHTML = '<p style="color:#999; font-style:italic;">Nenhum item vinculado</p>';
                     return;
                 }
-
-                const res = await window.fetchDireto(`${API_URL}/complementos/produto/${pId}`);
-                let vinculados = [];
-                if (res.ok) {
-                    const dados = await res.json();
-                    if(Array.isArray(dados)) vinculados = dados;
-                }
                 
-                let gruposOrdenados = [];
-                vinculados.forEach(v => { const g = window.grupos.find(x => String(x.id) === String(v.id)); if(g) gruposOrdenados.push(g); });
-                window.grupos.forEach(g => { if(!vinculados.some(v => String(v.id) === String(g.id))) gruposOrdenados.push(g); });
-                
-                container.innerHTML = gruposOrdenados.map(g => {
-                    const isChecked = vinculados.some(v => String(v.id) === String(g.id)) ? 'checked' : '';
-                    return `
-                        <div class="grupo-vinculo-box">
-                            <div style="display:flex; flex-direction:column; gap:5px;">
-                                <button type="button" class="btn-ordenar" onclick="moverGrupoUp(this)" title="Subir">⬆️</button>
-                                <button type="button" class="btn-ordenar" onclick="moverGrupoDown(this)" title="Descer">⬇️</button>
-                            </div>
-                            <label style="display:flex; flex-direction:column; cursor:pointer; flex:1;">
-                                <div style="display:flex; align-items:center; font-size:16px; font-weight:bold; color:#333;">
-                                    <input type="checkbox" class="vinculo-cb" value="${g.id}" ${isChecked} onchange="atualizarPreviewCelular()" style="width:20px; height:20px; margin-right:15px; accent-color:#C83232;"> 
-                                    ${g.nome}
-                                </div>
-                                <div style="margin-left:35px; font-size:12px; color:#666; margin-top:5px;">
-                                    ${g.obrigatorio ? '<span style="color:#C83232; font-weight:bold;">Obrigatório</span>' : 'Opcional'} • Máx permitidos: ${g.limite_selecao}
-                                </div>
-                            </label>
-                        </div>
-                    `;
-                }).join('');
-                
-                document.getElementById('btnSalvarMontagem').style.display = 'block';
-                window.atualizarPreviewCelular();
+                container.innerHTML = itens.map(item => `
+                    <div class="complemento-item">
+                        <span>${item.nome}</span>
+                        <span class="complemento-preco">R$ ${parseFloat(item.preco).toFixed(2)}</span>
+                        <button class="btn-delete btn-small" onclick="removerItemDoGrupo(${grupoId}, ${item.id})">×</button>
+                    </div>
+                `).join('');
             } catch (error) {
-                container.innerHTML = `<p style="color:red; text-align:center; padding:30px;">Erro de servidor. Tente novamente.</p>`;
+                console.error('Erro ao carregar itens do grupo:', error);
             }
         }
 
-        window.moverGrupoUp = function(btn) { const item = btn.closest('.grupo-vinculo-box'); const prev = item.previousElementSibling; if (prev) { item.parentNode.insertBefore(item, prev); window.atualizarPreviewCelular(); } }
-        window.moverGrupoDown = function(btn) { const item = btn.closest('.grupo-vinculo-box'); const next = item.nextElementSibling; if (next) { item.parentNode.insertBefore(next, item); window.atualizarPreviewCelular(); } }
-        
-        window.salvarVinculos = async function() {
-            const pId = document.getElementById('produtoSelect').value;
-            if(!pId) return window.mostrarNotificacao('Selecione um produto primeiro!', 'erro');
-            
-            const marcados = Array.from(document.querySelectorAll('.vinculo-cb:checked')).map(cb => parseInt(cb.value));
-            const btn = document.getElementById('btnSalvarMontagem');
-            btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
-            try {
-                const res = await window.fetchDireto(`${API_URL}/complementos/produto/${pId}/vincular`, { 
-                    method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ grupos: marcados }) 
-                });
-                
-                if(res.ok) { window.mostrarNotificacao('Montagem salva com sucesso!', 'sucesso'); } 
-                else { window.mostrarNotificacao('Falha ao salvar.', 'erro'); }
-            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); } 
-            finally { btn.innerHTML = '💾 Salvar Montagem'; btn.disabled = false; }
+        function abrirModalGrupo() {
+            grupoEditando = null;
+            document.getElementById('grupoModalTitulo').textContent = 'Novo Grupo';
+            document.getElementById('grupoNome').value = '';
+            document.getElementById('grupoDescricao').value = '';
+            document.getElementById('grupoLimite').value = '1';
+            document.getElementById('grupoOrdem').value = '0';
+            document.getElementById('grupoObrigatorio').checked = false;
+            document.getElementById('grupoModal').style.display = 'block';
         }
 
-        window.atualizarPreviewCelular = function() {
-            const pId = document.getElementById('produtoSelect').value;
-            const prod = window.produtos.find(p => String(p.id) === String(pId));
-            if(!prod) return;
+        function editarGrupo(id) {
+            const grupo = grupos.find(g => g.id === id);
+            if (!grupo) return;
             
-            let html = `<div class="preview-produto-nome">${prod.nome} <div style="color:#C83232; font-size:14px; margin-top:5px;">R$ ${parseFloat(prod.preco).toFixed(2)}</div></div>`;
-            const marcados = document.querySelectorAll('.vinculo-cb:checked');
-            
-            if(marcados.length === 0) html += `<div style="padding:20px; text-align:center; color:#999; font-size:14px;">Nenhuma opção selecionada.</div>`;
-            
-            marcados.forEach(cb => {
-                const gId = cb.value; const g = window.grupos.find(x => String(x.id) === String(gId)); const its = window.itensPorGrupo[gId] || [];
-                if(!g) return;
-                
-                const max = parseInt(g.limite_selecao) || 1;
-                let subText = `Escolha até ${max} opções`;
+            grupoEditando = grupo;
+            document.getElementById('grupoModalTitulo').textContent = 'Editar Grupo';
+            document.getElementById('grupoNome').value = grupo.nome || '';
+            document.getElementById('grupoDescricao').value = grupo.descricao || '';
+            document.getElementById('grupoLimite').value = grupo.limite_selecao || 1;
+            document.getElementById('grupoOrdem').value = grupo.ordem || 0;
+            document.getElementById('grupoObrigatorio').checked = grupo.obrigatorio || false;
+            document.getElementById('grupoModal').style.display = 'block';
+        }
 
-                let reqClass = g.obrigatorio ? 'obrig' : 'opc'; let reqText = g.obrigatorio ? 'OBRIGATÓRIO' : 'OPCIONAL';
+        async function salvarGrupo() {
+            const nome = document.getElementById('grupoNome').value.trim();
+            const descricao = document.getElementById('grupoDescricao').value;
+            const limite = parseInt(document.getElementById('grupoLimite').value) || 1;
+            const ordem = parseInt(document.getElementById('grupoOrdem').value) || 0;
+            const obrigatorio = document.getElementById('grupoObrigatorio').checked;
+            
+            if (!nome) {
+                alert('Nome do grupo é obrigatório');
+                return;
+            }
+            
+            const grupo = {
+                tenant_id: 1,
+                nome,
+                descricao,
+                limite_selecao: limite,
+                ordem,
+                obrigatorio
+            };
+            
+            try {
+                let response;
+                if (grupoEditando) {
+                    response = await fetch(`${API_URL}/grupos-complementos/${grupoEditando.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(grupo)
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/grupos-complementos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(grupo)
+                    });
+                }
                 
-                html += `<div class="preview-grupo"><div class="preview-grupo-header"><div class="preview-grupo-titulo">${g.nome} <span class="preview-badge ${reqClass}">${reqText}</span></div><div class="preview-grupo-sub">${subText}</div></div>`;
-                if(its.length === 0) html += `<div class="preview-item" style="color:#999; font-style:italic;">Sem ingredientes neste grupo.</div>`;
-                
-                its.forEach(i => {
-                    let pTxt = parseFloat(i.preco) > 0 ? `+ R$ ${parseFloat(i.preco).toFixed(2)}` : 'Grátis';
-                    let dispTxt = i.disponivel === false ? '<span style="color:#C83232;font-size:11px;">(Pausado)</span>' : '';
-                    html += `<div class="preview-item"><div class="preview-item-info"><span class="preview-item-nome" style="${i.disponivel === false ? 'text-decoration:line-through;color:#999;' : ''}">${i.nome} ${dispTxt}</span><span class="preview-item-preco" style="color:${parseFloat(i.preco)>0?'#C83232':'#4CAF50'}">${pTxt}</span></div><div class="preview-checkbox"></div></div>`;
+                if (response.ok) {
+                    fecharModal('grupoModal');
+                    await carregarGrupos();
+                    mostrarNotificacao('Grupo salvo com sucesso!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
+        }
+
+        async function excluirGrupo(id) {
+            if (!confirm('Tem certeza que deseja excluir este grupo?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/grupos-complementos/${id}`, {
+                    method: 'DELETE'
                 });
-                html += `</div>`;
+                
+                if (response.ok) {
+                    await carregarGrupos();
+                    mostrarNotificacao('Grupo excluído!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão');
+            }
+        }
+
+        // ===== ITENS =====
+        async function carregarItens() {
+            try {
+                const response = await fetch(`${API_URL}/complementos?tenant_id=1`);
+                itens = await response.json();
+                exibirItens();
+            } catch (error) {
+                console.error('Erro ao carregar itens:', error);
+                document.getElementById('itensLista').innerHTML = '<p style="color:red">Erro ao carregar itens</p>';
+            }
+        }
+
+        function exibirItens() {
+            const container = document.getElementById('itensLista');
+            
+            if (itens.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum item cadastrado</p>';
+                return;
+            }
+            
+            let html = '<table><thead><tr><th>Nome</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+            
+            itens.forEach(item => {
+                html += `
+                    <tr>
+                        <td>${item.nome}</td>
+                        <td>${item.categoria_complemento || '-'}</td>
+                        <td>R$ ${parseFloat(item.preco).toFixed(2)}</td>
+                        <td>${item.disponivel ? '✅' : '❌'}</td>
+                        <td>
+                            <button class="btn-edit" onclick="editarItem(${item.id})">Editar</button>
+                            <button class="btn-delete" onclick="excluirItem(${item.id})">Excluir</button>
+                        </td>
+                    </tr>
+                `;
             });
-            document.getElementById('mobilePreviewContent').innerHTML = html;
-        }
-
-        // ==========================================
-        // ABA 4: PRODUTOS CONFIGURADOS
-        // ==========================================
-        window.carregarProdutosConfigurados = async function() {
-            const container = document.getElementById('produtosConfiguradosLista');
-            container.innerHTML = '<div class="loading">Buscando configurações ativas...</div>';
-            try {
-                const resProd = await window.fetchDireto(`${API_URL}/produtos`);
-                const todosProdutos = await resProd.json();
-                const promessas = todosProdutos.map(p => 
-                    window.fetchDireto(`${API_URL}/complementos/produto/${p.id}`)
-                    .then(r => r.json())
-                    .then(grupos => ({ ...p, qtde_grupos: Array.isArray(grupos) ? grupos.length : 0 }))
-                    .catch(() => ({ ...p, qtde_grupos: 0 }))
-                );
-                const comVinculos = await Promise.all(promessas);
-                const configurados = comVinculos.filter(p => p.qtde_grupos > 0);
-                
-                if (configurados.length === 0) return container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">Nenhum produto possui complementos ainda. Vá na Aba 3!</p>';
-                
-                container.innerHTML = configurados.map(p => `<div class="grupo-item" style="display:flex; justify-content:space-between; align-items:center; background:#fff;"><div><div style="font-weight:bold; font-size:16px; color:#333;">${p.nome}</div><div style="font-size:13px; color:#666; margin-top:5px;">🧩 ${p.qtde_grupos} grupo(s) ativos</div></div><div style="display:flex; gap:10px;"><button class="btn-edit" style="padding:8px 15px; font-size:13px;" onclick="editarConfiguracaoProduto(${p.id})">✏️ Editar</button><button class="btn-delete" style="padding:8px 15px; font-size:13px;" onclick="limparConfiguracaoProduto(${p.id}, '${p.nome.replace(/'/g, "\\'")}')">🗑️ Limpar</button></div></div>`).join('');
-            } catch (e) { container.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar a lista de produtos.</p>'; }
-        }
-
-        window.editarConfiguracaoProduto = async function(produtoId) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`button[onclick="abrirTab('vinculos')"]`).classList.add('active');
-            document.getElementById('tab-vinculos').classList.add('active');
             
-            document.getElementById('produtoSelect').innerHTML = '<option value="">Carregando produtos...</option>';
-            document.getElementById('vinculosContainer').innerHTML = '<div class="loading">Sincronizando dados...</div>';
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function abrirModalItem() {
+            itemEditando = null;
+            document.getElementById('itemModalTitulo').textContent = 'Novo Item';
+            document.getElementById('itemNome').value = '';
+            document.getElementById('itemDescricao').value = '';
+            document.getElementById('itemPreco').value = '0.00';
+            document.getElementById('itemCategoria').value = 'acompanhamento';
+            document.getElementById('itemOrdem').value = '0';
+            document.getElementById('itemDisponivel').checked = true;
+            document.getElementById('itemModal').style.display = 'block';
+        }
+
+        function editarItem(id) {
+            const item = itens.find(i => i.id === id);
+            if (!item) return;
             
-            await window.carregarGrupos(); 
-            await window.carregarProdutosSelect();
-            document.getElementById('produtoSelect').value = produtoId;
-            await window.carregarVinculosProduto();
+            itemEditando = item;
+            document.getElementById('itemModalTitulo').textContent = 'Editar Item';
+            document.getElementById('itemNome').value = item.nome || '';
+            document.getElementById('itemDescricao').value = item.descricao || '';
+            document.getElementById('itemPreco').value = item.preco || '0.00';
+            document.getElementById('itemCategoria').value = item.categoria_complemento || 'acompanhamento';
+            document.getElementById('itemOrdem').value = item.ordem || 0;
+            document.getElementById('itemDisponivel').checked = item.disponivel !== false;
+            document.getElementById('itemModal').style.display = 'block';
         }
 
-        window.limparConfiguracaoProduto = async function(produtoId, nomeProduto) {
-            if(!confirm(`Excluir toda a montagem do produto "${nomeProduto}"?`)) return;
+        async function salvarItem() {
+            const nome = document.getElementById('itemNome').value.trim();
+            const descricao = document.getElementById('itemDescricao').value;
+            const preco = parseFloat(document.getElementById('itemPreco').value) || 0;
+            const categoria = document.getElementById('itemCategoria').value;
+            const ordem = parseInt(document.getElementById('itemOrdem').value) || 0;
+            const disponivel = document.getElementById('itemDisponivel').checked;
+            
+            if (!nome) {
+                alert('Nome do item é obrigatório');
+                return;
+            }
+            
+            const item = {
+                tenant_id: 1,
+                nome,
+                descricao,
+                preco,
+                categoria_complemento: categoria,
+                ordem,
+                disponivel
+            };
+            
             try {
-                const res = await window.fetchDireto(`${API_URL}/complementos/produto/${produtoId}/vincular`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({grupos: []}) });
-                if(res.ok) {
-                    window.mostrarNotificacao('Montagem limpa!', 'sucesso');
-                    if (document.getElementById('produtoSelect').value == produtoId) {
-                        document.getElementById('produtoSelect').value = "";
-                        document.getElementById('vinculosContainer').innerHTML = '<p style="color:#999; text-align:center; padding:30px;">Selecione um produto acima.</p>';
-                        document.getElementById('mobilePreviewContent').innerHTML = '<div style="text-align:center; margin-top:50%; color:#999;">📱 Selecione um produto.</div>';
-                    }
-                    window.carregarProdutosConfigurados();
-                } else { window.mostrarNotificacao('Erro ao limpar.', 'erro'); }
-            } catch(e) { window.mostrarNotificacao('Erro de conexão', 'erro'); }
+                let response;
+                if (itemEditando) {
+                    response = await fetch(`${API_URL}/complementos/${itemEditando.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item)
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/complementos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item)
+                    });
+                }
+                
+                if (response.ok) {
+                    fecharModal('itemModal');
+                    await carregarItens();
+                    mostrarNotificacao('Item salvo com sucesso!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
         }
 
-        window.onload = () => { carregarGrupos(); };
+        async function excluirItem(id) {
+            if (!confirm('Tem certeza que deseja excluir este item?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/complementos/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    await carregarItens();
+                    mostrarNotificacao('Item excluído!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão');
+            }
+        }
+
+        // ===== VÍNCULOS =====
+        async function carregarProdutos() {
+            try {
+                const response = await fetch(`${API_URL}/produtos`);
+                produtos = await response.json();
+                
+                const select = document.getElementById('produtoSelect');
+                select.innerHTML = '<option value="">Selecione um produto...</option>' +
+                    produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+            }
+        }
+
+        async function carregarGruposParaVinculo() {
+            try {
+                const response = await fetch(`${API_URL}/grupos-complementos?tenant_id=1`);
+                grupos = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar grupos:', error);
+            }
+        }
+
+        async function carregarVinculosProduto() {
+            const produtoId = document.getElementById('produtoSelect').value;
+            
+            if (!produtoId) {
+                document.getElementById('vinculosContainer').innerHTML = '<p style="color:#999; text-align:center; padding:40px;">Selecione um produto</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/complementos/produto/${produtoId}`);
+                const gruposVinculados = await response.json();
+                
+                let html = '<h3 style="margin-bottom:15px;">Grupos disponíveis para este produto</h3>';
+                
+                grupos.forEach(grupo => {
+                    const vinculado = gruposVinculados.some(g => g.id === grupo.id);
+                    const checked = vinculado ? 'checked' : '';
+                    
+                    html += `
+                        <div class="grupo-item" style="margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <input type="checkbox" id="grupo_${grupo.id}" ${checked} onchange="toggleGrupoProduto(${grupo.id}, this.checked)">
+                                    <label for="grupo_${grupo.id}" style="font-weight:bold;">${grupo.nome}</label>
+                                    ${grupo.obrigatorio ? '<span class="badge obrigatorio">Obrigatório</span>' : ''}
+                                </div>
+                                <span class="badge">Limite: ${grupo.limite_selecao}</span>
+                            </div>
+                            ${grupo.descricao ? `<p style="color:#666; font-size:12px; margin-top:5px;">${grupo.descricao}</p>` : ''}
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('vinculosContainer').innerHTML = html;
+                
+            } catch (error) {
+                console.error('Erro ao carregar vínculos:', error);
+                document.getElementById('vinculosContainer').innerHTML = '<p style="color:red">Erro ao carregar vínculos</p>';
+            }
+        }
+
+        function toggleGrupoProduto(grupoId, ativo) {
+            // Função para toggle - pode ser usada depois
+            console.log(`Grupo ${grupoId} ${ativo ? 'ativado' : 'desativado'}`);
+        }
+
+        async function salvarVinculos() {
+            const produtoId = document.getElementById('produtoSelect').value;
+            
+            if (!produtoId) {
+                alert('Selecione um produto');
+                return;
+            }
+            
+            // Coletar grupos selecionados
+            const gruposSelecionados = [];
+            document.querySelectorAll('#vinculosContainer input[type="checkbox"]:checked').forEach(cb => {
+                const grupoId = parseInt(cb.id.replace('grupo_', ''));
+                gruposSelecionados.push(grupoId);
+            });
+            
+            try {
+                const response = await fetch(`${API_URL}/complementos/produto/${produtoId}/vincular`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grupos: gruposSelecionados })
+                });
+                
+                if (response.ok) {
+                    mostrarNotificacao('Vínculos salvos com sucesso!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
+        }
+
+        // ===== VINCULAR ITEM AO GRUPO =====
+        function abrirVincularItem(grupoId, grupoNome) {
+            grupoSelecionado = grupoId;
+            document.getElementById('vincularGrupoNome').value = grupoNome;
+            
+            const select = document.getElementById('vincularItemSelect');
+            select.innerHTML = '<option value="">Selecione...</option>' +
+                itens.map(i => `<option value="${i.id}">${i.nome} - R$ ${parseFloat(i.preco).toFixed(2)}</option>`).join('');
+            
+            document.getElementById('vincularOrdem').value = '0';
+            document.getElementById('vincularItemModal').style.display = 'block';
+        }
+
+        async function salvarVinculoItem() {
+            const complementoId = document.getElementById('vincularItemSelect').value;
+            const ordem = parseInt(document.getElementById('vincularOrdem').value) || 0;
+            
+            if (!complementoId) {
+                alert('Selecione um item');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/grupos/${grupoSelecionado}/itens/${complementoId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ordem })
+                });
+                
+                if (response.ok) {
+                    fecharModal('vincularItemModal');
+                    await carregarItensGrupo(grupoSelecionado);
+                    mostrarNotificacao('Item vinculado com sucesso!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão: ' + error.message);
+            }
+        }
+
+        async function removerItemDoGrupo(grupoId, complementoId) {
+            if (!confirm('Remover este item do grupo?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/grupos/${grupoId}/itens/${complementoId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    await carregarItensGrupo(grupoId);
+                    mostrarNotificacao('Item removido do grupo!');
+                } else {
+                    const erro = await response.json();
+                    alert('Erro: ' + (erro.erro || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro de conexão');
+            }
+        }
+
+        // Inicializar
+        carregarGrupos();
+        carregarItens();
     </script>
 </body>
 </html>
