@@ -1,119 +1,28 @@
-const pool = require('../config/database');
+const pool = require('../config/db');
 
 const complementoController = {
 
     async listar(req, res) {
         try {
-            const result = await pool.query(`
-                SELECT * 
-                FROM complementos
-                ORDER BY id
-            `);
-
-            res.json(result.rows);
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ erro: error.message });
-        }
-    },
-
-    async buscarPorId(req, res) {
-        try {
-            const { id } = req.params;
-
             const result = await pool.query(
-                'SELECT * FROM complementos WHERE id = $1',
-                [id]
+                'SELECT * FROM complementos ORDER BY id'
             );
-
-            res.json(result.rows[0] || null);
-
-        } catch (error) {
-            res.status(500).json({ erro: error.message });
-        }
-    },
-
-    async buscarPorCategoria(req, res) {
-        try {
-            const { categoria } = req.params;
-
-            const result = await pool.query(
-                'SELECT * FROM complementos WHERE categoria_complemento = $1 ORDER BY ordem',
-                [categoria]
-            );
-
             res.json(result.rows);
-
         } catch (error) {
             res.status(500).json({ erro: error.message });
         }
     },
 
-    async buscarPorGrupo(req, res) {
+    async criarItem(req, res) {
         try {
-            const { grupoId } = req.params;
-
-            const result = await pool.query(`
-                SELECT c.*
-                FROM complementos c
-                INNER JOIN grupo_itens gi ON gi.complemento_id = c.id
-                WHERE gi.grupo_id = $1
-            `, [grupoId]);
-
-            res.json(result.rows);
-
-        } catch (error) {
-            res.status(500).json({ erro: error.message });
-        }
-    },
-
-    async buscarParaProduto(req, res) {
-        try {
-            const { produtoId } = req.params;
-
-            const result = await pool.query(`
-                SELECT c.*
-                FROM complementos c
-                INNER JOIN grupo_itens gi ON gi.complemento_id = c.id
-                INNER JOIN produto_grupos pg ON pg.grupo_id = gi.grupo_id
-                WHERE pg.produto_id = $1
-            `, [produtoId]);
-
-            res.json(result.rows);
-
-        } catch (error) {
-            res.status(500).json({ erro: error.message });
-        }
-    },
-
-    async buscarGruposPorProduto(req, res) {
-        try {
-            const { produtoId } = req.params;
-
-            const result = await pool.query(`
-                SELECT g.*
-                FROM grupos_complementos g
-                INNER JOIN produto_grupos pg ON pg.grupo_id = g.id
-                WHERE pg.produto_id = $1
-            `, [produtoId]);
-
-            res.json(result.rows);
-
-        } catch (error) {
-            res.status(500).json({ erro: error.message });
-        }
-    },
-
-    async criar(req, res) {
-        try {
-            const { nome, preco, categoria_complemento, disponivel } = req.body;
+            const { nome, preco, disponivel } = req.body;
 
             const result = await pool.query(`
                 INSERT INTO complementos
-                (nome, preco, categoria_complemento, disponivel)
-                VALUES ($1,$2,$3,$4)
+                (nome, preco, disponivel)
+                VALUES ($1,$2,$3)
                 RETURNING *
-            `, [nome, preco, categoria_complemento, disponivel]);
+            `, [nome, preco, disponivel]);
 
             res.json(result.rows[0]);
 
@@ -122,17 +31,20 @@ const complementoController = {
         }
     },
 
-    async atualizar(req, res) {
+    async atualizarItem(req, res) {
         try {
+
             const { id } = req.params;
-            const { nome, preco, categoria_complemento, disponivel } = req.body;
+            const { nome, preco, disponivel } = req.body;
 
             const result = await pool.query(`
                 UPDATE complementos
-                SET nome=$1, preco=$2, categoria_complemento=$3, disponivel=$4
-                WHERE id=$5
+                SET nome=$1,
+                    preco=$2,
+                    disponivel=$3
+                WHERE id=$4
                 RETURNING *
-            `, [nome, preco, categoria_complemento, disponivel, id]);
+            `, [nome, preco, disponivel, id]);
 
             res.json(result.rows[0]);
 
@@ -141,52 +53,99 @@ const complementoController = {
         }
     },
 
-    async excluir(req, res) {
+    async excluirItem(req, res) {
+
         try {
+
             const { id } = req.params;
 
             await pool.query(
-                'DELETE FROM grupo_itens WHERE complemento_id = $1',
+                'DELETE FROM grupo_itens WHERE complemento_id=$1',
                 [id]
             );
 
             await pool.query(
-                'DELETE FROM complementos WHERE id = $1',
+                'DELETE FROM complementos WHERE id=$1',
                 [id]
             );
 
             res.json({ sucesso: true });
 
         } catch (error) {
+
             res.status(500).json({ erro: error.message });
+
         }
+
     },
 
-    async vincularAoProduto(req, res) {
+    async listarItensDoGrupo(req, res) {
+
         try {
 
-            const { produtoId } = req.params;
-            const { grupos } = req.body;
+            const { id } = req.params;
 
-            await pool.query(
-                'DELETE FROM produto_grupos WHERE produto_id=$1',
-                [produtoId]
-            );
+            const result = await pool.query(`
+                SELECT c.*
+                FROM complementos c
+                INNER JOIN grupo_itens gi
+                ON gi.complemento_id = c.id
+                WHERE gi.grupo_id = $1
+            `, [id]);
 
-            for (let g of grupos) {
+            res.json(result.rows);
 
-                await pool.query(`
-                    INSERT INTO produto_grupos (produto_id,grupo_id)
-                    VALUES ($1,$2)
-                `, [produtoId, g]);
+        } catch (error) {
 
-            }
+            res.status(500).json({ erro: error.message });
+
+        }
+
+    },
+
+    async vincularItemAoGrupo(req, res) {
+
+        try {
+
+            const { grupoId, itemId } = req.params;
+
+            await pool.query(`
+                INSERT INTO grupo_itens
+                (grupo_id, complemento_id)
+                VALUES ($1,$2)
+                ON CONFLICT DO NOTHING
+            `, [grupoId, itemId]);
 
             res.json({ sucesso: true });
 
         } catch (error) {
+
             res.status(500).json({ erro: error.message });
+
         }
+
+    },
+
+    async removerItemDoGrupo(req, res) {
+
+        try {
+
+            const { grupoId, itemId } = req.params;
+
+            await pool.query(`
+                DELETE FROM grupo_itens
+                WHERE grupo_id=$1
+                AND complemento_id=$2
+            `, [grupoId, itemId]);
+
+            res.json({ sucesso: true });
+
+        } catch (error) {
+
+            res.status(500).json({ erro: error.message });
+
+        }
+
     }
 
 };
