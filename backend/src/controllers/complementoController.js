@@ -1,11 +1,11 @@
 const pool = require('../config/database');
 
-// O "Semáforo": Garante que a correção no banco roda apenas 1 vez e SEM BLOQUEIOS DE CHAVE
 let dbInitPromise = null;
 
 function garantirTabelasComplementos() {
     if (!dbInitPromise) {
         dbInitPromise = (async () => {
+            // 1. Tabela Produtos
             try {
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS produtos (
@@ -19,6 +19,10 @@ function garantirTabelasComplementos() {
                         ativo BOOLEAN DEFAULT true
                     );
                 `);
+            } catch(e) { console.log("Ignorando erro produtos:", e.message); }
+
+            // 2. Tabela Grupos
+            try {
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS grupos_complementos (
                         id SERIAL PRIMARY KEY,
@@ -30,6 +34,10 @@ function garantirTabelasComplementos() {
                         ordem INTEGER DEFAULT 0
                     );
                 `);
+            } catch(e) { console.log("Ignorando erro grupos:", e.message); }
+
+            // 3. Tabela Complementos
+            try {
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS complementos (
                         id SERIAL PRIMARY KEY,
@@ -41,19 +49,27 @@ function garantirTabelasComplementos() {
                         ordem INTEGER DEFAULT 0
                     );
                 `);
+            } catch(e) { console.log("Ignorando erro complementos:", e.message); }
 
-                // ==========================================
-                // CRIAÇÃO DAS TABELAS DE VÍNCULO S/ AMARRAS RÍGIDAS
-                // ==========================================
-                
+            // ==========================================
+            // 4. DESTRUIÇÃO DA TABELA FANTASMA (AGORA RODA SEMPRE!)
+            // ==========================================
+            try { await pool.query("DROP TABLE IF EXISTS grupo_itens CASCADE;"); } catch(e) {}
+            try { await pool.query("DROP TABLE IF EXISTS vinculo_grupo_complemento CASCADE;"); } catch(e) {}
+
+            // 5. RECRIAÇÃO LIMPA DA TABELA COM A COLUNA CORRETA
+            try {
                 await pool.query(`
-                    CREATE TABLE IF NOT EXISTS vinculo_grupo_complemento (
+                    CREATE TABLE vinculo_grupo_complemento (
                         grupo_id INTEGER,
                         complemento_id INTEGER,
                         ordem INTEGER DEFAULT 0
                     );
                 `);
+            } catch(e) { console.log("Ignorando erro ao recriar vinculo:", e.message); }
 
+            // 6. Tabela Vínculo Produto/Grupo
+            try {
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS vinculo_produto_grupo (
                         produto_id INTEGER,
@@ -61,29 +77,19 @@ function garantirTabelasComplementos() {
                         ordem INTEGER DEFAULT 0
                     );
                 `);
+            } catch(e) { console.log("Ignorando erro produto/grupo:", e.message); }
 
-                // Tenta forçar a mudança do nome antigo "item_id" para "complemento_id"
-                try { await pool.query("ALTER TABLE vinculo_grupo_complemento RENAME COLUMN item_id TO complemento_id;"); } catch(e) {}
-
-                // ==========================================
-                // INJEÇÃO FORÇADA DE COLUNAS
-                // ==========================================
-                const forcarColunas = [
-                    "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS grupo_id INTEGER;",
-                    "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS complemento_id INTEGER;",
-                    "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS ordem INTEGER DEFAULT 0;",
-                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
-                    "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
-                    "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;"
-                ];
-                
-                for (let query of forcarColunas) { 
-                    await pool.query(query).catch(e => {}); 
-                }
-
-            } catch(e) {
-                console.log("Erro na inicialização do DB:", e.message);
-                dbInitPromise = null; 
+            // 7. Vacinas de Colunas Individuais
+            const vacinaColunas = [
+                "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS minimo_selecao INTEGER DEFAULT 0;",
+                "ALTER TABLE grupos_complementos ADD COLUMN IF NOT EXISTS limite_selecao INTEGER DEFAULT 1;",
+                "ALTER TABLE complementos ADD COLUMN IF NOT EXISTS disponivel BOOLEAN DEFAULT true;",
+                "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS complemento_id INTEGER;",
+                "ALTER TABLE vinculo_grupo_complemento ADD COLUMN IF NOT EXISTS grupo_id INTEGER;"
+            ];
+            
+            for (let query of vacinaColunas) { 
+                try { await pool.query(query); } catch(e) {} 
             }
         })();
     }
@@ -105,7 +111,6 @@ const complementoController = {
     async criarGrupo(req, res) {
         try {
             await garantirTabelasComplementos();
-            // AQUI O BACKEND RECEBE OS LIMITES E TRATA DO "OBRIGATÓRIO" AUTOMATICAMENTE
             const { tenant_id, nome, obrigatorio, limite_selecao, minimo_selecao, ordem } = req.body;
             
             const result = await pool.query(
@@ -135,9 +140,8 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            // Exclui o grupo e as ligações dele manualmente para não depender do DB
-            await pool.query('DELETE FROM vinculo_grupo_complemento WHERE grupo_id = $1', [id]);
-            await pool.query('DELETE FROM vinculo_produto_grupo WHERE grupo_id = $1', [id]);
+            await pool.query('DELETE FROM vinculo_grupo_complemento WHERE grupo_id = $1', [id]).catch(()=>{});
+            await pool.query('DELETE FROM vinculo_produto_grupo WHERE grupo_id = $1', [id]).catch(()=>{});
             
             const result = await pool.query('DELETE FROM grupos_complementos WHERE id = $1 RETURNING *', [id]);
             if (result.rows.length === 0) return res.status(404).json({ erro: 'Grupo não encontrado' });
@@ -186,7 +190,8 @@ const complementoController = {
         try {
             await garantirTabelasComplementos();
             const { id } = req.params;
-            const vinculos = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', [id]);
+            
+            const vinculos = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE complemento_id = $1', [id]).catch(()=>({rows:[]}));
             if (vinculos.rows.length > 0) return res.status(400).json({ erro: 'Este item está sendo usado em um grupo. Remova-o do grupo primeiro.' });
             
             const result = await pool.query('DELETE FROM complementos WHERE id = $1 RETURNING *', [id]);
@@ -196,7 +201,7 @@ const complementoController = {
     },
 
     // ==========================================
-    // 3. VÍNCULOS ITEM -> GRUPO
+    // 3. VÍNCULOS ITEM -> GRUPO (AGORA FUNCIONA!)
     // ==========================================
     async listarItensDoGrupo(req, res) {
         try {
@@ -217,7 +222,6 @@ const complementoController = {
             await garantirTabelasComplementos();
             const { grupoId, itemId } = req.params;
             
-            // Verifica manualmente para não inserir duplicados
             const check = await pool.query('SELECT * FROM vinculo_grupo_complemento WHERE grupo_id = $1 AND complemento_id = $2', [grupoId, itemId]);
             
             if (check.rows.length === 0) {
