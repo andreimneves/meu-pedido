@@ -1,38 +1,25 @@
-const express = require('express')
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
+const controller = require('../controllers/complementoController');
 
-const complementoController = require('../controllers/complementoController')
+router.get('/complementos', controller.listar);
 
-// GRUPOS
-router.get('/grupos', complementoController.listarGrupos)
-router.post('/grupos', complementoController.criarGrupo)
-router.put('/grupos/:id', complementoController.atualizarGrupo)
-router.delete('/grupos/:id', complementoController.excluirGrupo)
+router.get('/complementos/categoria/:categoria', controller.buscarPorCategoria);
 
-// ITENS
-router.get('/itens', complementoController.listarItens)
-router.post('/itens', complementoController.criarItem)
-router.put('/itens/:id', complementoController.atualizarItem)
-router.delete('/itens/:id', complementoController.excluirItem)
+router.get('/complementos/grupo/:grupoId', controller.buscarPorGrupo);
 
-// ITENS DO GRUPO
-router.get('/grupos/:id/itens', complementoController.listarItensDoGrupo)
+router.get('/complementos/produto/:produtoId', controller.buscarParaProduto);
 
-router.post('/grupos/:grupoId/itens/:itemId',
-    complementoController.vincularItemAoGrupo
-)
+router.get('/complementos/produto/:produtoId/grupos', controller.buscarGruposPorProduto);
 
-router.delete('/grupos/:grupoId/itens/:itemId',
-    complementoController.removerItemDoGrupo
-)
+router.get('/complementos/:id', controller.buscarPorId);
 
-// GRUPOS DO PRODUTO
-router.get('/produtos/:produtoId/grupos',
-    complementoController.listarGruposDoProduto
-)
+router.post('/complementos', controller.criar);
 
-router.put('/produtos/:produtoId/grupos',
-    complementoController.vincularGruposProduto
-)
+router.put('/complementos/:id', controller.atualizar);
 
-module.exports = router
+router.delete('/complementos/:id', controller.excluir);
+
+router.put('/complementos/produto/:produtoId/vincular', controller.vincularAoProduto);
+
+module.exports = router;
