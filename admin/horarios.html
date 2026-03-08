@@ -2,39 +2,246 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Horários</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Horários - Meu Pedido</title>
+
 <link rel="stylesheet" href="style.css">
+
+<style>
+
+.horario-check{
+width:18px;
+height:18px;
+cursor:pointer;
+}
+
+.horario-time{
+padding:5px;
+}
+
+.btn-save-horario{
+background:#C83232;
+color:white;
+border:none;
+padding:6px 12px;
+border-radius:5px;
+cursor:pointer;
+}
+
+</style>
+
 </head>
 
 <body>
 
 <div class="admin-header">
-<h1>⏰ Horários de Funcionamento</h1>
+<h1>🍽️ Meu Pedido - Painel Administrativo</h1>
+
+<div class="user-info">
+<span>👤 DL Crepes e Lanches</span>
+<button class="logout">🚪 Sair</button>
+</div>
 </div>
 
+
 <div class="admin-container">
+
+<div class="admin-sidebar">
+<ul>
+<li><a href="dashboard.html">📊 Dashboard</a></li>
+<li><a href="pedidos.html">📋 Pedidos</a></li>
+<li><a href="config.html">⚙️ Configurações</a></li>
+<li><a href="categorias.html">📁 Categorias</a></li>
+<li><a href="produtos.html">📦 Produtos</a></li>
+<li><a href="complementos.html">🧩 Complementos</a></li>
+<li><a href="horarios.html" class="active">🕒 Horários</a></li>
+</ul>
+</div>
+
+
+<div class="admin-content">
+
+<h1>🕒 Horário de Funcionamento</h1>
+
+<div class="table-container">
 
 <table>
 
 <thead>
+
 <tr>
 <th>Dia</th>
-<th>Aberto</th>
+
+<th>Loja aberta</th>
 <th>Abre</th>
 <th>Fecha</th>
+
+<th>Delivery aberto</th>
 <th>Delivery abre</th>
 <th>Delivery fecha</th>
+
 <th>Ação</th>
 </tr>
+
 </thead>
 
-<tbody id="horariosTable"></tbody>
+<tbody id="horariosTable">
+
+<tr>
+<td colspan="8">Carregando...</td>
+</tr>
+
+</tbody>
 
 </table>
 
 </div>
 
-<script src="horarios.js"></script>
+</div>
+
+</div>
+
+
+<script>
+
+const dias = [
+'Domingo',
+'Segunda',
+'Terça',
+'Quarta',
+'Quinta',
+'Sexta',
+'Sábado'
+]
+
+async function carregarHorarios(){
+
+const res = await fetch('/admin/horarios')
+const data = await res.json()
+
+const table = document.getElementById('horariosTable')
+
+table.innerHTML=''
+
+data.forEach(h=>{
+
+table.innerHTML+=`
+
+<tr>
+
+<td>${dias[h.dia_semana]}</td>
+
+<td>
+<input type="checkbox"
+class="horario-check"
+id="aberto_${h.id}"
+${h.aberto ? 'checked' : ''}>
+</td>
+
+<td>
+<input type="time"
+class="horario-time"
+id="abre_${h.id}"
+value="${h.abre}">
+</td>
+
+<td>
+<input type="time"
+class="horario-time"
+id="fecha_${h.id}"
+value="${h.fecha}">
+</td>
+
+
+<td>
+<input type="checkbox"
+class="horario-check"
+id="delivery_aberto_${h.id}"
+${h.delivery_aberto ? 'checked' : ''}>
+</td>
+
+<td>
+<input type="time"
+class="horario-time"
+id="delivery_abre_${h.id}"
+value="${h.delivery_abre}">
+</td>
+
+<td>
+<input type="time"
+class="horario-time"
+id="delivery_fecha_${h.id}"
+value="${h.delivery_fecha}">
+</td>
+
+
+<td>
+
+<button
+class="btn-save-horario"
+onclick="salvarHorario(${h.id})">
+
+Salvar
+
+</button>
+
+</td>
+
+</tr>
+
+`
+
+})
+
+}
+
+
+async function salvarHorario(id){
+
+const aberto = document.getElementById(`aberto_${id}`).checked
+
+const abre = document.getElementById(`abre_${id}`).value
+
+const fecha = document.getElementById(`fecha_${id}`).value
+
+const delivery_aberto = document.getElementById(`delivery_aberto_${id}`).checked
+
+const delivery_abre = document.getElementById(`delivery_abre_${id}`).value
+
+const delivery_fecha = document.getElementById(`delivery_fecha_${id}`).value
+
+
+
+await fetch(`/admin/horarios/${id}`,{
+
+method:'PUT',
+
+headers:{
+'Content-Type':'application/json'
+},
+
+body:JSON.stringify({
+
+aberto,
+abre,
+fecha,
+delivery_aberto,
+delivery_abre,
+delivery_fecha
+
+})
+
+})
+
+
+alert('Horário atualizado!')
+
+}
+
+carregarHorarios()
+
+</script>
 
 </body>
 </html>
