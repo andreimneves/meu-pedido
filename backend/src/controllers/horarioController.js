@@ -1,14 +1,32 @@
+// ==========================================
+// backend/src/controllers/horarioController.js
+// ==========================================
 const pool = require('../config/database');
 
 const horarioController = {
     // ==========================================
-    // LISTAR HORÁRIOS (para o painel admin)
+    // LISTAR HORÁRIOS
     // ==========================================
     async listar(req, res) {
         try {
             const { tenant_id = 1 } = req.query;
             
-            // Buscar horários da loja e delivery em uma única query
+            console.log('🔍 Buscando horários para tenant:', tenant_id);
+            
+            // Verificar se a tabela existe
+            const tableCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'horarios_funcionamento'
+                );
+            `);
+            
+            if (!tableCheck.rows[0].exists) {
+                return res.status(404).json({ 
+                    erro: 'Tabela horarios_funcionamento não existe. Execute o script SQL primeiro.' 
+                });
+            }
+            
             const result = await pool.query(`
                 SELECT 
                     dias.dia_semana,
@@ -40,7 +58,9 @@ const horarioController = {
                 ORDER BY dias.dia_semana
             `, [tenant_id]);
             
+            console.log('✅ Horários encontrados:', result.rows.length);
             res.json(result.rows);
+            
         } catch (error) {
             console.error('❌ Erro ao listar horários:', error);
             res.status(500).json({ erro: error.message });
@@ -48,7 +68,7 @@ const horarioController = {
     },
 
     // ==========================================
-    // ATUALIZAR HORÁRIOS (em lote)
+    // ATUALIZAR HORÁRIOS
     // ==========================================
     async atualizarLote(req, res) {
         const client = await pool.connect();
@@ -57,8 +77,9 @@ const horarioController = {
             
             const { horarios, tenant_id = 1 } = req.body;
             
+            console.log('📝 Atualizando horários para tenant:', tenant_id);
+            
             for (const h of horarios) {
-                // Atualizar loja
                 await client.query(`
                     INSERT INTO horarios_funcionamento 
                         (tenant_id, dia_semana, tipo, aberto, abre, fecha)
@@ -71,7 +92,6 @@ const horarioController = {
                         updated_at = CURRENT_TIMESTAMP
                 `, [tenant_id, h.dia_semana, h.loja_aberta, h.loja_abre, h.loja_fecha]);
                 
-                // Atualizar delivery
                 await client.query(`
                     INSERT INTO horarios_funcionamento 
                         (tenant_id, dia_semana, tipo, aberto, abre, fecha)
@@ -86,11 +106,12 @@ const horarioController = {
             }
             
             await client.query('COMMIT');
-            res.json({ mensagem: 'Horários atualizados com sucesso!' });
+            console.log('✅ Horários atualizados!');
+            res.json({ mensagem: 'Horários salvos com sucesso!' });
             
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('❌ Erro ao atualizar horários:', error);
+            console.error('❌ Erro:', error);
             res.status(500).json({ erro: error.message });
         } finally {
             client.release();
@@ -98,28 +119,28 @@ const horarioController = {
     },
 
     // ==========================================
-    // VERIFICAR STATUS DA LOJA (para o site)
+    // VERIFICAR STATUS
     // ==========================================
     async verificarStatus(req, res) {
         try {
             const { subdominio = 'dlcrepes' } = req.params;
             const agora = new Date();
             const diaSemana = agora.getDay();
-            const horaAtual = agora.toTimeString().slice(0,5); // HH:MM
+            const horaAtual = agora.toTimeString().slice(0,5);
             
-            // Buscar tenant_id pelo subdomínio
+            console.log(`🔍 Verificando status: ${subdominio}, dia ${diaSemana}, hora ${horaAtual}`);
+            
             const tenantQuery = await pool.query(
                 'SELECT id FROM tenants WHERE subdominio = $1',
                 [subdominio]
             );
             
             if (tenantQuery.rows.length === 0) {
-                return res.status(404).json({ erro: 'Loja não encontrada' });
+                return res.status(404).json({ erro: 'Estabelecimento não encontrado' });
             }
             
             const tenantId = tenantQuery.rows[0].id;
             
-            // Buscar horários de hoje
             const horarios = await pool.query(`
                 SELECT 
                     COALESCE(loja.aberto, true) as loja_aberta,
@@ -141,88 +162,54 @@ const horarioController = {
                     AND delivery.tipo = 'delivery'
             `, [tenantId, diaSemana]);
             
-            const h = horarios.rows[0];
+            const h = horarios.rows[0] || {
+                loja_aberta: true,
+                loja_abre: '18:00:00',
+                loja_fecha: '23:00:00',
+                delivery_aberto: true,
+                delivery_abre: '18:00:00',
+                delivery_fecha: '23:00:00'
+            };
             
-            // Função para comparar horários
-            const horaAtualMinutos = horaAtual.split(':').reduce((h,m) => h*60 + parseInt(m));
-            
-            const lojaAbreMinutos = h.loja_abre.split(':').reduce((h,m) => h*60 + parseInt(m));
-            const lojaFechaMinutos = h.loja_fecha.split(':').reduce((h,m) => h*60 + parseInt(m));
-            
-            const deliveryAbreMinutos = h.delivery_abre.split(':').reduce((h,m) => h*60 + parseInt(m));
-            const deliveryFechaMinutos = h.delivery_fecha.split(':').reduce((h,m) => h*60 + parseInt(m));
-            
-            // Verificar se passou da meia-noite
-            const lojaAbreHoje = lojaAbreMinutos <= lojaFechaMinutos;
-            const deliveryAbreHoje = deliveryAbreMinutos <= deliveryFechaMinutos;
-            
-            // Status da loja
-            let lojaAberta = false;
-            let deliveryAberto = false;
-            let mensagemLoja = '';
-            let mensagemDelivery = '';
-            
-            if (!h.loja_aberta) {
-                mensagemLoja = 'Loja fechada hoje';
-            } else if (lojaAbreHoje) {
-                // Horário normal (abre e fecha no mesmo dia)
-                if (horaAtualMinutos >= lojaAbreMinutos && horaAtualMinutos <= lojaFechaMinutos) {
-                    lojaAberta = true;
-                    mensagemLoja = 'Loja aberta';
-                } else if (horaAtualMinutos < lojaAbreMinutos) {
-                    mensagemLoja = `Abre às ${h.loja_abre}`;
-                } else {
-                    mensagemLoja = 'Loja fechada';
-                }
-            } else {
-                // Horário que passa da meia-noite (ex: 18:00 às 02:00)
-                if (horaAtualMinutos >= lojaAbreMinutos || horaAtualMinutos <= lojaFechaMinutos) {
-                    lojaAberta = true;
-                    mensagemLoja = 'Loja aberta';
-                } else {
-                    mensagemLoja = `Abre às ${h.loja_abre}`;
-                }
+            function horaParaMinutos(hora) {
+                const [h, m] = hora.split(':').map(Number);
+                return h * 60 + m;
             }
             
-            // Status do delivery (mesma lógica)
-            if (!h.delivery_aberto) {
-                mensagemDelivery = 'Delivery fechado hoje';
-            } else if (deliveryAbreHoje) {
-                if (horaAtualMinutos >= deliveryAbreMinutos && horaAtualMinutos <= deliveryFechaMinutos) {
-                    deliveryAberto = true;
-                    mensagemDelivery = 'Delivery disponível';
-                } else if (horaAtualMinutos < deliveryAbreMinutos) {
-                    mensagemDelivery = `Delivery abre às ${h.delivery_abre}`;
-                } else {
-                    mensagemDelivery = 'Delivery encerrado';
-                }
+            const horaAtualMin = horaParaMinutos(horaAtual);
+            const lojaAbreMin = horaParaMinutos(h.loja_abre);
+            const lojaFechaMin = horaParaMinutos(h.loja_fecha);
+            
+            let loja_aberta = false;
+            let mensagem_loja = '';
+            
+            if (!h.loja_aberta) {
+                mensagem_loja = 'Loja fechada hoje';
+            } else if (horaAtualMin >= lojaAbreMin && horaAtualMin <= lojaFechaMin) {
+                loja_aberta = true;
+                mensagem_loja = 'Loja aberta';
+            } else if (horaAtualMin < lojaAbreMin) {
+                mensagem_loja = `Abre às ${h.loja_abre}`;
             } else {
-                if (horaAtualMinutos >= deliveryAbreMinutos || horaAtualMinutos <= deliveryFechaMinutos) {
-                    deliveryAberto = true;
-                    mensagemDelivery = 'Delivery disponível';
-                } else {
-                    mensagemDelivery = `Delivery abre às ${h.delivery_abre}`;
-                }
+                mensagem_loja = 'Loja fechada';
             }
             
             res.json({
-                loja_aberta: lojaAberta,
-                delivery_aberto: deliveryAberto,
-                pode_agendar: true, // Sempre pode agendar
-                mensagem_loja: mensagemLoja,
-                mensagem_delivery: mensagemDelivery,
-                horario_loja: h.loja_abre && h.loja_fecha ? `${h.loja_abre} às ${h.loja_fecha}` : '18:00 às 23:00',
-                horario_delivery: h.delivery_abre && h.delivery_fecha ? `${h.delivery_abre} às ${h.delivery_fecha}` : '18:00 às 23:00'
+                loja_aberta,
+                delivery_aberto: h.delivery_aberto,
+                pode_agendar: true,
+                mensagem_loja,
+                horario_loja: `${h.loja_abre} às ${h.loja_fecha}`
             });
             
         } catch (error) {
-            console.error('❌ Erro ao verificar status:', error);
+            console.error('❌ Erro:', error);
             res.status(500).json({ erro: error.message });
         }
     },
 
     // ==========================================
-    // FECHAR LOJA AGORA (botão de emergência)
+    // FECHAR LOJA AGORA
     // ==========================================
     async fecharLojaAgora(req, res) {
         try {
@@ -237,13 +224,13 @@ const horarioController = {
             res.json({ mensagem: 'Loja fechada com sucesso!' });
             
         } catch (error) {
-            console.error('❌ Erro ao fechar loja:', error);
+            console.error('❌ Erro:', error);
             res.status(500).json({ erro: error.message });
         }
     },
 
     // ==========================================
-    // ABRIR LOJA AGORA (botão de emergência)
+    // ABRIR LOJA AGORA
     // ==========================================
     async abrirLojaAgora(req, res) {
         try {
@@ -258,8 +245,47 @@ const horarioController = {
             res.json({ mensagem: 'Loja aberta com sucesso!' });
             
         } catch (error) {
-            console.error('❌ Erro ao abrir loja:', error);
+            console.error('❌ Erro:', error);
             res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ==========================================
+    // ROTA DE TESTE
+    // ==========================================
+    async teste(req, res) {
+        try {
+            const pool = require('../config/database');
+            
+            // Verificar se a tabela existe
+            const tableCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'horarios_funcionamento'
+                );
+            `);
+            
+            if (!tableCheck.rows[0].exists) {
+                return res.json({ 
+                    status: 'tabela_nao_existe',
+                    mensagem: 'Execute o script SQL para criar a tabela'
+                });
+            }
+            
+            const result = await pool.query('SELECT * FROM horarios_funcionamento LIMIT 5');
+            
+            res.json({ 
+                status: 'ok',
+                tabela_existe: true,
+                registros: result.rows.length,
+                dados: result.rows 
+            });
+            
+        } catch (error) {
+            res.status(500).json({ 
+                status: 'erro',
+                erro: error.message 
+            });
         }
     }
 };

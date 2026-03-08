@@ -1,3 +1,6 @@
+// ==========================================
+// backend/src/routes.js
+// ==========================================
 const express = require('express');
 const router = express.Router();
 
@@ -7,7 +10,7 @@ const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
 const configController = require('./controllers/configController');
-const horarioController = require('./controllers/horarioController'); // NOVO
+const horarioController = require('./controllers/horarioController');
 
 // ===== UPLOAD DE IMAGENS =====
 try {
@@ -102,10 +105,23 @@ router.put('/complementos/produto/:produtoId/vincular', safe(complementoControll
 // ==========================================
 // HORÁRIOS - NOVAS ROTAS
 // ==========================================
+
+// ROTA DE TESTE (para verificar se o controller está funcionando)
+router.get('/horarios-teste', safe(horarioController.teste));
+
+// Listar horários
 router.get('/horarios', safe(horarioController.listar));
+
+// Atualizar horários em lote
 router.put('/horarios/lote', safe(horarioController.atualizarLote));
+
+// Verificar status da loja (para o site do cliente)
 router.get('/status-loja/:subdominio', safe(horarioController.verificarStatus));
+
+// Fechar loja agora (botão emergência)
 router.post('/horarios/fechar-loja', safe(horarioController.fecharLojaAgora));
+
+// Abrir loja agora (botão emergência)
 router.post('/horarios/abrir-loja', safe(horarioController.abrirLojaAgora));
 
 // ===== 404 =====

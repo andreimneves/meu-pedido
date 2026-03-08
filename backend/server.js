@@ -1,107 +1,46 @@
-const express = require('express')
-const cors = require('cors')
-const path = require('path')
+// ==========================================
+// backend/server.js
+// ==========================================
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
 
-const app = express()
+const app = express();
 
-app.use(cors())
-app.use(express.json())
+console.log("🚀 Iniciando servidor...");
+console.log("📂 Diretório atual:", __dirname);
 
-// SERVIR FRONTEND
-app.use(express.static(path.join(__dirname,'public')))
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
-// ROTAS
-const adminHorarios = require('./routes/adminHorarios')
+// Servir arquivos estáticos
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(adminHorarios)
-
-
-// STATUS DA LOJA (USADO PELO SITE)
-
-const pool = require('./config/db')
-
-app.get('/status-loja', async (req,res)=>{
-
-try{
-
-const agora = new Date()
-
-const dia = agora.getDay()
-
-const hora = agora.toTimeString().slice(0,5)
-
-const result = await pool.query(
-`
-SELECT *
-FROM horarios_funcionamento
-WHERE dia_semana=$1
-AND tipo='loja'
-`,[dia]
-)
-
-if(result.rows.length==0){
-
-return res.json({
-loja_aberta:false,
-mensagem:'Fechado hoje'
-})
-
+// Carregar rotas
+try {
+    const rotas = require('./src/routes');
+    app.use('/api', rotas);
+    console.log("✅ Rotas carregadas com sucesso!");
+} catch (error) {
+    console.error("❌ Erro ao carregar rotas:", error.message);
 }
 
-const h = result.rows[0]
+// Rota raiz
+app.get('/', (req, res) => {
+    res.json({ 
+        status: 'API Meu Pedido rodando',
+        rotas_disponiveis: [
+            '/api/status',
+            '/api/horarios-teste',
+            '/api/horarios',
+            '/api/status-loja/:subdominio'
+        ]
+    });
+});
 
-
-if(!h.aberto){
-
-return res.json({
-loja_aberta:false,
-mensagem:'Loja fechada'
-})
-
-}
-
-
-if(hora < h.abre){
-
-return res.json({
-loja_aberta:false,
-mensagem:`Abre às ${h.abre}`
-})
-
-}
-
-
-if(hora > h.fecha){
-
-return res.json({
-loja_aberta:false,
-mensagem:'Encerrado hoje'
-})
-
-}
-
-
-res.json({
-loja_aberta:true,
-delivery_aberto:h.delivery_aberto,
-mensagem:'Loja aberta'
-})
-
-}catch(err){
-
-res.status(500).json({erro:err.message})
-
-}
-
-})
-
-
-// PORTA
-
-const PORT = 3000
-
-app.listen(PORT,()=>{
-
-console.log(`Servidor rodando na porta ${PORT}`)
-
-})
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
+});

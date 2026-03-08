@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horários - Meu Pedido</title>
-    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="style.css">
     <style>
         .status-badge {
             padding: 4px 8px;
@@ -33,6 +33,8 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            flex: 1;
+            min-width: 200px;
         }
         .btn-fechar {
             background: #f44336;
@@ -41,12 +43,20 @@
         .btn-fechar:hover {
             background: #d32f2f;
         }
+        .btn-fechar:disabled {
+            background: #ffcdd2;
+            cursor: not-allowed;
+        }
         .btn-abrir {
             background: #4CAF50;
             color: white;
         }
         .btn-abrir:hover {
             background: #388E3C;
+        }
+        .btn-abrir:disabled {
+            background: #c8e6c9;
+            cursor: not-allowed;
         }
         .btn-salvar {
             background: #2196F3;
@@ -58,6 +68,13 @@
             cursor: pointer;
             margin-top: 20px;
             width: 100%;
+        }
+        .btn-salvar:hover {
+            background: #1976D2;
+        }
+        .btn-salvar:disabled {
+            background: #bbdefb;
+            cursor: not-allowed;
         }
         .horario-card {
             background: white;
@@ -123,6 +140,11 @@
             padding: 40px;
             color: #666;
         }
+        .error-message {
+            color: #f44336;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -169,10 +191,10 @@
             
             <!-- Botões de emergência -->
             <div class="emergency-buttons">
-                <button class="btn-emergency btn-fechar" onclick="fecharLojaAgora()">
+                <button class="btn-emergency btn-fechar" onclick="fecharLojaAgora()" id="btnFechar">
                     🔴 FECHAR LOJA AGORA
                 </button>
-                <button class="btn-emergency btn-abrir" onclick="abrirLojaAgora()">
+                <button class="btn-emergency btn-abrir" onclick="abrirLojaAgora()" id="btnAbrir">
                     🟢 ABRIR LOJA AGORA
                 </button>
             </div>
@@ -211,8 +233,20 @@
             container.innerHTML = '<div class="loading">Carregando horários...</div>';
             
             try {
+                console.log('🔄 Carregando horários...');
                 const response = await fetch(`${API_URL}/horarios?tenant_id=1`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
                 const horarios = await response.json();
+                console.log('✅ Horários carregados:', horarios);
+                
+                if (!horarios || horarios.length === 0) {
+                    container.innerHTML = '<p class="error-message">Nenhum horário encontrado</p>';
+                    return;
+                }
                 
                 let html = '';
                 horarios.forEach(h => {
@@ -230,19 +264,19 @@
                                         <input type="checkbox" 
                                                id="loja_aberta_${h.dia_semana}" 
                                                ${h.loja_aberta ? 'checked' : ''}>
-                                        <label>Loja aberta neste dia</label>
+                                        <label for="loja_aberta_${h.dia_semana}">Loja aberta neste dia</label>
                                     </div>
                                     <div class="form-group">
-                                        <label>Abre:</label>
+                                        <label for="loja_abre_${h.dia_semana}">Abre:</label>
                                         <input type="time" 
                                                id="loja_abre_${h.dia_semana}" 
-                                               value="${h.loja_abre}">
+                                               value="${h.loja_abre.substring(0,5)}">
                                     </div>
                                     <div class="form-group">
-                                        <label>Fecha:</label>
+                                        <label for="loja_fecha_${h.dia_semana}">Fecha:</label>
                                         <input type="time" 
                                                id="loja_fecha_${h.dia_semana}" 
-                                               value="${h.loja_fecha}">
+                                               value="${h.loja_fecha.substring(0,5)}">
                                     </div>
                                 </div>
                                 
@@ -253,19 +287,19 @@
                                         <input type="checkbox" 
                                                id="delivery_aberta_${h.dia_semana}" 
                                                ${h.delivery_aberto ? 'checked' : ''}>
-                                        <label>Delivery disponível neste dia</label>
+                                        <label for="delivery_aberta_${h.dia_semana}">Delivery disponível neste dia</label>
                                     </div>
                                     <div class="form-group">
-                                        <label>Abre:</label>
+                                        <label for="delivery_abre_${h.dia_semana}">Abre:</label>
                                         <input type="time" 
                                                id="delivery_abre_${h.dia_semana}" 
-                                               value="${h.delivery_abre}">
+                                               value="${h.delivery_abre.substring(0,5)}">
                                     </div>
                                     <div class="form-group">
-                                        <label>Fecha:</label>
+                                        <label for="delivery_fecha_${h.dia_semana}">Fecha:</label>
                                         <input type="time" 
                                                id="delivery_fecha_${h.dia_semana}" 
-                                               value="${h.delivery_fecha}">
+                                               value="${h.delivery_fecha.substring(0,5)}">
                                     </div>
                                 </div>
                             </div>
@@ -274,10 +308,11 @@
                 });
                 
                 container.innerHTML = html;
-                atualizarStatusLoja(); // Atualiza o status atual
+                await atualizarStatusLoja(); // Atualiza o status atual
                 
             } catch (error) {
-                container.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar horários</p>';
+                console.error('❌ Erro ao carregar horários:', error);
+                container.innerHTML = `<p class="error-message">❌ Erro ao carregar horários: ${error.message}</p>`;
             }
         }
         
@@ -287,7 +322,13 @@
         async function atualizarStatusLoja() {
             try {
                 const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
                 const status = await response.json();
+                console.log('📊 Status atual:', status);
                 
                 const statusLoja = document.getElementById('statusLojaAtual');
                 const statusDelivery = document.getElementById('statusDeliveryAtual');
@@ -315,7 +356,7 @@
                 msgDelivery.textContent = status.mensagem_delivery || '';
                 
             } catch (error) {
-                console.error('Erro ao atualizar status:', error);
+                console.error('❌ Erro ao atualizar status:', error);
             }
         }
         
@@ -342,15 +383,17 @@
                 horarios.push({
                     dia_semana: dia,
                     loja_aberta,
-                    loja_abre,
-                    loja_fecha,
+                    loja_abre: loja_abre + ':00',
+                    loja_fecha: loja_fecha + ':00',
                     delivery_aberto,
-                    delivery_abre,
-                    delivery_fecha
+                    delivery_abre: delivery_abre + ':00',
+                    delivery_fecha: delivery_fecha + ':00'
                 });
             }
             
             try {
+                console.log('📤 Enviando horários:', horarios);
+                
                 const response = await fetch(`${API_URL}/horarios/lote`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -360,14 +403,17 @@
                     })
                 });
                 
-                if (response.ok) {
-                    alert('✅ Horários salvos com sucesso!');
-                    await carregarHorarios(); // Recarrega para mostrar os novos valores
-                } else {
-                    alert('❌ Erro ao salvar horários');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.erro || 'Erro ao salvar');
                 }
+                
+                alert('✅ Horários salvos com sucesso!');
+                await carregarHorarios(); // Recarrega para mostrar os novos valores
+                
             } catch (error) {
-                alert('❌ Erro de conexão');
+                console.error('❌ Erro ao salvar:', error);
+                alert('❌ Erro ao salvar horários: ' + error.message);
             } finally {
                 btn.innerHTML = '💾 SALVAR TODOS OS HORÁRIOS';
                 btn.disabled = false;
@@ -382,22 +428,35 @@
                 return;
             }
             
+            const btn = document.getElementById('btnFechar');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '⏳ Fechando...';
+            btn.disabled = true;
+            
             try {
+                console.log('🔴 Solicitando fechamento da loja...');
+                
                 const response = await fetch(`${API_URL}/horarios/fechar-loja`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenant_id: 1 })
                 });
                 
-                if (response.ok) {
-                    alert('✅ Loja fechada com sucesso!');
-                    await atualizarStatusLoja(); // Atualiza o status
-                    await carregarHorarios(); // Recarrega para mostrar os checkboxes atualizados
-                } else {
-                    alert('❌ Erro ao fechar loja');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.erro || 'Erro ao fechar loja');
                 }
+                
+                alert('✅ Loja fechada com sucesso!');
+                await atualizarStatusLoja(); // Atualiza o status
+                await carregarHorarios(); // Recarrega para mostrar os checkboxes atualizados
+                
             } catch (error) {
-                alert('❌ Erro de conexão');
+                console.error('❌ Erro ao fechar loja:', error);
+                alert('❌ Erro ao fechar loja: ' + error.message);
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
             }
         }
         
@@ -409,22 +468,35 @@
                 return;
             }
             
+            const btn = document.getElementById('btnAbrir');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '⏳ Abrindo...';
+            btn.disabled = true;
+            
             try {
+                console.log('🟢 Solicitando abertura da loja...');
+                
                 const response = await fetch(`${API_URL}/horarios/abrir-loja`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenant_id: 1 })
                 });
                 
-                if (response.ok) {
-                    alert('✅ Loja aberta com sucesso!');
-                    await atualizarStatusLoja(); // Atualiza o status
-                    await carregarHorarios(); // Recarrega para mostrar os checkboxes atualizados
-                } else {
-                    alert('❌ Erro ao abrir loja');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.erro || 'Erro ao abrir loja');
                 }
+                
+                alert('✅ Loja aberta com sucesso!');
+                await atualizarStatusLoja(); // Atualiza o status
+                await carregarHorarios(); // Recarrega para mostrar os checkboxes atualizados
+                
             } catch (error) {
-                alert('❌ Erro de conexão');
+                console.error('❌ Erro ao abrir loja:', error);
+                alert('❌ Erro ao abrir loja: ' + error.message);
+            } finally {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
             }
         }
         
