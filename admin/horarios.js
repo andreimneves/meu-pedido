@@ -1,87 +1,114 @@
-const API = "/api";
+const express = require('express')
+const router = express.Router()
 
-const dias = [
-"Domingo",
-"Segunda",
-"Terça",
-"Quarta",
-"Quinta",
-"Sexta",
-"Sábado"
-];
+const pool = require('../config/db')
 
-async function carregar(){
 
-const res = await fetch(API+"/horarios");
+// LISTAR HORÁRIOS
 
-const dados = await res.json();
+router.get('/admin/horarios', async (req,res)=>{
 
-const tabela = document.getElementById("horariosTable");
+try{
 
-tabela.innerHTML="";
+const result = await pool.query(
+`
+SELECT *
+FROM horarios_funcionamento
+WHERE tipo='loja'
+ORDER BY dia_semana
+`
+)
 
-dados.forEach(h=>{
+res.json(result.rows)
 
-tabela.innerHTML+=`
+}catch(err){
 
-<tr>
-
-<td>${dias[h.dia_semana]}</td>
-
-<td>
-<input type="checkbox" id="aberto${h.id}" ${h.aberto?"checked":""}>
-</td>
-
-<td>
-<input type="time" id="abre${h.id}" value="${h.abre}">
-</td>
-
-<td>
-<input type="time" id="fecha${h.id}" value="${h.fecha}">
-</td>
-
-<td>
-<input type="time" id="dabre${h.id}" value="${h.delivery_abre}">
-</td>
-
-<td>
-<input type="time" id="dfecha${h.id}" value="${h.delivery_fecha}">
-</td>
-
-<td>
-<button onclick="salvar(${h.id})">Salvar</button>
-</td>
-
-</tr>
-
-`;
-
-});
+res.status(500).json({erro:err.message})
 
 }
 
-async function salvar(id){
+})
 
-const aberto=document.getElementById("aberto"+id).checked;
-const abre=document.getElementById("abre"+id).value;
-const fecha=document.getElementById("fecha"+id).value;
-const dabre=document.getElementById("dabre"+id).value;
-const dfecha=document.getElementById("dfecha"+id).value;
 
-await fetch(API+"/horarios/"+id,{
-method:"PUT",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
+
+
+// ATUALIZAR HORÁRIO
+
+router.put('/admin/horarios/:id', async (req,res)=>{
+
+try{
+
+const {id} = req.params
+
+const {
 aberto,
 abre,
 fecha,
-delivery_abre:dabre,
-delivery_fecha:dfecha
-})
-});
+delivery_aberto,
+delivery_abre,
+delivery_fecha
+} = req.body
 
-alert("Salvo!");
+const result = await pool.query(
+`
+UPDATE horarios_funcionamento
+SET
+
+aberto=$1,
+abre=$2,
+fecha=$3,
+delivery_aberto=$4,
+delivery_abre=$5,
+delivery_fecha=$6
+
+WHERE id=$7
+
+RETURNING *
+`,
+[
+aberto,
+abre,
+fecha,
+delivery_aberto,
+delivery_abre,
+delivery_fecha,
+id
+]
+)
+
+res.json(result.rows[0])
+
+}catch(err){
+
+res.status(500).json({erro:err.message})
 
 }
 
-carregar();
+})
+
+
+
+// BOTÃO FECHAR LOJA
+
+router.post('/admin/fechar-loja', async(req,res)=>{
+
+try{
+
+await pool.query(`
+UPDATE horarios_funcionamento
+SET aberto=false
+WHERE tipo='loja'
+`)
+
+res.json({ok:true})
+
+}catch(err){
+
+res.status(500).json({erro:err.message})
+
+}
+
+})
+
+
+module.exports = router
