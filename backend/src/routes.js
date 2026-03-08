@@ -103,47 +103,13 @@ router.get('/complementos/produto/:produtoId', safe(complementoController.listar
 router.put('/complementos/produto/:produtoId/vincular', safe(complementoController.vincularGruposProduto));
 
 // ==========================================
-// HORÁRIOS - NOVAS ROTAS (ADICIONADAS AGORA)
+// HORÁRIOS - ROTAS NOVAS (ADICIONADAS)
 // ==========================================
 
 // ROTA DE TESTE (para verificar se o controller está funcionando)
-router.get('/horarios-teste', async (req, res) => {
-    try {
-        const pool = require('./config/database');
-        
-        // Verificar se a tabela existe
-        const tableCheck = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'horarios_funcionamento'
-            );
-        `);
-        
-        if (!tableCheck.rows[0].exists) {
-            return res.json({ 
-                status: 'tabela_nao_existe',
-                mensagem: 'Execute o script SQL para criar a tabela'
-            });
-        }
-        
-        const result = await pool.query('SELECT * FROM horarios_funcionamento LIMIT 5');
-        
-        res.json({ 
-            status: 'ok',
-            mensagem: 'Rotas de horários funcionando!',
-            registros: result.rows.length,
-            dados: result.rows 
-        });
-        
-    } catch (error) {
-        res.status(500).json({ 
-            status: 'erro',
-            erro: error.message 
-        });
-    }
-});
+router.get('/horarios-teste', safe(horarioController.teste));
 
-// Listar horários
+// Listar horários (para o painel admin)
 router.get('/horarios', safe(horarioController.listar));
 
 // Atualizar horários em lote
