@@ -13,7 +13,7 @@ let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados 
 let coordsLoja = { lat: null, lng: null };
 let modoAgendamento = false;
 let horarioSelecionado = null;
-let dataSelecionada = null;
+let dataSelecionadaGlobal = null;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -23,6 +23,28 @@ window.onload = async () => {
     await carregarTudoDoBanco();
     atualizarStatusLoja();
     setInterval(atualizarStatusLoja, 30000);
+    
+    // Adicionar eventos após carregar a página
+    setTimeout(() => {
+        const horarioSelect = document.getElementById('horarioAgendamento');
+        if (horarioSelect) {
+            horarioSelect.addEventListener('change', function() {
+                const data = document.getElementById('dataAgendamento').value;
+                const horario = this.value;
+                const btn = document.querySelector('.whatsapp-btn');
+                const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
+                
+                if (data && horario) {
+                    horarioSelecionado = horario;
+                    btn.disabled = false;
+                    btn.innerHTML = `📅 Confirmar Agendamento de ${tipo === 'delivery' ? 'Entrega' : 'Retirada'}`;
+                } else {
+                    btn.disabled = true;
+                    btn.innerHTML = `📅 Selecione data e horário`;
+                }
+            });
+        }
+    }, 1000);
 };
 
 // ==========================================
@@ -465,7 +487,7 @@ window.removerDoCarrinho = function(idx) {
 }
 
 // ==========================================
-// TOGGLE DELIVERY - VERSÃO CORRIGIDA
+// TOGGLE DELIVERY - VERSÃO CORRIGIDA (COM RETIRADA)
 // ==========================================
 window.toggleDelivery = async function(isDelivery) {
     if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
@@ -482,7 +504,7 @@ window.toggleDelivery = async function(isDelivery) {
     // Reset do botão de finalizar
     const btn = document.querySelector('.whatsapp-btn');
     btn.disabled = true;
-    btn.innerHTML = '📅 Selecione um horário';
+    btn.innerHTML = isDelivery ? '📅 Verifique o CEP' : '📅 Selecione o horário';
     
     // Buscar status atualizado
     const status = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`).then(r => r.json());
@@ -492,12 +514,17 @@ window.toggleDelivery = async function(isDelivery) {
     let proximo = isDelivery ? status.proximo_delivery : status.proximo_loja;
     
     if (disponivel) {
-        btn.disabled = false;
-        btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
+        if (isDelivery) {
+            btn.disabled = true; // Só habilita depois do CEP
+            btn.innerHTML = '👆 Informe seu CEP';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
+        }
         avisoDiv.style.display = 'none';
     } else {
         btn.disabled = true;
-        btn.innerHTML = '📅 Agendar Pedido';
+        btn.innerHTML = '📅 Agendar';
         
         avisoDiv.innerHTML = `
             <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -539,8 +566,10 @@ window.mostrarAgendamento = function() {
     document.getElementById('agendamentoFields').style.display = 'block';
     modoAgendamento = true;
     
+    const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     const hoje = new Date();
     const dataMin = hoje.toISOString().split('T')[0];
+    
     document.getElementById('dataAgendamento').min = dataMin;
     document.getElementById('dataAgendamento').value = '';
     document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data</option>';
@@ -548,9 +577,12 @@ window.mostrarAgendamento = function() {
     // Resetar botão
     const btn = document.querySelector('.whatsapp-btn');
     btn.disabled = true;
-    btn.innerHTML = '📅 Selecione data e horário';
+    btn.innerHTML = `📅 Selecione data para ${tipo === 'delivery' ? 'entrega' : 'retirada'}`;
 }
 
+// ==========================================
+// CARREGAR HORÁRIOS POR DATA (VERSÃO CORRIGIDA)
+// ==========================================
 window.carregarHorariosPorData = async function() {
     const dataSelecionada = document.getElementById('dataAgendamento').value;
     const select = document.getElementById('horarioAgendamento');
@@ -560,7 +592,7 @@ window.carregarHorariosPorData = async function() {
     if (!dataSelecionada) {
         select.innerHTML = '<option value="">Selecione uma data</option>';
         btn.disabled = true;
-        btn.innerHTML = '📅 Selecione uma data';
+        btn.innerHTML = `📅 Selecione uma data`;
         return;
     }
     
@@ -568,12 +600,15 @@ window.carregarHorariosPorData = async function() {
     select.innerHTML = '<option value="">🔄 Carregando...</option>';
     
     try {
-        const horarios = await buscarHorariosDisponiveis(tipo, dataSelecionada);
+        // IMPORTANTE: Para retirada, usar tipo 'loja'
+        const tipoBusca = tipo === 'delivery' ? 'delivery' : 'loja';
+        
+        const horarios = await buscarHorariosDisponiveis(tipoBusca, dataSelecionada);
         
         if (!horarios.disponivel || !horarios.opcoes || horarios.opcoes.length === 0) {
             select.innerHTML = '<option value="">❌ Sem horários disponíveis</option>';
             btn.disabled = true;
-            btn.innerHTML = '📅 Indisponível';
+            btn.innerHTML = `📅 Indisponível para ${tipo === 'delivery' ? 'entrega' : 'retirada'}`;
             return;
         }
         
@@ -589,34 +624,9 @@ window.carregarHorariosPorData = async function() {
         console.error('Erro ao carregar horários:', error);
         select.innerHTML = '<option value="">❌ Erro ao carregar</option>';
         btn.disabled = true;
-        btn.innerHTML = '📅 Erro';
+        btn.innerHTML = `📅 Erro`;
     }
 }
-
-// Nova função para quando selecionar um horário
-window.selecionarHorario = function() {
-    const select = document.getElementById('horarioAgendamento');
-    const btn = document.querySelector('.whatsapp-btn');
-    const data = document.getElementById('dataAgendamento').value;
-    const horario = select.value;
-    
-    if (data && horario) {
-        horarioSelecionado = horario;
-        btn.disabled = false;
-        btn.innerHTML = '📅 Confirmar Agendamento';
-    } else {
-        btn.disabled = true;
-        btn.innerHTML = '📅 Selecione data e horário';
-    }
-}
-
-// Adicionar evento ao select de horário
-document.addEventListener('DOMContentLoaded', function() {
-    const horarioSelect = document.getElementById('horarioAgendamento');
-    if (horarioSelect) {
-        horarioSelect.addEventListener('change', window.selecionarHorario);
-    }
-});
 
 // ==========================================
 // CEP E FRETE
@@ -640,6 +650,7 @@ window.mascaraCEP = function(i) {
 window.calcularFretePorCEP = async function() {
     const cepInput = document.getElementById('cepInput').value;
     const cepCliente = cepInput.replace(/\D/g, '');
+    const btn = document.querySelector('.whatsapp-btn');
     
     if(cepCliente.length !== 8) {
         document.getElementById('cepInfo').innerHTML = '❌ CEP Inválido';
@@ -680,6 +691,8 @@ window.calcularFretePorCEP = async function() {
                 document.getElementById('freteInfo').className = 'frete-info erro';
                 dentroAreaEntrega = false;
                 taxaFrete = 0;
+                btn.disabled = true;
+                btn.innerHTML = '🚫 Fora da área';
                 calcularSubtotalGeral();
                 return;
             }
@@ -713,6 +726,12 @@ window.calcularFretePorCEP = async function() {
             document.getElementById('freteInfo').className = 'frete-info';
             document.getElementById('freteInfo').style.background = '#e8f5e9';
             document.getElementById('freteInfo').style.color = '#333';
+        }
+        
+        // Habilitar botão se estiver dentro da área e não for agendamento
+        if (!modoAgendamento) {
+            btn.disabled = false;
+            btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
         }
         
         calcularSubtotalGeral();
