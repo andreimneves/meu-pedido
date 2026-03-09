@@ -13,42 +13,26 @@ console.log("🌐 Ambiente:", process.env.NODE_ENV || 'development');
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos
+// Servir uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/admin', express.static(path.join(__dirname, '../admin')));
-app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Rotas da API
+// Rotas
 try {
     const rotas = require('./src/routes');
     app.use('/api', rotas);
-    console.log("✅ Rotas carregadas com sucesso!");
+    console.log("✅ Rotas carregadas!");
 } catch (err) {
-    console.error("❌ Erro ao carregar rotas:", err.message);
+    console.error("❌ Erro ao carregar rotas:", err);
 }
 
-// Rota raiz - redireciona para o frontend
+// Health check
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
-
-// Rota de saúde do servidor
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
-    });
+    res.json({ status: 'API rodando' });
 });
 
 // Porta
 const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log('='.repeat(60));
-    console.log(`✅ SERVIDOR RODANDO NA PORTA ${PORT}`);
-    console.log(`📌 Frontend: https://meu-pedido-backend.onrender.com/`);
-    console.log(`📌 Admin: https://meu-pedido-backend.onrender.com/admin/horarios.html`);
-    console.log(`📌 API: https://meu-pedido-backend.onrender.com/api/teste`);
-    console.log('='.repeat(60));
+app.listen(PORT, () => {
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
