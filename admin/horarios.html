@@ -471,6 +471,15 @@
             font-size: 14px;
         }
 
+        .stats-badge {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
         .btn-salvar {
             background: #C83232;
             color: white;
@@ -554,15 +563,6 @@
                 transform: translateX(0);
                 opacity: 1;
             }
-        }
-
-        .stats-badge {
-            background: #f1f5f9;
-            color: #334155;
-            padding: 4px 10px;
-            border-radius: 30px;
-            font-size: 12px;
-            font-weight: 500;
         }
     </style>
 </head>
@@ -685,6 +685,7 @@
             const container = document.getElementById('horariosContainer');
             
             try {
+                console.log('🔄 Carregando horários...');
                 const response = await fetch(`${API_URL}/horarios?tenant_id=1`);
                 
                 if (!response.ok) {
@@ -692,6 +693,7 @@
                 }
                 
                 const horarios = await response.json();
+                console.log('✅ Horários recebidos:', horarios);
                 
                 if (!horarios || horarios.length === 0) {
                     container.innerHTML = '<div class="error-message">Nenhum horário encontrado</div>';
@@ -782,6 +784,7 @@
                 await atualizarStatusLoja();
                 
             } catch (error) {
+                console.error('❌ Erro:', error);
                 container.innerHTML = `<div class="error-message">❌ Erro ao carregar: ${error.message}</div>`;
             }
         }
@@ -799,7 +802,7 @@
                 statusLoja.innerHTML = status.loja_aberta ? 
                     '<span class="status-badge aberto">🟢 ABERTO AGORA</span>' : 
                     '<span class="status-badge fechado">🔴 FECHADO AGORA</span>';
-                msgLoja.textContent = status.mensagem_loja;
+                msgLoja.textContent = status.mensagem_loja || '';
                 proximoLoja.textContent = status.proximo_loja ? `Próximo horário: ${status.proximo_loja}` : '';
                 
                 // Atualizar Delivery
@@ -810,7 +813,7 @@
                 statusDelivery.innerHTML = status.delivery_aberto ? 
                     '<span class="status-badge aberto">🟢 DISPONÍVEL</span>' : 
                     '<span class="status-badge fechado">🔴 INDISPONÍVEL</span>';
-                msgDelivery.textContent = status.mensagem_delivery;
+                msgDelivery.textContent = status.mensagem_delivery || '';
                 proximoDelivery.textContent = status.proximo_delivery ? `Próximo horário: ${status.proximo_delivery}` : '';
                 
             } catch (error) {
@@ -837,14 +840,20 @@
                 if (loja_abre && loja_fecha) {
                     diasCarregados++;
                     
+                    // PEGAR APENAS OS PRIMEIROS 5 CARACTERES (HH:MM)
+                    const lojaAbreValor = loja_abre.value.substring(0,5);
+                    const lojaFechaValor = loja_fecha.value.substring(0,5);
+                    const deliveryAbreValor = delivery_abre.value.substring(0,5);
+                    const deliveryFechaValor = delivery_fecha.value.substring(0,5);
+                    
                     horarios.push({
                         dia_semana: dia,
                         loja_aberta: loja_aberta.checked,
-                        loja_abre: loja_abre.value + ':00',
-                        loja_fecha: loja_fecha.value + ':00',
+                        loja_abre: lojaAbreValor,
+                        loja_fecha: lojaFechaValor,
                         delivery_aberto: delivery_aberta.checked,
-                        delivery_abre: delivery_abre.value + ':00',
-                        delivery_fecha: delivery_fecha.value + ':00'
+                        delivery_abre: deliveryAbreValor,
+                        delivery_fecha: deliveryFechaValor
                     });
                 }
             }
@@ -855,6 +864,8 @@
                 btn.disabled = false;
                 return;
             }
+            
+            console.log('📤 Enviando:', horarios);
             
             try {
                 const response = await fetch(`${API_URL}/horarios/lote`, {
@@ -876,6 +887,7 @@
                 await carregarHorarios();
                 
             } catch (error) {
+                console.error('❌ Erro:', error);
                 mostrarToast('❌ Erro: ' + error.message, 'erro');
             } finally {
                 btn.innerHTML = '<span>💾</span><span>SALVAR TODAS AS ALTERAÇÕES</span>';
@@ -884,9 +896,7 @@
         }
         
         async function fecharLojaAgora() {
-            if (!confirm('Tem certeza que deseja FECHAR a loja agora? Isso vai desativar todos os pedidos imediatamente.')) {
-                return;
-            }
+            if (!confirm('Tem certeza que deseja FECHAR a loja agora?')) return;
             
             const btn = document.getElementById('btnFechar');
             btn.innerHTML = '<span>⏳</span><span>FECHANDO...</span>';
@@ -916,9 +926,7 @@
         }
         
         async function abrirLojaAgora() {
-            if (!confirm('Tem certeza que deseja ABRIR a loja agora?')) {
-                return;
-            }
+            if (!confirm('Tem certeza que deseja ABRIR a loja agora?')) return;
             
             const btn = document.getElementById('btnAbrir');
             btn.innerHTML = '<span>⏳</span><span>ABRINDO...</span>';

@@ -9,7 +9,7 @@ const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
 const configController = require('./controllers/configController');
-const horarioController = require('./controllers/horarioController'); // NOVO
+const horarioController = require('./controllers/horarioController');
 
 // ===== UPLOAD DE IMAGENS =====
 try {
@@ -20,16 +20,6 @@ try {
     console.log('⚠️ Upload não configurado');
 }
 
-// ===== FUNÇÃO SEGURA =====
-const safe = (fn) => async (req, res) => {
-    try {
-        await fn(req, res);
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        res.status(500).json({ erro: error.message });
-    }
-};
-
 // ===== STATUS =====
 router.get('/status', (req, res) => {
     res.json({ status: 'online', timestamp: new Date().toISOString() });
@@ -38,77 +28,77 @@ router.get('/status', (req, res) => {
 // ==========================================
 // CONFIGURAÇÕES
 // ==========================================
-router.get('/config/:subdominio', safe(configController.buscarConfiguracoes));
-router.put('/config/:subdominio', safe(configController.atualizarConfiguracoes));
+router.get('/config/:subdominio', configController.buscarConfiguracoes);
+router.put('/config/:subdominio', configController.atualizarConfiguracoes);
 
 // ==========================================
 // CATEGORIAS
 // ==========================================
-router.get('/categorias', safe(categoriaController.listar));
-router.get('/categorias/:id', safe(categoriaController.buscarPorId));
-router.post('/categorias', safe(categoriaController.criar));
-router.put('/categorias/:id', safe(categoriaController.atualizar));
-router.delete('/categorias/:id', safe(categoriaController.excluir));
+router.get('/categorias', categoriaController.listar);
+router.get('/categorias/:id', categoriaController.buscarPorId);
+router.post('/categorias', categoriaController.criar);
+router.put('/categorias/:id', categoriaController.atualizar);
+router.delete('/categorias/:id', categoriaController.excluir);
 
 // ==========================================
 // PRODUTOS
 // ==========================================
-router.get('/produtos', safe(produtoController.listarTodos));
-router.get('/produtos/:id', safe(produtoController.buscarPorId));
-router.post('/produtos', safe(produtoController.criar));
-router.put('/produtos/:id', safe(produtoController.atualizar));
-router.delete('/produtos/:id', safe(produtoController.excluir));
-router.get('/cardapio/:subdominio', safe(produtoController.cardapio));
+router.get('/produtos', produtoController.listarTodos);
+router.get('/produtos/:id', produtoController.buscarPorId);
+router.post('/produtos', produtoController.criar);
+router.put('/produtos/:id', produtoController.atualizar);
+router.delete('/produtos/:id', produtoController.excluir);
+router.get('/cardapio/:subdominio', produtoController.cardapio);
 
 // ==========================================
 // PEDIDOS
 // ==========================================
-router.post('/pedidos', safe(pedidoController.criarPedido));
-router.get('/pedidos/:subdominio', safe(pedidoController.listarPedidos));
-router.get('/pedidos/:subdominio/:id', safe(pedidoController.buscarPedido));
-router.put('/pedidos/:subdominio/:id/status', safe(pedidoController.atualizarStatus));
-router.get('/dashboard/:subdominio', safe(pedidoController.dashboard));
+router.post('/pedidos', pedidoController.criarPedido);
+router.get('/pedidos/:subdominio', pedidoController.listarPedidos);
+router.get('/pedidos/:subdominio/:id', pedidoController.buscarPedido);
+router.put('/pedidos/:subdominio/:id/status', pedidoController.atualizarStatus);
+router.get('/dashboard/:subdominio', pedidoController.dashboard);
 
 // ==========================================
 // COMPLEMENTOS - GRUPOS
 // ==========================================
-router.get('/grupos-complementos', safe(complementoController.listarGrupos));
-router.post('/grupos-complementos', safe(complementoController.criarGrupo));
-router.put('/grupos-complementos/:id', safe(complementoController.atualizarGrupo));
-router.delete('/grupos-complementos/:id', safe(complementoController.excluirGrupo));
+router.get('/grupos-complementos', complementoController.listarGrupos);
+router.post('/grupos-complementos', complementoController.criarGrupo);
+router.put('/grupos-complementos/:id', complementoController.atualizarGrupo);
+router.delete('/grupos-complementos/:id', complementoController.excluirGrupo);
 
 // ==========================================
 // COMPLEMENTOS - ITENS
 // ==========================================
-router.get('/complementos', safe(complementoController.listarItens));
-router.post('/complementos', safe(complementoController.criarItem));
-router.put('/complementos/:id', safe(complementoController.atualizarItem));
-router.delete('/complementos/:id', safe(complementoController.excluirItem));
+router.get('/complementos', complementoController.listarItens);
+router.post('/complementos', complementoController.criarItem);
+router.put('/complementos/:id', complementoController.atualizarItem);
+router.delete('/complementos/:id', complementoController.excluirItem);
 
 // ==========================================
 // VÍNCULOS GRUPO-ITEM
 // ==========================================
-router.get('/grupo-complementos/:id/itens', safe(complementoController.listarItensDoGrupo));
-router.post('/grupos/:grupoId/itens/:itemId', safe(complementoController.vincularItemAoGrupo));
-router.delete('/grupos/:grupoId/itens/:itemId', safe(complementoController.removerItemDoGrupo));
+router.get('/grupo-complementos/:id/itens', complementoController.listarItensDoGrupo);
+router.post('/grupos/:grupoId/itens/:itemId', complementoController.vincularItemAoGrupo);
+router.delete('/grupos/:grupoId/itens/:itemId', complementoController.removerItemDoGrupo);
 
 // ==========================================
 // VÍNCULOS PRODUTO-GRUPO
 // ==========================================
-router.get('/produtos/:produtoId/grupos', safe(complementoController.listarGruposDoProduto));
-router.post('/produtos/:produtoId/grupos', safe(complementoController.vincularGruposProduto));
-router.get('/complementos/produto/:produtoId', safe(complementoController.listarGruposDoProduto));
-router.put('/complementos/produto/:produtoId/vincular', safe(complementoController.vincularGruposProduto));
+router.get('/produtos/:produtoId/grupos', complementoController.listarGruposDoProduto);
+router.post('/produtos/:produtoId/grupos', complementoController.vincularGruposProduto);
+router.get('/complementos/produto/:produtoId', complementoController.listarGruposDoProduto);
+router.put('/complementos/produto/:produtoId/vincular', complementoController.vincularGruposProduto);
 
 // ==========================================
-// HORÁRIOS - NOVAS ROTAS
+// HORÁRIOS - ROTAS COMPLETAS
 // ==========================================
-router.get('/horarios', safe(horarioController.listar));
-router.put('/horarios/lote', safe(horarioController.atualizarLote));
-router.get('/status-loja/:subdominio', safe(horarioController.verificarStatus));
-router.get('/horarios-disponiveis/:subdominio/:tipo', safe(horarioController.horariosDisponiveis));
-router.post('/horarios/fechar-loja', safe(horarioController.fecharLojaAgora));
-router.post('/horarios/abrir-loja', safe(horarioController.abrirLojaAgora));
+router.get('/horarios', horarioController.listar);
+router.put('/horarios/lote', horarioController.atualizarLote);
+router.get('/status-loja/:subdominio', horarioController.verificarStatus);
+router.get('/horarios-disponiveis/:subdominio/:tipo', horarioController.horariosDisponiveis);
+router.post('/horarios/fechar-loja', horarioController.fecharLojaAgora);
+router.post('/horarios/abrir-loja', horarioController.abrirLojaAgora);
 
 // ===== 404 =====
 router.use('*', (req, res) => {

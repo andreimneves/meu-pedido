@@ -8,16 +8,18 @@ const horarioController = {
         try {
             const { tenant_id = 1 } = req.query;
             
+            console.log('🔍 Buscando horários para tenant:', tenant_id);
+            
             const result = await pool.query(`
                 SELECT 
                     dias.dia_semana,
                     dias.nome_dia,
                     COALESCE(loja.aberto, true) as loja_aberta,
-                    COALESCE(loja.abre::text, '18:00') as loja_abre,
-                    COALESCE(loja.fecha::text, '23:00') as loja_fecha,
+                    COALESCE(loja.abre, '18:00') as loja_abre,
+                    COALESCE(loja.fecha, '23:00') as loja_fecha,
                     COALESCE(delivery.aberto, true) as delivery_aberto,
-                    COALESCE(delivery.abre::text, '18:00') as delivery_abre,
-                    COALESCE(delivery.fecha::text, '23:00') as delivery_fecha
+                    COALESCE(delivery.abre, '18:00') as delivery_abre,
+                    COALESCE(delivery.fecha, '23:00') as delivery_fecha
                 FROM (
                     VALUES 
                         (0, 'Domingo'),
@@ -39,15 +41,17 @@ const horarioController = {
                 ORDER BY dias.dia_semana
             `, [tenant_id]);
             
+            console.log('✅ Horários encontrados:', result.rows.length);
             res.json(result.rows);
+            
         } catch (error) {
-            console.error('Erro ao listar horários:', error);
+            console.error('❌ Erro ao listar horários:', error);
             res.status(500).json({ erro: error.message });
         }
     },
 
     // ==========================================
-    // ATUALIZAR HORÁRIOS (painel admin)
+    // ATUALIZAR HORÁRIOS EM LOTE (VERSÃO CORRIGIDA)
     // ==========================================
     atualizarLote: async (req, res) => {
         const client = await pool.connect();
@@ -56,37 +60,51 @@ const horarioController = {
             
             const { horarios, tenant_id = 1 } = req.body;
             
+            console.log('📝 Recebidos para atualização:', horarios.length, 'registros');
+            
             for (const h of horarios) {
-                // Loja
-                await client.query(`
-                    INSERT INTO horarios_funcionamento (tenant_id, dia_semana, tipo, aberto, abre, fecha)
-                    VALUES ($1, $2, 'loja', $3, $4::time, $5::time)
-                    ON CONFLICT (tenant_id, dia_semana, tipo) 
-                    DO UPDATE SET 
-                        aberto = EXCLUDED.aberto,
-                        abre = EXCLUDED.abre,
-                        fecha = EXCLUDED.fecha,
-                        updated_at = CURRENT_TIMESTAMP
-                `, [tenant_id, h.dia_semana, h.loja_aberta, h.loja_abre, h.loja_fecha]);
+                // GARANTIR APENAS HH:MM (5 caracteres)
+                const loja_abre = h.loja_abre ? h.loja_abre.substring(0,5) : '18:00';
+                const loja_fecha = h.loja_fecha ? h.loja_fecha.substring(0,5) : '23:00';
+                const delivery_abre = h.delivery_abre ? h.delivery_abre.substring(0,5) : '18:00';
+                const delivery_fecha = h.delivery_fecha ? h.delivery_fecha.substring(0,5) : '23:00';
                 
-                // Delivery
+                console.log(`📌 Dia ${h.dia_semana}: Loja ${loja_abre}-${loja_fecha}, Delivery ${delivery_abre}-${delivery_fecha}`);
+                
+                // Atualizar loja
                 await client.query(`
-                    INSERT INTO horarios_funcionamento (tenant_id, dia_semana, tipo, aberto, abre, fecha)
-                    VALUES ($1, $2, 'delivery', $3, $4::time, $5::time)
+                    INSERT INTO horarios_funcionamento 
+                        (tenant_id, dia_semana, tipo, aberto, abre, fecha)
+                    VALUES ($1, $2, 'loja', $3, $4, $5)
                     ON CONFLICT (tenant_id, dia_semana, tipo) 
                     DO UPDATE SET 
                         aberto = EXCLUDED.aberto,
                         abre = EXCLUDED.abre,
                         fecha = EXCLUDED.fecha,
                         updated_at = CURRENT_TIMESTAMP
-                `, [tenant_id, h.dia_semana, h.delivery_aberto, h.delivery_abre, h.delivery_fecha]);
+                `, [tenant_id, h.dia_semana, h.loja_aberta, loja_abre, loja_fecha]);
+                
+                // Atualizar delivery
+                await client.query(`
+                    INSERT INTO horarios_funcionamento 
+                        (tenant_id, dia_semana, tipo, aberto, abre, fecha)
+                    VALUES ($1, $2, 'delivery', $3, $4, $5)
+                    ON CONFLICT (tenant_id, dia_semana, tipo) 
+                    DO UPDATE SET 
+                        aberto = EXCLUDED.aberto,
+                        abre = EXCLUDED.abre,
+                        fecha = EXCLUDED.fecha,
+                        updated_at = CURRENT_TIMESTAMP
+                `, [tenant_id, h.dia_semana, h.delivery_aberto, delivery_abre, delivery_fecha]);
             }
             
             await client.query('COMMIT');
+            console.log('✅ Horários atualizados com sucesso!');
             res.json({ mensagem: 'Horários salvos com sucesso!' });
+            
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Erro ao atualizar horários:', error);
+            console.error('❌ Erro ao atualizar horários:', error);
             res.status(500).json({ erro: error.message });
         } finally {
             client.release();
@@ -103,6 +121,8 @@ const horarioController = {
             const diaSemana = agora.getDay();
             const horaAtual = agora.getHours().toString().padStart(2,'0') + ':' + 
                              agora.getMinutes().toString().padStart(2,'0');
+            
+            console.log(`🔍 Verificando status para: ${subdominio}, dia: ${diaSemana}, hora: ${horaAtual}`);
             
             // Buscar tenant
             const tenant = await pool.query(
@@ -232,8 +252,12 @@ const horarioController = {
             });
             
         } catch (error) {
-            console.error('Erro ao verificar status:', error);
-            res.status(500).json({ erro: error.message });
+            console.error('❌ Erro ao verificar status:', error);
+            res.status(500).json({ 
+                loja_aberta: true,
+                delivery_aberto: true,
+                erro: error.message 
+            });
         }
     },
 
@@ -242,7 +266,7 @@ const horarioController = {
     // ==========================================
     horariosDisponiveis: async (req, res) => {
         try {
-            const { subdominio, tipo } = req.params; // tipo = 'loja' ou 'delivery'
+            const { subdominio, tipo } = req.params;
             const { data } = req.query;
             
             const dataSelecionada = data ? new Date(data) : new Date();
@@ -293,7 +317,7 @@ const horarioController = {
                 const minutoAtual = hoje.getMinutes();
                 
                 if (horaAtual > abreH || (horaAtual === abreH && minutoAtual > abreM)) {
-                    horaInicio = horaAtual + 1; // Próxima hora cheia
+                    horaInicio = horaAtual + 1;
                     minutoInicio = 0;
                 }
             }
@@ -323,7 +347,55 @@ const horarioController = {
             });
             
         } catch (error) {
-            console.error('Erro ao buscar horários disponíveis:', error);
+            console.error('❌ Erro ao buscar horários disponíveis:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ==========================================
+    // FECHAR LOJA AGORA
+    // ==========================================
+    fecharLojaAgora: async (req, res) => {
+        try {
+            const { tenant_id = 1 } = req.body;
+            
+            console.log('🔴 Fechando loja para tenant:', tenant_id);
+            
+            await pool.query(`
+                UPDATE horarios_funcionamento 
+                SET aberto = false 
+                WHERE tenant_id = $1 AND tipo = 'loja'
+            `, [tenant_id]);
+            
+            console.log('✅ Loja fechada com sucesso!');
+            res.json({ mensagem: 'Loja fechada com sucesso!' });
+            
+        } catch (error) {
+            console.error('❌ Erro ao fechar loja:', error);
+            res.status(500).json({ erro: error.message });
+        }
+    },
+
+    // ==========================================
+    // ABRIR LOJA AGORA
+    // ==========================================
+    abrirLojaAgora: async (req, res) => {
+        try {
+            const { tenant_id = 1 } = req.body;
+            
+            console.log('🟢 Abrindo loja para tenant:', tenant_id);
+            
+            await pool.query(`
+                UPDATE horarios_funcionamento 
+                SET aberto = true 
+                WHERE tenant_id = $1 AND tipo = 'loja'
+            `, [tenant_id]);
+            
+            console.log('✅ Loja aberta com sucesso!');
+            res.json({ mensagem: 'Loja aberta com sucesso!' });
+            
+        } catch (error) {
+            console.error('❌ Erro ao abrir loja:', error);
             res.status(500).json({ erro: error.message });
         }
     }
