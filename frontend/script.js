@@ -12,6 +12,8 @@ let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = fa
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
 let modoAgendamento = false;
+let horarioSelecionado = null;
+let dataSelecionada = null;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -19,8 +21,8 @@ let modoAgendamento = false;
 window.onload = async () => {
     await carregarConfiguracoes();
     await carregarTudoDoBanco();
-    atualizarStatusLoja(); // Carregar status inicial
-    setInterval(atualizarStatusLoja, 30000); // Atualizar a cada 30 segundos
+    atualizarStatusLoja();
+    setInterval(atualizarStatusLoja, 30000);
 };
 
 // ==========================================
@@ -33,7 +35,6 @@ function parseJSONSeguro(texto) {
 }
 
 function mostrarNotificacao(mensagem, tipo = 'sucesso') {
-    // Criar elemento de notificação
     const notificacao = document.createElement('div');
     notificacao.style.cssText = `
         position: fixed;
@@ -96,14 +97,13 @@ async function carregarConfiguracoes() {
 }
 
 // ==========================================
-// ATUALIZAR STATUS DA LOJA (NOVO)
+// ATUALIZAR STATUS DA LOJA
 // ==========================================
 async function atualizarStatusLoja() {
     try {
         const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
         const status = await response.json();
         
-        // Atualizar header com status
         const headerHorario = document.getElementById('horario');
         if (status.loja_aberta) {
             headerHorario.innerHTML = '🕒 <span style="color: #4CAF50;">● Aberto agora</span>';
@@ -465,7 +465,7 @@ window.removerDoCarrinho = function(idx) {
 }
 
 // ==========================================
-// TOGGLE DELIVERY - VERSÃO ATUALIZADA (COLOQUE AQUI!)
+// TOGGLE DELIVERY - VERSÃO CORRIGIDA
 // ==========================================
 window.toggleDelivery = async function(isDelivery) {
     if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
@@ -477,16 +477,19 @@ window.toggleDelivery = async function(isDelivery) {
     let avisoDiv = document.getElementById('avisoDelivery');
     
     modoAgendamento = false;
+    horarioSelecionado = null;
+    
+    // Reset do botão de finalizar
+    const btn = document.querySelector('.whatsapp-btn');
+    btn.disabled = true;
+    btn.innerHTML = '📅 Selecione um horário';
     
     // Buscar status atualizado
-    const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
-    const status = await response.json();
+    const status = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`).then(r => r.json());
     
     let disponivel = isDelivery ? status.delivery_aberto : status.loja_aberta;
     let mensagem = isDelivery ? status.mensagem_delivery : status.mensagem_loja;
     let proximo = isDelivery ? status.proximo_delivery : status.proximo_loja;
-    
-    let btn = document.querySelector('.whatsapp-btn');
     
     if (disponivel) {
         btn.disabled = false;
@@ -529,7 +532,7 @@ window.toggleDelivery = async function(isDelivery) {
 }
 
 // ==========================================
-// AGENDAMENTO
+// AGENDAMENTO - VERSÃO CORRIGIDA
 // ==========================================
 window.mostrarAgendamento = function() {
     document.getElementById('avisoDelivery').style.display = 'none';
@@ -541,18 +544,27 @@ window.mostrarAgendamento = function() {
     document.getElementById('dataAgendamento').min = dataMin;
     document.getElementById('dataAgendamento').value = '';
     document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data</option>';
+    
+    // Resetar botão
+    const btn = document.querySelector('.whatsapp-btn');
+    btn.disabled = true;
+    btn.innerHTML = '📅 Selecione data e horário';
 }
 
 window.carregarHorariosPorData = async function() {
     const dataSelecionada = document.getElementById('dataAgendamento').value;
     const select = document.getElementById('horarioAgendamento');
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
+    const btn = document.querySelector('.whatsapp-btn');
     
     if (!dataSelecionada) {
         select.innerHTML = '<option value="">Selecione uma data</option>';
+        btn.disabled = true;
+        btn.innerHTML = '📅 Selecione uma data';
         return;
     }
     
+    dataSelecionadaGlobal = dataSelecionada;
     select.innerHTML = '<option value="">🔄 Carregando...</option>';
     
     try {
@@ -560,13 +572,15 @@ window.carregarHorariosPorData = async function() {
         
         if (!horarios.disponivel || !horarios.opcoes || horarios.opcoes.length === 0) {
             select.innerHTML = '<option value="">❌ Sem horários disponíveis</option>';
+            btn.disabled = true;
+            btn.innerHTML = '📅 Indisponível';
             return;
         }
         
         let options = '<option value="">Selecione o horário</option>';
         
         horarios.opcoes.forEach(h => {
-            options += `<option value="${dataSelecionada}|${h.valor}">${h.texto}</option>`;
+            options += `<option value="${h.valor}">${h.texto}</option>`;
         });
         
         select.innerHTML = options;
@@ -574,8 +588,35 @@ window.carregarHorariosPorData = async function() {
     } catch (error) {
         console.error('Erro ao carregar horários:', error);
         select.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+        btn.disabled = true;
+        btn.innerHTML = '📅 Erro';
     }
 }
+
+// Nova função para quando selecionar um horário
+window.selecionarHorario = function() {
+    const select = document.getElementById('horarioAgendamento');
+    const btn = document.querySelector('.whatsapp-btn');
+    const data = document.getElementById('dataAgendamento').value;
+    const horario = select.value;
+    
+    if (data && horario) {
+        horarioSelecionado = horario;
+        btn.disabled = false;
+        btn.innerHTML = '📅 Confirmar Agendamento';
+    } else {
+        btn.disabled = true;
+        btn.innerHTML = '📅 Selecione data e horário';
+    }
+}
+
+// Adicionar evento ao select de horário
+document.addEventListener('DOMContentLoaded', function() {
+    const horarioSelect = document.getElementById('horarioAgendamento');
+    if (horarioSelect) {
+        horarioSelect.addEventListener('change', window.selecionarHorario);
+    }
+});
 
 // ==========================================
 // CEP E FRETE
@@ -643,7 +684,7 @@ window.calcularFretePorCEP = async function() {
                 return;
             }
             
-            document.getElementById('cepInfo').innerHTML = `✅ Aprovado (${kmReal.toFixed(1)} km)`;
+            document.getElementById('cepInfo').innerHTML = `📍 Aprovado (${kmReal.toFixed(1)} km)`;
             
             let tMin = parseFloat(configuracoesLoja.taxa_minima) || 0;
             let tKm = parseFloat(configuracoesLoja.taxa_por_km) || 0;
@@ -691,13 +732,14 @@ function calcularSubtotalGeral() {
 }
 
 // ==========================================
-// FINALIZAR PEDIDO
+// FINALIZAR PEDIDO (COM AGENDAMENTO)
 // ==========================================
 window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
     let strAgendamento = "";
     
+    // Verificar se é agendamento
     if (modoAgendamento) {
         const dataAgendamento = document.getElementById('dataAgendamento')?.value;
         const horarioAgendamento = document.getElementById('horarioAgendamento')?.value;
@@ -707,11 +749,11 @@ window.finalizarPedido = async function() {
             return;
         }
         
-        const [dataStr, horaStr] = horarioAgendamento.split('|');
-        const dataFormatada = new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR');
-        strAgendamento = `📅 Agendado para: ${dataFormatada} às ${horaStr}`;
+        const dataFormatada = new Date(dataAgendamento + 'T12:00:00').toLocaleDateString('pt-BR');
+        strAgendamento = `📅 Agendado para: ${dataFormatada} às ${horarioAgendamento}`;
     }
     
+    // Validar campos
     if(tipo === 'delivery') {
         nome = document.getElementById('clienteNome').value.trim();
         tel = document.getElementById('clienteTelefone').value.trim();
@@ -720,7 +762,7 @@ window.finalizarPedido = async function() {
             return alert('Preencha todos os dados de entrega!');
         }
         
-        if(!dentroAreaEntrega) {
+        if(!dentroAreaEntrega && !modoAgendamento) {
             return alert('Desculpe, este endereço está fora da área de entrega calculada.');
         }
     } else {
@@ -781,7 +823,9 @@ window.finalizarPedido = async function() {
         const dbData = await res.json();
         if(dbData && dbData.pedido_id) idPedidoReal = ` #${dbData.pedido_id}`;
         
-    } catch(e) {}
+    } catch(e) {
+        console.error('Erro ao salvar pedido:', e);
+    }
     
     let msg = `🍽️ *NOVO PEDIDO${idPedidoReal}*\n━━━━━━━━━━━━━━━━\n`;
     if(strAgendamento) msg += `*${strAgendamento}*\n━━━━━━━━━━━━━━━━\n`;
