@@ -9,6 +9,7 @@ const categoriaController = require('./controllers/categoriaController');
 const pedidoController = require('./controllers/pedidoController');
 const complementoController = require('./controllers/complementoController');
 const configController = require('./controllers/configController');
+const horarioController = require('./controllers/horarioController'); // NOVO
 
 // ===== UPLOAD DE IMAGENS =====
 try {
@@ -98,5 +99,20 @@ router.get('/produtos/:produtoId/grupos', safe(complementoController.listarGrupo
 router.post('/produtos/:produtoId/grupos', safe(complementoController.vincularGruposProduto));
 router.get('/complementos/produto/:produtoId', safe(complementoController.listarGruposDoProduto));
 router.put('/complementos/produto/:produtoId/vincular', safe(complementoController.vincularGruposProduto));
+
+// ==========================================
+// HORÁRIOS - NOVAS ROTAS
+// ==========================================
+router.get('/horarios', safe(horarioController.listar));
+router.put('/horarios/lote', safe(horarioController.atualizarLote));
+router.get('/status-loja/:subdominio', safe(horarioController.verificarStatus));
+router.get('/horarios-disponiveis/:subdominio/:tipo', safe(horarioController.horariosDisponiveis));
+router.post('/horarios/fechar-loja', safe(horarioController.fecharLojaAgora));
+router.post('/horarios/abrir-loja', safe(horarioController.abrirLojaAgora));
+
+// ===== 404 =====
+router.use('*', (req, res) => {
+    res.status(404).json({ erro: 'Rota não encontrada' });
+});
 
 module.exports = router;

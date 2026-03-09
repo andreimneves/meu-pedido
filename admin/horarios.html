@@ -1,40 +1,954 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Horários</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horários - Meu Pedido</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #C83232, #A02828);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(200, 50, 50, 0.2);
+        }
+
+        .admin-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logout {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .logout:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .admin-container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+        }
+
+        .admin-sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.03);
+            padding: 25px 0;
+        }
+
+        .admin-sidebar ul {
+            list-style: none;
+        }
+
+        .admin-sidebar li {
+            margin-bottom: 5px;
+        }
+
+        .admin-sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .admin-sidebar a:hover {
+            background: #f1f5f9;
+            border-left-color: #C83232;
+            color: #C83232;
+        }
+
+        .admin-sidebar a.active {
+            background: #fef2f2;
+            border-left-color: #C83232;
+            color: #C83232;
+            font-weight: 600;
+        }
+
+        .admin-content {
+            flex: 1;
+            padding: 30px;
+            background: #f8fafc;
+        }
+
+        .admin-content h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Status Cards */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(200,50,50,0.08);
+            border-color: #C83232;
+        }
+
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .status-icon.loja {
+            background: #fef2f2;
+            color: #C83232;
+        }
+
+        .status-icon.delivery {
+            background: #f0f9ff;
+            color: #0284c7;
+        }
+
+        .status-info {
+            flex: 1;
+        }
+
+        .status-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.aberto {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.fechado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-message {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .proximo-horario {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        /* Emergency Buttons */
+        .emergency-section {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .emergency-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .emergency-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-emergency {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .btn-fechar {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-fechar:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-abrir {
+            background: #22c55e;
+            color: white;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+        }
+
+        .btn-abrir:hover {
+            background: #16a34a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+        }
+
+        /* Horários Grid */
+        .horarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .horario-card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .horario-card:hover {
+            border-color: #C83232;
+            box-shadow: 0 8px 25px rgba(200,50,50,0.08);
+        }
+
+        .horario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .horario-dia {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dia-badge {
+            background: #C83232;
+            color: white;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .horario-tipos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .tipo-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 15px;
+        }
+
+        .tipo-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .tipo-header.loja {
+            color: #C83232;
+        }
+
+        .tipo-header.delivery {
+            color: #0284c7;
+        }
+
+        .switch-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 8px 0;
+        }
+
+        .switch-label {
+            font-size: 14px;
+            color: #475569;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #C83232;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'Inter', monospace;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #C83232;
+            box-shadow: 0 0 0 3px rgba(200,50,50,0.1);
+        }
+
+        .time-separator {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* Sticky Save Button */
+        .btn-salvar-container {
+            position: sticky;
+            bottom: 20px;
+            background: white;
+            border-radius: 60px;
+            padding: 15px 30px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+        }
+
+        .btn-salvar-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-salvar-info span {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .btn-salvar {
+            background: #C83232;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(200,50,50,0.3);
+        }
+
+        .btn-salvar:hover {
+            background: #A02828;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(200,50,50,0.4);
+        }
+
+        .btn-salvar:disabled {
+            background: #94a3b8;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f1f5f9;
+            border-top: 3px solid #C83232;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #fecaca;
+        }
+
+        .success-toast {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: #22c55e;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .stats-badge {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
 </head>
-
 <body>
+    <div class="admin-header">
+        <h1>🍽️ Meu Pedido · Painel Administrativo</h1>
+        <div class="user-info">
+            <span>👤 DL Crepes e Lanches</span>
+            <button class="logout" onclick="logout()">🚪 Sair</button>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="admin-sidebar">
+            <ul>
+                <li><a href="dashboard.html">📊 Dashboard</a></li>
+                <li><a href="pedidos.html">📋 Pedidos</a></li>
+                <li><a href="horarios.html" class="active">⏰ Horários</a></li>
+                <li><a href="config.html">⚙️ Configurações</a></li>
+                <li><a href="categorias.html">📁 Categorias</a></li>
+                <li><a href="produtos.html">📦 Produtos</a></li>
+                <li><a href="complementos.html">🧩 Complementos</a></li>
+            </ul>
+        </div>
+        
+        <div class="admin-content">
+            <h1>⏰ Configurar Horários de Funcionamento</h1>
+            
+            <!-- Status Cards -->
+            <div class="status-grid" id="statusCards">
+                <div class="status-card">
+                    <div class="status-icon loja">🏪</div>
+                    <div class="status-info">
+                        <div class="status-label">Loja Física</div>
+                        <div id="statusLojaValue" class="status-value">Carregando...</div>
+                        <div id="statusLojaMessage" class="status-message"></div>
+                        <div id="proximoLoja" class="proximo-horario"></div>
+                    </div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-icon delivery">🛵</div>
+                    <div class="status-info">
+                        <div class="status-label">Delivery</div>
+                        <div id="statusDeliveryValue" class="status-value">Carregando...</div>
+                        <div id="statusDeliveryMessage" class="status-message"></div>
+                        <div id="proximoDelivery" class="proximo-horario"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Emergency Actions -->
+            <div class="emergency-section">
+                <div class="emergency-title">
+                    <span>🚨</span>
+                    <span>Ações Rápidas</span>
+                </div>
+                <div class="emergency-buttons">
+                    <button class="btn-emergency btn-fechar" onclick="fecharLojaAgora()" id="btnFechar">
+                        <span>🔴</span>
+                        <span>FECHAR LOJA AGORA</span>
+                    </button>
+                    <button class="btn-emergency btn-abrir" onclick="abrirLojaAgora()" id="btnAbrir">
+                        <span>🟢</span>
+                        <span>ABRIR LOJA AGORA</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Horários Grid -->
+            <div id="horariosContainer">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Carregando horários...</div>
+                </div>
+            </div>
+            
+            <!-- Sticky Save Button -->
+            <div class="btn-salvar-container">
+                <div class="btn-salvar-info">
+                    <span>📅</span>
+                    <span>Configuração semanal</span>
+                    <span class="stats-badge" id="diasConfigurados">0/7</span>
+                </div>
+                <button class="btn-salvar" onclick="salvarTodosHorarios()" id="btnSalvar">
+                    <span>💾</span>
+                    <span>SALVAR TODAS AS ALTERAÇÕES</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-<div class="admin-header">
-<h1>⏰ Horários de Funcionamento</h1>
-</div>
-
-<div class="admin-container">
-
-<table>
-
-<thead>
-<tr>
-<th>Dia</th>
-<th>Aberto</th>
-<th>Abre</th>
-<th>Fecha</th>
-<th>Delivery abre</th>
-<th>Delivery fecha</th>
-<th>Ação</th>
-</tr>
-</thead>
-
-<tbody id="horariosTable"></tbody>
-
-</table>
-
-</div>
-
-<script src="horarios.js"></script>
-
+    <script>
+        const API_URL = 'https://meu-pedido-backend.onrender.com/api';
+        const SUBDOMINIO = 'dlcrepes';
+        
+        if (!localStorage.getItem('adminLogado')) {
+            window.location.href = 'index.html';
+        }
+        
+        function logout() {
+            localStorage.removeItem('adminLogado');
+            window.location.href = 'index.html';
+        }
+        
+        function mostrarToast(mensagem, tipo = 'sucesso') {
+            const toast = document.createElement('div');
+            toast.className = 'success-toast';
+            toast.style.background = tipo === 'sucesso' ? '#22c55e' : '#ef4444';
+            toast.textContent = mensagem;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        async function carregarHorarios() {
+            const container = document.getElementById('horariosContainer');
+            
+            try {
+                const response = await fetch(`${API_URL}/horarios?tenant_id=1`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                
+                const horarios = await response.json();
+                
+                if (!horarios || horarios.length === 0) {
+                    container.innerHTML = '<div class="error-message">Nenhum horário encontrado</div>';
+                    return;
+                }
+                
+                document.getElementById('diasConfigurados').textContent = `${horarios.length}/7`;
+                
+                let html = '<div class="horarios-grid">';
+                
+                horarios.forEach(h => {
+                    html += `
+                        <div class="horario-card" data-dia="${h.dia_semana}">
+                            <div class="horario-header">
+                                <div class="horario-dia">
+                                    <span class="dia-badge">${h.dia_semana + 1}</span>
+                                    ${h.nome_dia}
+                                </div>
+                            </div>
+                            
+                            <div class="horario-tipos">
+                                <!-- Loja -->
+                                <div class="tipo-card">
+                                    <div class="tipo-header loja">
+                                        <span>🏪</span>
+                                        <span>Loja Física</span>
+                                    </div>
+                                    
+                                    <div class="switch-group">
+                                        <span class="switch-label">Aberto neste dia</span>
+                                        <label class="switch">
+                                            <input type="checkbox" 
+                                                   id="loja_aberta_${h.dia_semana}" 
+                                                   ${h.loja_aberta ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="time-inputs">
+                                        <input type="time" 
+                                               class="time-input"
+                                               id="loja_abre_${h.dia_semana}" 
+                                               value="${h.loja_abre.substring(0,5)}">
+                                        <span class="time-separator">→</span>
+                                        <input type="time" 
+                                               class="time-input"
+                                               id="loja_fecha_${h.dia_semana}" 
+                                               value="${h.loja_fecha.substring(0,5)}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Delivery -->
+                                <div class="tipo-card">
+                                    <div class="tipo-header delivery">
+                                        <span>🛵</span>
+                                        <span>Delivery</span>
+                                    </div>
+                                    
+                                    <div class="switch-group">
+                                        <span class="switch-label">Disponível neste dia</span>
+                                        <label class="switch">
+                                            <input type="checkbox" 
+                                                   id="delivery_aberta_${h.dia_semana}" 
+                                                   ${h.delivery_aberto ? 'checked' : ''}>
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="time-inputs">
+                                        <input type="time" 
+                                               class="time-input"
+                                               id="delivery_abre_${h.dia_semana}" 
+                                               value="${h.delivery_abre.substring(0,5)}">
+                                        <span class="time-separator">→</span>
+                                        <input type="time" 
+                                               class="time-input"
+                                               id="delivery_fecha_${h.dia_semana}" 
+                                               value="${h.delivery_fecha.substring(0,5)}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                await atualizarStatusLoja();
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error-message">❌ Erro ao carregar: ${error.message}</div>`;
+            }
+        }
+        
+        async function atualizarStatusLoja() {
+            try {
+                const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
+                const status = await response.json();
+                
+                // Atualizar Loja
+                const statusLoja = document.getElementById('statusLojaValue');
+                const msgLoja = document.getElementById('statusLojaMessage');
+                const proximoLoja = document.getElementById('proximoLoja');
+                
+                statusLoja.innerHTML = status.loja_aberta ? 
+                    '<span class="status-badge aberto">🟢 ABERTO AGORA</span>' : 
+                    '<span class="status-badge fechado">🔴 FECHADO AGORA</span>';
+                msgLoja.textContent = status.mensagem_loja;
+                proximoLoja.textContent = status.proximo_loja ? `Próximo horário: ${status.proximo_loja}` : '';
+                
+                // Atualizar Delivery
+                const statusDelivery = document.getElementById('statusDeliveryValue');
+                const msgDelivery = document.getElementById('statusDeliveryMessage');
+                const proximoDelivery = document.getElementById('proximoDelivery');
+                
+                statusDelivery.innerHTML = status.delivery_aberto ? 
+                    '<span class="status-badge aberto">🟢 DISPONÍVEL</span>' : 
+                    '<span class="status-badge fechado">🔴 INDISPONÍVEL</span>';
+                msgDelivery.textContent = status.mensagem_delivery;
+                proximoDelivery.textContent = status.proximo_delivery ? `Próximo horário: ${status.proximo_delivery}` : '';
+                
+            } catch (error) {
+                console.error('Erro ao atualizar status:', error);
+            }
+        }
+        
+        async function salvarTodosHorarios() {
+            const btn = document.getElementById('btnSalvar');
+            btn.innerHTML = '<span>⏳</span><span>SALVANDO...</span>';
+            btn.disabled = true;
+            
+            const horarios = [];
+            let diasCarregados = 0;
+            
+            for (let dia = 0; dia <= 6; dia++) {
+                const loja_aberta = document.getElementById(`loja_aberta_${dia}`);
+                const loja_abre = document.getElementById(`loja_abre_${dia}`);
+                const loja_fecha = document.getElementById(`loja_fecha_${dia}`);
+                const delivery_aberta = document.getElementById(`delivery_aberta_${dia}`);
+                const delivery_abre = document.getElementById(`delivery_abre_${dia}`);
+                const delivery_fecha = document.getElementById(`delivery_fecha_${dia}`);
+                
+                if (loja_abre && loja_fecha) {
+                    diasCarregados++;
+                    
+                    horarios.push({
+                        dia_semana: dia,
+                        loja_aberta: loja_aberta.checked,
+                        loja_abre: loja_abre.value + ':00',
+                        loja_fecha: loja_fecha.value + ':00',
+                        delivery_aberto: delivery_aberta.checked,
+                        delivery_abre: delivery_abre.value + ':00',
+                        delivery_fecha: delivery_fecha.value + ':00'
+                    });
+                }
+            }
+            
+            if (horarios.length === 0) {
+                mostrarToast('Nenhum horário para salvar', 'erro');
+                btn.innerHTML = '<span>💾</span><span>SALVAR TODAS AS ALTERAÇÕES</span>';
+                btn.disabled = false;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/horarios/lote`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        horarios,
+                        tenant_id: 1 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.erro || 'Erro ao salvar');
+                }
+                
+                mostrarToast('✅ Horários salvos com sucesso!');
+                await carregarHorarios();
+                
+            } catch (error) {
+                mostrarToast('❌ Erro: ' + error.message, 'erro');
+            } finally {
+                btn.innerHTML = '<span>💾</span><span>SALVAR TODAS AS ALTERAÇÕES</span>';
+                btn.disabled = false;
+            }
+        }
+        
+        async function fecharLojaAgora() {
+            if (!confirm('Tem certeza que deseja FECHAR a loja agora? Isso vai desativar todos os pedidos imediatamente.')) {
+                return;
+            }
+            
+            const btn = document.getElementById('btnFechar');
+            btn.innerHTML = '<span>⏳</span><span>FECHANDO...</span>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_URL}/horarios/fechar-loja`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: 1 })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.erro || 'Erro ao fechar loja');
+                }
+                
+                mostrarToast('🔴 Loja fechada com sucesso!');
+                await carregarHorarios();
+                
+            } catch (error) {
+                mostrarToast('❌ Erro: ' + error.message, 'erro');
+            } finally {
+                btn.innerHTML = '<span>🔴</span><span>FECHAR LOJA AGORA</span>';
+                btn.disabled = false;
+            }
+        }
+        
+        async function abrirLojaAgora() {
+            if (!confirm('Tem certeza que deseja ABRIR a loja agora?')) {
+                return;
+            }
+            
+            const btn = document.getElementById('btnAbrir');
+            btn.innerHTML = '<span>⏳</span><span>ABRINDO...</span>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_URL}/horarios/abrir-loja`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: 1 })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.erro || 'Erro ao abrir loja');
+                }
+                
+                mostrarToast('🟢 Loja aberta com sucesso!');
+                await carregarHorarios();
+                
+            } catch (error) {
+                mostrarToast('❌ Erro: ' + error.message, 'erro');
+            } finally {
+                btn.innerHTML = '<span>🟢</span><span>ABRIR LOJA AGORA</span>';
+                btn.disabled = false;
+            }
+        }
+        
+        setInterval(atualizarStatusLoja, 30000);
+        carregarHorarios();
+    </script>
 </body>
 </html>

@@ -1,23 +1,65 @@
+// ==========================================
+// CONFIGURAÇÕES GLOBAIS
+// ==========================================
 const API_URL = 'https://meu-pedido-backend.onrender.com/api';
 const SUBDOMINIO = 'dlcrepes';
 
+// ==========================================
+// VARIÁVEIS GLOBAIS
+// ==========================================
 let produtos = [], gruposComplementosGlobal = [], itensComplementosGlobal = [], categorias = [], categoriaAtiva = 'Todos';
 let carrinho = [], configuracoesLoja = {}, taxaFrete = 0, dentroAreaEntrega = false;
 let produtoDetalheAtual = null, quantidadeDetalhe = 1, complementosSelecionados = {};
 let coordsLoja = { lat: null, lng: null };
 let modoAgendamento = false;
 
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
 window.onload = async () => {
     await carregarConfiguracoes();
     await carregarTudoDoBanco();
+    atualizarStatusLoja(); // Carregar status inicial
+    setInterval(atualizarStatusLoja, 30000); // Atualizar a cada 30 segundos
 };
 
+// ==========================================
+// UTILITÁRIOS
+// ==========================================
 function parseJSONSeguro(texto) {
     if (!texto) return {};
     if (typeof texto === 'object') return texto;
     try { return JSON.parse(texto) || {}; } catch (e) { return {}; }
 }
 
+function mostrarNotificacao(mensagem, tipo = 'sucesso') {
+    // Criar elemento de notificação
+    const notificacao = document.createElement('div');
+    notificacao.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 50px;
+        background: ${tipo === 'sucesso' ? '#4CAF50' : '#f44336'};
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease;
+    `;
+    notificacao.textContent = mensagem;
+    document.body.appendChild(notificacao);
+    
+    setTimeout(() => {
+        notificacao.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notificacao.remove(), 300);
+    }, 3000);
+}
+
+// ==========================================
+// CONFIGURAÇÕES DA LOJA
+// ==========================================
 async function carregarConfiguracoes() {
     try {
         const res = await fetch(`${API_URL}/config/${SUBDOMINIO}`);
@@ -26,8 +68,7 @@ async function carregarConfiguracoes() {
         document.getElementById('nomeLoja').textContent = configuracoesLoja.nome_loja || 'Nossa Loja';
         document.getElementById('slogan').textContent = configuracoesLoja.slogan || '';
         document.getElementById('endereco').innerHTML = `📍 ${configuracoesLoja.endereco_completo || ''}`;
-        document.getElementById('horario').innerHTML = `🕒 ${configuracoesLoja.horario_funcionamento || 'Consulte os horários'}`;
-
+        
         if (configuracoesLoja.logo_url) {
             document.getElementById('logoImagem').src = configuracoesLoja.logo_url;
             document.getElementById('logoImagem').style.display = 'block';
@@ -42,7 +83,6 @@ async function carregarConfiguracoes() {
             if(msgDiv) {
                 msgDiv.style.backgroundColor = configuracoesLoja.mensagem_banner_cor || '#FFF3E0';
                 msgDiv.style.color = configuracoesLoja.mensagem_banner_texto || '#E65100';
-                msgDiv.style.borderBottom = `1px solid ${configuracoesLoja.mensagem_banner_texto || '#E65100'}`;
                 msgDiv.innerHTML = `<span style="font-size:16px;">${configuracoesLoja.mensagem_banner_icone || '📢'}</span> <span>${textoMsg}</span>`;
                 msgDiv.style.display = 'flex';
             }
@@ -55,20 +95,53 @@ async function carregarConfiguracoes() {
     } catch (e) { console.error('Erro configs', e); }
 }
 
-async function verificarDisponibilidade(tipo) {
+// ==========================================
+// ATUALIZAR STATUS DA LOJA (NOVO)
+// ==========================================
+async function atualizarStatusLoja() {
     try {
-        const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tipo })
-        });
-        return await response.json();
+        const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
+        const status = await response.json();
+        
+        // Atualizar header com status
+        const headerHorario = document.getElementById('horario');
+        if (status.loja_aberta) {
+            headerHorario.innerHTML = '🕒 <span style="color: #4CAF50;">● Aberto agora</span>';
+        } else {
+            headerHorario.innerHTML = `🕒 <span style="color: #f44336;">● Fechado • ${status.proximo_loja || 'Abre às 18:00'}</span>`;
+        }
+        
+        return status;
     } catch (error) {
-        console.error('Erro:', error);
-        return { disponivel: true, pode_agendar: true };
+        console.error('Erro ao atualizar status:', error);
+        return null;
     }
 }
 
+// ==========================================
+// BUSCAR HORÁRIOS DISPONÍVEIS PARA AGENDAMENTO
+// ==========================================
+async function buscarHorariosDisponiveis(tipo, data) {
+    try {
+        const response = await fetch(
+            `${API_URL}/horarios-disponiveis/${SUBDOMINIO}/${tipo}?data=${data}`
+        );
+        
+        if (!response.ok) {
+            throw new Error('Erro ao buscar horários');
+        }
+        
+        return await response.json();
+        
+    } catch (error) {
+        console.error('Erro ao buscar horários disponíveis:', error);
+        return { disponivel: false, opcoes: [] };
+    }
+}
+
+// ==========================================
+// CARDÁPIO
+// ==========================================
 async function carregarTudoDoBanco() {
     try {
         const [resProd, resGrupos, resItens] = await Promise.all([
@@ -76,12 +149,15 @@ async function carregarTudoDoBanco() {
             fetch(`${API_URL}/grupos-complementos?tenant_id=1`),
             fetch(`${API_URL}/complementos?tenant_id=1`)
         ]);
+        
         produtos = await resProd.json();
         gruposComplementosGlobal = resGrupos.ok ? await resGrupos.json() : [];
         itensComplementosGlobal = resItens.ok ? await resItens.json() : [];
+        
         categorias = ['Todos', ...new Set(produtos.map(p => p.categoria_nome).filter(Boolean))];
         renderizarCategorias();
         renderizarProdutos();
+        
     } catch (e) {
         document.getElementById('produtos').innerHTML = `<div style="text-align:center; color:red;">Erro ao carregar cardápio.</div>`;
     }
@@ -131,6 +207,9 @@ function renderizarProdutos() {
     `).join('');
 }
 
+// ==========================================
+// DETALHE DO PRODUTO (complementos)
+// ==========================================
 window.abrirDetalheProduto = async function(id) {
     produtoDetalheAtual = produtos.find(p => p.id == id);
     quantidadeDetalhe = 1;
@@ -336,6 +415,9 @@ window.adicionarProdutoPersonalizadoAoCarrinho = function() {
     atualizarRodapeCarrinho();
 }
 
+// ==========================================
+// CARRINHO
+// ==========================================
 function atualizarRodapeCarrinho() {
     const rodape = document.getElementById('rodapeCarrinho');
     if (carrinho.length > 0) {
@@ -365,8 +447,7 @@ window.abrirCarrinho = function() {
         </div>
     `).join('');
     
-    const isDeliveryChecked = document.getElementById('deliveryOption').checked;
-    window.toggleDelivery(isDeliveryChecked);
+    toggleDelivery(document.getElementById('deliveryOption').checked);
     
     document.getElementById('cartModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -383,6 +464,122 @@ window.removerDoCarrinho = function(idx) {
     if(carrinho.length > 0) abrirCarrinho();
 }
 
+// ==========================================
+// TOGGLE DELIVERY - VERSÃO ATUALIZADA (COLOQUE AQUI!)
+// ==========================================
+window.toggleDelivery = async function(isDelivery) {
+    if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
+    
+    document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
+    document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
+    
+    document.getElementById('agendamentoFields').style.display = 'none';
+    let avisoDiv = document.getElementById('avisoDelivery');
+    
+    modoAgendamento = false;
+    
+    // Buscar status atualizado
+    const response = await fetch(`${API_URL}/status-loja/${SUBDOMINIO}`);
+    const status = await response.json();
+    
+    let disponivel = isDelivery ? status.delivery_aberto : status.loja_aberta;
+    let mensagem = isDelivery ? status.mensagem_delivery : status.mensagem_loja;
+    let proximo = isDelivery ? status.proximo_delivery : status.proximo_loja;
+    
+    let btn = document.querySelector('.whatsapp-btn');
+    
+    if (disponivel) {
+        btn.disabled = false;
+        btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
+        avisoDiv.style.display = 'none';
+    } else {
+        btn.disabled = true;
+        btn.innerHTML = '📅 Agendar Pedido';
+        
+        avisoDiv.innerHTML = `
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <p style="font-weight: bold; margin-bottom: 8px;">⏰ Fora do horário de funcionamento</p>
+                <p style="margin-bottom: 8px;">${mensagem}</p>
+                <p style="margin-bottom: 15px; color: #856404;">Próximo horário: ${proximo}</p>
+                <button style="background: #C83232; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer;" onclick="mostrarAgendamento()">
+                    📅 Agendar ${isDelivery ? 'Entrega' : 'Retirada'}
+                </button>
+                ${isDelivery ? `
+                    <button style="background: #4CAF50; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 8px;" onclick="toggleDelivery(false)">
+                        🏪 Retirar na Loja
+                    </button>
+                ` : ''}
+            </div>
+        `;
+        avisoDiv.style.display = 'block';
+    }
+    
+    if (isDelivery) {
+        document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP.';
+        document.getElementById('freteInfo').className = 'frete-info';
+        taxaFrete = 0;
+        dentroAreaEntrega = false;
+    } else {
+        taxaFrete = 0;
+        dentroAreaEntrega = false;
+        document.getElementById('cepInfo').innerHTML = '';
+    }
+    
+    calcularSubtotalGeral();
+}
+
+// ==========================================
+// AGENDAMENTO
+// ==========================================
+window.mostrarAgendamento = function() {
+    document.getElementById('avisoDelivery').style.display = 'none';
+    document.getElementById('agendamentoFields').style.display = 'block';
+    modoAgendamento = true;
+    
+    const hoje = new Date();
+    const dataMin = hoje.toISOString().split('T')[0];
+    document.getElementById('dataAgendamento').min = dataMin;
+    document.getElementById('dataAgendamento').value = '';
+    document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data</option>';
+}
+
+window.carregarHorariosPorData = async function() {
+    const dataSelecionada = document.getElementById('dataAgendamento').value;
+    const select = document.getElementById('horarioAgendamento');
+    const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
+    
+    if (!dataSelecionada) {
+        select.innerHTML = '<option value="">Selecione uma data</option>';
+        return;
+    }
+    
+    select.innerHTML = '<option value="">🔄 Carregando...</option>';
+    
+    try {
+        const horarios = await buscarHorariosDisponiveis(tipo, dataSelecionada);
+        
+        if (!horarios.disponivel || !horarios.opcoes || horarios.opcoes.length === 0) {
+            select.innerHTML = '<option value="">❌ Sem horários disponíveis</option>';
+            return;
+        }
+        
+        let options = '<option value="">Selecione o horário</option>';
+        
+        horarios.opcoes.forEach(h => {
+            options += `<option value="${dataSelecionada}|${h.valor}">${h.texto}</option>`;
+        });
+        
+        select.innerHTML = options;
+        
+    } catch (error) {
+        console.error('Erro ao carregar horários:', error);
+        select.innerHTML = '<option value="">❌ Erro ao carregar</option>';
+    }
+}
+
+// ==========================================
+// CEP E FRETE
+// ==========================================
 function calcularDistanciaGeo(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -493,130 +690,9 @@ function calcularSubtotalGeral() {
     document.getElementById('cartTotalFinal').textContent = (sub + (document.getElementById('deliveryOption').checked ? taxaFrete : 0)).toFixed(2);
 }
 
-window.mostrarAgendamento = function() {
-    document.getElementById('avisoDelivery').style.display = 'none';
-    document.getElementById('agendamentoFields').style.display = 'block';
-    modoAgendamento = true;
-    
-    const hoje = new Date();
-    const dataMin = hoje.toISOString().split('T')[0];
-    document.getElementById('dataAgendamento').min = dataMin;
-    document.getElementById('dataAgendamento').value = '';
-    document.getElementById('horarioAgendamento').innerHTML = '<option value="">Selecione uma data primeiro</option>';
-}
-
-window.carregarHorariosPorData = async function() {
-    const dataSelecionada = document.getElementById('dataAgendamento').value;
-    const select = document.getElementById('horarioAgendamento');
-    const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
-    
-    if (!dataSelecionada) {
-        select.innerHTML = '<option value="">Selecione uma data primeiro</option>';
-        return;
-    }
-    
-    select.innerHTML = '<option value="">🔄 Carregando...</option>';
-    
-    try {
-        const response = await fetch(`${API_URL}/horarios/verificar/${SUBDOMINIO}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tipo: tipo,
-                data: dataSelecionada
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Erro na resposta');
-        }
-        
-        const data = await response.json();
-        console.log('📅 Horários para data:', data);
-        
-        if (!data.disponivel) {
-            select.innerHTML = '<option value="">❌ Fechado neste dia</option>';
-            return;
-        }
-        
-        if (!data.opcoes_horario || data.opcoes_horario.length === 0) {
-            select.innerHTML = '<option value="">❌ Sem horários disponíveis</option>';
-            return;
-        }
-        
-        select.innerHTML = '<option value="">Selecione o horário</option>' +
-            data.opcoes_horario.map(h =>
-                `<option value="${dataSelecionada}|${h.valor}">${h.texto}</option>`
-            ).join('');
-            
-    } catch (error) {
-        console.error('Erro:', error);
-        const opcoesPadrao = [];
-        for (let h = 18; h < 23; h++) {
-            opcoesPadrao.push({
-                valor: `${String(h).padStart(2, '0')}:00`,
-                texto: `${String(h).padStart(2, '0')}:00 às ${String(h+1).padStart(2, '0')}:00`
-            });
-        }
-        
-        select.innerHTML = '<option value="">Selecione o horário (padrão)</option>' +
-            opcoesPadrao.map(h =>
-                `<option value="${dataSelecionada}|${h.valor}">${h.texto}</option>`
-            ).join('');
-    }
-}
-
-window.toggleDelivery = async function(isDelivery) {
-    if (isDelivery === undefined) isDelivery = document.getElementById('deliveryOption').checked;
-    
-    document.getElementById('deliveryFields').style.display = isDelivery ? 'block' : 'none';
-    document.getElementById('pickupFields').style.display = isDelivery ? 'none' : 'block';
-    
-    document.getElementById('agendamentoFields').style.display = 'none';
-    let avisoDiv = document.getElementById('avisoDelivery');
-    if(avisoDiv) avisoDiv.style.display = 'none';
-    
-    modoAgendamento = false;
-    
-    const status = await verificarDisponibilidade(isDelivery ? 'delivery' : 'loja');
-    let btn = document.querySelector('.whatsapp-btn');
-    btn.disabled = false;
-    btn.innerHTML = '📲 Enviar Pedido via WhatsApp';
-    
-    if (!status.disponivel) {
-        let mensagem = isDelivery ? '🚫 Delivery Fechado' : '🏪 Loja Fechada';
-        let corBotao = isDelivery ? '#2196F3' : '#ff9800';
-        
-        avisoDiv.innerHTML = `
-            <p style="margin-bottom: 8px; font-weight: bold;">${mensagem}</p>
-            <p style="font-size: 13px; margin-bottom: 12px;">${status.mensagem || 'Fora do horário de funcionamento'}</p>
-            <button style="background:${corBotao}; color:white; border:none; padding:12px; border-radius:5px; width:100%; font-weight:bold; cursor:pointer; margin-bottom:8px;" onclick="mostrarAgendamento()">
-                📅 Agendar ${isDelivery ? 'Entrega' : 'Retirada'}
-            </button>
-            ${isDelivery ? `
-                <button style="background:#4CAF50; color:white; border:none; padding:12px; border-radius:5px; width:100%; font-weight:bold; cursor:pointer;" onclick="toggleDelivery(false)">
-                    🏪 Retirar na Loja
-                </button>
-            ` : ''}
-        `;
-        avisoDiv.style.display = 'block';
-        btn.innerHTML = '⚠️ Requer Agendamento';
-    }
-    
-    if (isDelivery) {
-        document.getElementById('freteInfo').innerHTML = '👆 Informe seu CEP.';
-        document.getElementById('freteInfo').className = 'frete-info';
-        taxaFrete = 0;
-        dentroAreaEntrega = false;
-    } else {
-        taxaFrete = 0;
-        dentroAreaEntrega = false;
-        document.getElementById('cepInfo').innerHTML = '';
-    }
-    
-    calcularSubtotalGeral();
-}
-
+// ==========================================
+// FINALIZAR PEDIDO
+// ==========================================
 window.finalizarPedido = async function() {
     const tipo = document.querySelector('input[name="deliveryType"]:checked').value;
     let nome, tel;
